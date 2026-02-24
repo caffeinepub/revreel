@@ -128,6 +128,7 @@ export const Comment = IDL.Record({
   'id' : CommentId,
   'authorId' : UserId,
   'text' : IDL.Text,
+  'authorName' : IDL.Text,
   'timestamp' : Time,
   'videoId' : VideoId,
 });
@@ -513,6 +514,7 @@ export const idlFactory = ({ IDL }) => {
     'id' : CommentId,
     'authorId' : UserId,
     'text' : IDL.Text,
+    'authorName' : IDL.Text,
     'timestamp' : Time,
     'videoId' : VideoId,
   });

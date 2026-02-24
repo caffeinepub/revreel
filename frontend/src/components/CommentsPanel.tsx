@@ -1,27 +1,12 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { X, Send, AtSign } from 'lucide-react';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
-import { useGetComments, useAddComment, useGetUserProfile, useGetAllUsers } from '../hooks/useQueries';
+import { useGetComments, useAddComment, useGetAllUsers } from '../hooks/useQueries';
+import { Comment } from '../backend';
 
 interface CommentsPanelProps {
   videoId: string;
   onClose: () => void;
-}
-
-function CommentAuthor({ authorId }: { authorId: string }) {
-  const { data: profile } = useGetUserProfile(authorId);
-  return (
-    <div className="flex items-center gap-2 mb-1">
-      {profile?.avatarUrl ? (
-        <img src={profile.avatarUrl} alt={profile.username} className="w-6 h-6 rounded-full object-cover" />
-      ) : (
-        <div className="w-6 h-6 rounded-full bg-neon-orange/20 flex items-center justify-center text-xs text-neon-orange font-bold">
-          {profile?.username?.[0]?.toUpperCase() ?? '?'}
-        </div>
-      )}
-      <span className="text-sm font-semibold text-foreground">{profile?.username ?? 'User'}</span>
-    </div>
-  );
 }
 
 function renderCommentText(text: string) {
@@ -32,6 +17,34 @@ function renderCommentText(text: string) {
     }
     return <span key={i}>{part}</span>;
   });
+}
+
+function timeAgo(ts: bigint): string {
+  const diff = Date.now() - Number(ts) / 1_000_000;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h`;
+  return `${Math.floor(hrs / 24)}d`;
+}
+
+function CommentItem({ comment }: { comment: Comment }) {
+  const displayName = comment.authorName || 'User';
+  const initial = displayName[0]?.toUpperCase() ?? '?';
+
+  return (
+    <div className="bg-card/40 rounded-lg p-3">
+      <div className="flex items-center gap-2 mb-1">
+        <div className="w-6 h-6 rounded-full bg-neon-orange/20 flex items-center justify-center text-xs text-neon-orange font-bold flex-shrink-0">
+          {initial}
+        </div>
+        <span className="text-sm font-semibold text-foreground">{displayName}</span>
+      </div>
+      <p className="text-sm text-foreground/90 ml-8">{renderCommentText(comment.text)}</p>
+      <p className="text-xs text-muted-foreground ml-8 mt-1">{timeAgo(comment.timestamp)}</p>
+    </div>
+  );
 }
 
 export default function CommentsPanel({ videoId, onClose }: CommentsPanelProps) {
@@ -51,7 +64,6 @@ export default function CommentsPanel({ videoId, onClose }: CommentsPanelProps) 
     setText(val);
     setCursorPos(pos);
 
-    // Detect @mention
     const textBeforeCursor = val.slice(0, pos);
     const mentionMatch = textBeforeCursor.match(/@(\w*)$/);
     if (mentionMatch) {
@@ -63,9 +75,9 @@ export default function CommentsPanel({ videoId, onClose }: CommentsPanelProps) 
     }
   };
 
-  const filteredUsers = allUsers?.filter(u =>
+  const filteredUsers = (allUsers ?? []).filter(u =>
     mentionQuery === '' || u.username.toLowerCase().includes(mentionQuery.toLowerCase())
-  ).slice(0, 5) ?? [];
+  ).slice(0, 5);
 
   const insertMention = (username: string) => {
     const textBeforeCursor = text.slice(0, cursorPos);
@@ -89,20 +101,16 @@ export default function CommentsPanel({ videoId, onClose }: CommentsPanelProps) 
     }
   };
 
-  const timeAgo = (ts: bigint) => {
-    const diff = Date.now() - Number(ts) / 1_000_000;
-    const mins = Math.floor(diff / 60000);
-    if (mins < 1) return 'just now';
-    if (mins < 60) return `${mins}m`;
-    const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `${hrs}h`;
-    return `${Math.floor(hrs / 24)}d`;
-  };
+  const sortedComments = comments
+    ? [...comments].sort((a, b) => Number(b.timestamp) - Number(a.timestamp))
+    : [];
 
   return (
     <div className="absolute inset-0 bg-background/95 backdrop-blur-sm flex flex-col z-20">
       <div className="flex items-center justify-between p-4 border-b border-border">
-        <h3 className="font-display font-bold text-foreground">Comments</h3>
+        <h3 className="font-display font-bold text-foreground">
+          Comments {sortedComments.length > 0 && <span className="text-muted-foreground text-sm font-normal">({sortedComments.length})</span>}
+        </h3>
         <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
           <X className="w-5 h-5" />
         </button>
@@ -115,22 +123,18 @@ export default function CommentsPanel({ videoId, onClose }: CommentsPanelProps) 
               <div key={i} className="h-16 bg-card/50 animate-pulse rounded-lg" />
             ))}
           </div>
-        ) : !comments || comments.length === 0 ? (
+        ) : sortedComments.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground text-sm">
             No comments yet. Be the first!
           </div>
         ) : (
-          comments.map(comment => (
-            <div key={String(comment.id)} className="bg-card/40 rounded-lg p-3">
-              <CommentAuthor authorId={comment.authorId.toString()} />
-              <p className="text-sm text-foreground/90 ml-8">{renderCommentText(comment.text)}</p>
-              <p className="text-xs text-muted-foreground ml-8 mt-1">{timeAgo(comment.timestamp)}</p>
-            </div>
+          sortedComments.map(comment => (
+            <CommentItem key={String(comment.id)} comment={comment} />
           ))
         )}
       </div>
 
-      {identity && (
+      {identity ? (
         <div className="p-4 border-t border-border relative">
           {showMentions && filteredUsers.length > 0 && (
             <div className="absolute bottom-full left-4 right-4 mb-1 bg-card border border-border rounded-lg overflow-hidden shadow-lg z-10">
@@ -173,6 +177,10 @@ export default function CommentsPanel({ videoId, onClose }: CommentsPanelProps) 
               <Send className="w-4 h-4" />
             </button>
           </form>
+        </div>
+      ) : (
+        <div className="p-4 border-t border-border text-center text-sm text-muted-foreground">
+          Log in to leave a comment
         </div>
       )}
     </div>

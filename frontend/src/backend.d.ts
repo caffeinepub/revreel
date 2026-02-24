@@ -103,6 +103,7 @@ export interface Comment {
     id: CommentId;
     authorId: UserId;
     text: string;
+    authorName: string;
     timestamp: Time;
     videoId: VideoId;
 }

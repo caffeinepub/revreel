@@ -10,6 +10,7 @@ import Time "mo:core/Time";
 import Principal "mo:core/Principal";
 import Runtime "mo:core/Runtime";
 
+
 import MixinAuthorization "authorization/MixinAuthorization";
 import MixinStorage "blob-storage/Mixin";
 import Storage "blob-storage/Storage";
@@ -101,6 +102,7 @@ actor {
     authorId : UserId;
     text : Text;
     timestamp : Time.Time;
+    authorName : Text;
   };
 
   public type CarMeet = {
@@ -656,6 +658,7 @@ actor {
       authorId = caller;
       text;
       timestamp = Time.now();
+      authorName = "";
     };
     let existingComments = switch (comments.get(videoId)) {
       case (?existing) { existing };
@@ -697,11 +700,22 @@ actor {
     };
   };
 
+  func enrichCommentWithAuthorName(comment : Comment) : Comment {
+    switch (users.get(comment.authorId)) {
+      case (null) { comment };
+      case (?user) {
+        { comment with authorName = user.profile.username };
+      };
+    };
+  };
+
   public query ({ caller }) func getComments(videoId : VideoId) : async [Comment] {
     // Anyone can view comments
     switch (comments.get(videoId)) {
       case (null) { [] };
-      case (?commentMap) { commentMap.values().toArray() };
+      case (?commentMap) {
+        commentMap.values().map(func(c) { enrichCommentWithAuthorName(c) }).toArray();
+      };
     };
   };
 

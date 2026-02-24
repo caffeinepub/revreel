@@ -1,51 +1,24 @@
 {
   "schemaVersion": "1.0.0",
   "projectStateVersion": 3,
-  "summary": "RevReel platform with a landing page that allows users to join/authenticate directly from the landing page to access the app.",
-  "architectural_notes": [
-    "App uses Internet Identity for authentication (passkeys, Google, Apple, Microsoft)"
-  ],
+  "summary": "New project",
+  "architectural_notes": [],
   "known_issues": [
-    "Join/sign-up button was not visible on the home screen"
+    "Tapping a notification opens a Google search for the username instead of navigating to the user's profile"
   ],
-  "isFixRequest": false,
-  "imageRequirements": "## Required Images\n- Dark cinematic car culture hero background with motion blur street racing lights and asphalt texture (landing-hero.dim_1920x1080.png)",
+  "isFixRequest": true,
   "existing_features": [
     {
-      "id": "feature-create-a-dedicated-landing-page-route-that-serves-as-the-public-entry-point-to-revreel-the-page-should-prominently-feature-a-join-revreel-call-to-action-button-that-triggers-internet-identity-login-upon-successful-authentication-the-user-is-redirected-to-the-main-app-feed-feed-if-the-user-is-already-authenticated-automatically-redirect-them-to-feed-without-showing-the-landing-page",
-      "title": "Create a dedicated landing page (route '/') that serves as the public entry point to RevReel. The page should prominently feature a 'Join RevReel' call-to-action button that triggers Internet Identity login. Upon successful authentication, the user is redirected to the main app feed ('/feed'). If the user is already authenticated, automatically redirect them to '/feed' without showing the landing page.",
+      "id": "feature-fix-the-notification-item-tap-click-handler-in-the-notifications-page-so-that-tapping-a-notification-navigates-to-the-referenced-user-s-in-app-profile-page-instead-of-triggering-a-google-search-for-the-username-the-navigation-must-use-the-app-s-internal-router-e-g-tanstack-router-to-route-to-the-correct-profile-route-and-must-not-construct-any-external-url-or-href-that-would-open-a-browser-search",
+      "title": "Fix the notification item tap/click handler in the Notifications page so that tapping a notification navigates to the referenced user's in-app profile page instead of triggering a Google search for the username. The navigation must use the app's internal router (e.g., TanStack Router) to route to the correct profile route, and must not construct any external URL or href that would open a browser search.",
       "reqIds": [
         "REQ-1"
       ],
       "version": 1
-    },
-    {
-      "id": "feature-update-the-tanstack-router-route-configuration-in-app-tsx-to-register-the-new-landing-page-as-the-root-route-and-move-or-adjust-the-existing-default-route-so-the-feed-is-accessible-at-feed-ensure-the-layout-shell-is-only-applied-to-authenticated-app-routes-not-the-landing-page",
-      "title": "Update the TanStack Router route configuration in App.tsx to register the new landing page as the root route '/' and move or adjust the existing default route so the feed is accessible at '/feed'. Ensure the Layout shell is only applied to authenticated app routes, not the landing page.",
-      "reqIds": [
-        "REQ-2"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-design-the-landing-page-with-a-visually-striking-hero-section-that-includes-the-revreel-logo-wordmark-a-bold-tagline-describing-the-car-culture-video-platform-and-the-join-revreel-authentication-button-use-the-existing-dark-theme-with-neon-accent-colors-glassmorphism-and-car-culture-aesthetic-consistent-with-the-rest-of-the-app-barlow-font-oklch-color-tokens-from-index-css",
-      "title": "Design the landing page with a visually striking hero section that includes the RevReel logo/wordmark, a bold tagline describing the car culture video platform, and the 'Join RevReel' authentication button. Use the existing dark theme with neon accent colors, glassmorphism, and car-culture aesthetic consistent with the rest of the app (Barlow font, OKLCH color tokens from index.css).",
-      "reqIds": [
-        "REQ-3"
-      ],
-      "version": 1
     }
   ],
-  "new_feature_requests": [
-    {
-      "id": "AR-1",
-      "summary": "Create a landing page with a join/sign-up button that gives direct access to the app",
-      "reqIds": [],
-      "status": "pending"
-    }
-  ],
-  "gameProjectType": "none",
-  "projectName": "RevReel",
+  "new_feature_requests": [],
+  "projectName": "Fix notification tap navigating to Google search instead of user profile",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

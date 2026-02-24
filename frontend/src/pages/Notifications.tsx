@@ -1,5 +1,5 @@
 import { Bell, Heart, MessageCircle, UserPlus, Mail, AtSign, Flame, Flag, CheckCheck } from 'lucide-react';
-import { useInternetIdentity } from '../hooks/useInternetIdentity';
+import { useNavigate } from '@tanstack/react-router';
 import AuthGuard from '../components/AuthGuard';
 import { useGetNotifications, useMarkAllNotificationsRead, useGetUserProfile } from '../hooks/useQueries';
 import { Notification } from '../backend';
@@ -20,6 +20,8 @@ function NotificationIcon({ type }: { type: string }) {
 
 function NotificationCard({ notif }: { notif: Notification }) {
   const { data: sender } = useGetUserProfile(notif.senderId.toString());
+  const navigate = useNavigate();
+
   const timeAgo = (ts: bigint) => {
     const diff = Date.now() - Number(ts) / 1_000_000;
     const mins = Math.floor(diff / 60000);
@@ -30,20 +32,50 @@ function NotificationCard({ notif }: { notif: Notification }) {
     return `${Math.floor(hrs / 24)}d ago`;
   };
 
+  const senderId = notif.senderId.toString();
+  // Only make clickable if there's a real sender (not anonymous/system)
+  const isClickable = senderId && senderId !== '2vxsx-fae';
+
+  const handleClick = () => {
+    if (!isClickable) return;
+    navigate({ to: '/profile/$userId', params: { userId: senderId } });
+  };
+
   return (
-    <div className={`flex items-start gap-3 p-4 rounded-xl border transition-all ${
-      !notif.isRead
-        ? 'border-neon-orange/60 bg-neon-orange/5 shadow-neon'
-        : 'border-border bg-card/50'
-    }`}>
+    <div
+      role={isClickable ? 'button' : undefined}
+      tabIndex={isClickable ? 0 : undefined}
+      onClick={isClickable ? handleClick : undefined}
+      onKeyDown={isClickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') handleClick(); } : undefined}
+      aria-label={isClickable ? `View ${sender?.username ?? 'user'}'s profile` : undefined}
+      className={`flex items-start gap-3 p-4 rounded-xl border transition-all ${
+        !notif.isRead
+          ? 'border-neon-orange/60 bg-neon-orange/5 shadow-neon'
+          : 'border-border bg-card/50'
+      } ${isClickable ? 'hover:border-neon-orange/80 hover:bg-neon-orange/10 cursor-pointer' : ''}`}
+    >
       <div className="flex-shrink-0 mt-0.5">
         <NotificationIcon type={notif.notificationType} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-foreground">
-          <span className="font-semibold text-neon-orange">{sender?.username ?? 'Someone'}</span>
-          {' '}{notif.message}
-        </p>
+        {/* Sender avatar + username */}
+        <div className="flex items-center gap-2 mb-1">
+          {sender?.avatarUrl ? (
+            <img
+              src={sender.avatarUrl}
+              alt={sender.username}
+              className="w-7 h-7 rounded-full object-cover border border-neon-orange/40 flex-shrink-0"
+            />
+          ) : (
+            <div className="w-7 h-7 rounded-full bg-neon-orange/20 border border-neon-orange/40 flex items-center justify-center text-xs text-neon-orange font-bold flex-shrink-0">
+              {sender?.username?.[0]?.toUpperCase() ?? '?'}
+            </div>
+          )}
+          <p className="text-sm text-foreground">
+            <span className="font-semibold text-neon-orange">{sender?.username ?? 'Someone'}</span>
+            {' '}{notif.message}
+          </p>
+        </div>
         <p className="text-xs text-muted-foreground mt-1">{timeAgo(notif.createdAt)}</p>
       </div>
       {!notif.isRead && (

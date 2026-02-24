@@ -1,58 +1,22 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Create landing page with direct join/authentication access",
+  "title": "Fix notification tap navigating to Google search instead of user profile",
   "requirements": [
     {
       "id": "REQ-1",
-      "summary": "Create a dedicated landing page at '/' that serves as the public entry point with a 'Join RevReel' button triggering Internet Identity login, redirecting authenticated users to '/feed'",
+      "summary": "Fix the notification item tap/click handler in the Notifications page so that tapping a notification navigates to the referenced user's in-app profile page instead of triggering a Google search for the username.",
       "acceptanceCriteria": [
-        "A landing page is rendered at the root route '/' for unauthenticated users",
-        "The page displays a prominent 'Join RevReel' button that initiates Internet Identity login",
-        "After successful login, the user is automatically redirected to '/feed'",
-        "Authenticated users visiting '/' are immediately redirected to '/feed'",
-        "The landing page is fully accessible without authentication (no AuthGuard wrapping it)",
-        "The landing page visually reflects the RevReel brand (dark theme, neon accents, car culture aesthetic consistent with the rest of the app)"
+        "Tapping a notification item navigates to the referenced user's profile page within the app.",
+        "No external browser navigation or Google search is triggered when tapping a notification.",
+        "The correct username/principal is passed to the profile route so the right profile loads.",
+        "Navigation works for all notification types that reference a user."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/pages/LandingPage.tsx",
-          "operation": "create",
-          "description": "Create a new LandingPage component that displays the RevReel branding with a hero section featuring the generated landing hero background image (frontend/public/assets/generated/landing-hero.dim_1920x1080.png). Include a prominent 'Join RevReel' button that calls the login() function from useInternetIdentity. Use useEffect to check if the user is authenticated via useInternetIdentity and redirect to '/feed' using TanStack Router's useNavigate if identity exists. Style using dark theme with neon accents, Barlow font, and glassmorphism effects consistent with index.css tokens. The component must NOT be wrapped in AuthGuard and should be publicly accessible."
-        }
-      ]
-    },
-    {
-      "id": "REQ-2",
-      "summary": "Update the TanStack Router configuration to register the landing page at '/' and ensure all authenticated app routes remain accessible with the Layout shell applied only to authenticated routes",
-      "acceptanceCriteria": [
-        "The root route '/' renders the new LandingPage component without the Layout shell",
-        "All existing app routes (feed, profile, upload, discover, meets, mechanics, inbox, admin, notifications, builds, classifieds) remain accessible and functional",
-        "Navigation between landing page and app routes works correctly"
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/App.tsx",
+          "path": "frontend/src/pages/Notifications.tsx",
           "operation": "modify",
-          "description": "Add a new root route '/' that renders the LandingPage component without the Layout shell or AuthGuard. Import the LandingPage component. Ensure the existing authenticated routes (feed, profile, upload, discover, meets, mechanics, inbox, admin, notifications, builds, classifieds) continue to use the Layout shell and remain at their current paths. The landing page route should be a sibling to the Layout-wrapped routes, not nested under Layout."
-        }
-      ]
-    },
-    {
-      "id": "REQ-3",
-      "summary": "Design the landing page with a visually striking hero section including RevReel branding, tagline, and the 'Join RevReel' button using the dark theme with neon effects and car culture aesthetic",
-      "acceptanceCriteria": [
-        "Landing page displays the RevReel brand name/logo prominently",
-        "A tagline or brief description of the platform is shown",
-        "The 'Join RevReel' button is visually prominent and clearly actionable",
-        "Page uses the dark theme, neon effects, and Barlow font consistent with the rest of the app",
-        "Page is responsive and looks good on mobile and desktop"
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/pages/LandingPage.tsx",
-          "operation": "modify",
-          "description": "Design the hero section within LandingPage to display the RevReel logo from frontend/public/assets/generated/revreel-logo.dim_256x256.png and a bold tagline (e.g., 'The Ultimate Car Culture Video Platform'). Use the generated landing hero background image (frontend/public/assets/generated/landing-hero.dim_1920x1080.png) as a background with cinematic motion blur effect. Style the 'Join RevReel' button with neon accent colors from index.css (--primary, --accent), glassmorphism effects, and hover animations. Ensure responsive layout using Tailwind utilities that work on both mobile and desktop. Use Barlow font family and maintain consistency with the dark theme OKLCH color tokens defined in index.css."
+          "description": "Replace the current notification item click handler that constructs an external href (triggering Google search) with a TanStack Router navigate call to the in-app profile route. Use the existing `useNavigate` hook from '@tanstack/react-router' (already imported in App.tsx and other components). When a notification is clicked, call `navigate({ to: '/profile/$userId', params: { userId: notification.senderId.toString() } })` to route to the sender's profile page within the app. Ensure the notification senderId Principal is converted to a string for the route param. Remove any anchor tag or href that constructs a search URL, and replace it with an onClick handler or use the router's Link component with proper params."
         }
       ]
     }

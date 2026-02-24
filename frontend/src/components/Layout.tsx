@@ -22,7 +22,7 @@ export default function Layout({ children }: LayoutProps) {
   const showProfileSetup = isAuthenticated && !profileLoading && isFetched && userProfile === null;
 
   const unreadDMs = inbox?.reduce((acc, conv) => acc + Number(conv.unreadCount), 0) ?? 0;
-  const unreadNotifs = unreadNotifCount ?? 0;
+  const unreadNotifs = unreadNotifCount !== undefined ? Number(unreadNotifCount) : 0;
 
   const profilePath = userId ? `/profile/${userId}` : '/profile/me';
 

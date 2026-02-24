@@ -1,7 +1,8 @@
-import { useRef, useEffect, useState, useCallback } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { Heart, MessageCircle, Share2, Trash2, Volume2, VolumeX, Bookmark, Flag, BadgeCheck } from 'lucide-react';
+import { Link } from '@tanstack/react-router';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
-import { useToggleLike, useDeleteVideo, useGetUserProfile, useAddReaction, useRemoveReaction, useSaveVideo, useUnsaveVideo, useGetCallerUserProfile, useIncrementViewCount, useGetChallengesForVideo } from '../hooks/useQueries';
+import { useToggleLike, useDeleteVideo, useGetUserProfile, useAddReaction, useRemoveReaction, useSaveVideo, useUnsaveVideo, useGetCallerUserProfile, useIncrementViewCount, useGetChallengesForVideo, useGetComments } from '../hooks/useQueries';
 import { Video, ReactionType } from '../backend';
 import CommentsPanel from './CommentsPanel';
 import ChallengeModal from './ChallengeModal';
@@ -28,7 +29,8 @@ export default function VideoCard({ video, isActive, isMuted, onMuteToggle }: Vi
   const { identity } = useInternetIdentity();
   const { data: userProfile } = useGetCallerUserProfile();
   const { data: uploaderProfile } = useGetUserProfile(video.uploader.toString());
-  const { data: challenges } = useGetChallengesForVideo(undefined); // skip per-video to avoid too many calls
+  const { data: challenges } = useGetChallengesForVideo(undefined);
+  const { data: comments } = useGetComments(video.id);
 
   const toggleLike = useToggleLike();
   const deleteVideo = useDeleteVideo();
@@ -52,11 +54,16 @@ export default function VideoCard({ video, isActive, isMuted, onMuteToggle }: Vi
 
   const isSaved = userProfile?.savedVideos?.some(id => id.toString() === video.id) ?? false;
 
+  // Use fetched comment count for accurate display
+  const commentCount = comments?.length ?? video.comments.length;
+
   // Reaction counts
   const reactionCounts = REACTIONS.map(r => ({
     ...r,
     count: video.reactions.filter(([, rt]) => rt === r.type).length,
   })).filter(r => r.count > 0);
+
+  const uploaderUserId = video.uploader.toString();
 
   useEffect(() => {
     isMutedRef.current = isMuted;
@@ -75,7 +82,6 @@ export default function VideoCard({ video, isActive, isMuted, onMuteToggle }: Vi
           videoEl.play().catch(() => {});
         });
       }
-      // Increment view count once per activation
       if (!viewCountedRef.current) {
         viewCountedRef.current = true;
         incrementViewCount.mutate(video.id);
@@ -145,21 +151,35 @@ export default function VideoCard({ video, isActive, isMuted, onMuteToggle }: Vi
 
       {/* Video info */}
       <div className="absolute bottom-0 left-0 right-16 p-4 z-10">
-        <div className="flex items-center gap-2 mb-1">
+        {/* Clickable uploader row — navigates to their profile */}
+        <Link
+          to="/profile/$userId"
+          params={{ userId: uploaderUserId }}
+          aria-label={`View ${uploaderProfile?.username ?? 'uploader'}'s profile`}
+          className="flex items-center gap-2 mb-1 w-fit group"
+          onClick={(e) => e.stopPropagation()}
+        >
           {uploaderProfile?.avatarUrl ? (
-            <img src={uploaderProfile.avatarUrl} alt={uploaderProfile.username} className="w-8 h-8 rounded-full object-cover border border-neon-orange/50" />
+            <img
+              src={uploaderProfile.avatarUrl}
+              alt={uploaderProfile.username}
+              className="w-8 h-8 rounded-full object-cover border border-neon-orange/50 group-hover:border-neon-orange transition-colors"
+            />
           ) : (
-            <div className="w-8 h-8 rounded-full bg-neon-orange/20 border border-neon-orange/50 flex items-center justify-center text-xs text-neon-orange font-bold">
+            <div className="w-8 h-8 rounded-full bg-neon-orange/20 border border-neon-orange/50 group-hover:border-neon-orange flex items-center justify-center text-xs text-neon-orange font-bold transition-colors">
               {uploaderProfile?.username?.[0]?.toUpperCase() ?? '?'}
             </div>
           )}
           <div className="flex items-center gap-1">
-            <span className="text-white font-semibold text-sm">{uploaderProfile?.username ?? '...'}</span>
+            <span className="text-white font-semibold text-sm group-hover:text-neon-orange transition-colors drop-shadow">
+              {uploaderProfile?.username ?? '...'}
+            </span>
             {uploaderProfile?.verified && (
               <BadgeCheck className="w-4 h-4 text-neon-orange" />
             )}
           </div>
-        </div>
+        </Link>
+
         <h3 className="text-white font-bold text-base mb-1 line-clamp-2">{video.title}</h3>
         {video.hashtags.length > 0 && (
           <div className="flex flex-wrap gap-1">
@@ -216,7 +236,7 @@ export default function VideoCard({ video, isActive, isMuted, onMuteToggle }: Vi
           <div className="w-10 h-10 rounded-full bg-black/50 backdrop-blur flex items-center justify-center">
             <MessageCircle className="w-5 h-5" />
           </div>
-          <span className="text-xs font-bold">{video.comments.length}</span>
+          <span className="text-xs font-bold">{commentCount}</span>
         </button>
 
         {/* Bookmark */}

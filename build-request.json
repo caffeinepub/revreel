@@ -1,85 +1,39 @@
 {
   "kind": "build_request",
-  "title": "Create landing page with direct join/authentication access",
-  "projectName": "RevReel",
+  "title": "Fix notification tap navigating to Google search instead of user profile",
   "priority": "high",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Create a dedicated landing page (route '/') that serves as the public entry point to RevReel. The page should prominently feature a 'Join RevReel' call-to-action button that triggers Internet Identity login. Upon successful authentication, the user is redirected to the main app feed ('/feed'). If the user is already authenticated, automatically redirect them to '/feed' without showing the landing page.",
+      "text": "Fix the notification item tap/click handler in the Notifications page so that tapping a notification navigates to the referenced user's in-app profile page instead of triggering a Google search for the username. The navigation must use the app's internal router (e.g., TanStack Router) to route to the correct profile route, and must not construct any external URL or href that would open a browser search.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-latest"
+          "msg-4"
         ],
         "quotes": [
-          "Make a landing page that you can just join from there to access the app"
+          "When I tap it it brings up a Google search for that word whatever the user name is"
         ]
       },
       "acceptanceCriteria": [
-        "A landing page is rendered at the root route '/' for unauthenticated users",
-        "The page displays a prominent 'Join RevReel' button that initiates Internet Identity login",
-        "After successful login, the user is automatically redirected to '/feed'",
-        "Authenticated users visiting '/' are immediately redirected to '/feed'",
-        "The landing page is fully accessible without authentication (no AuthGuard wrapping it)",
-        "The landing page visually reflects the RevReel brand (dark theme, neon accents, car culture aesthetic consistent with the rest of the app)"
-      ]
-    },
-    {
-      "id": "REQ-2",
-      "text": "Update the TanStack Router route configuration in App.tsx to register the new landing page as the root route '/' and move or adjust the existing default route so the feed is accessible at '/feed'. Ensure the Layout shell is only applied to authenticated app routes, not the landing page.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-latest"
-        ],
-        "quotes": [
-          "Make a landing page that you can just join from there to access the app"
-        ]
-      },
-      "acceptanceCriteria": [
-        "The root route '/' renders the new LandingPage component without the Layout shell",
-        "All existing app routes (feed, profile, upload, discover, meets, mechanics, inbox, admin, notifications, builds, classifieds) remain accessible and functional",
-        "Navigation between landing page and app routes works correctly"
-      ]
-    },
-    {
-      "id": "REQ-3",
-      "text": "Design the landing page with a visually striking hero section that includes the RevReel logo/wordmark, a bold tagline describing the car culture video platform, and the 'Join RevReel' authentication button. Use the existing dark theme with neon accent colors, glassmorphism, and car-culture aesthetic consistent with the rest of the app (Barlow font, OKLCH color tokens from index.css).",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-latest"
-        ],
-        "quotes": [
-          "Make a landing page that you can just join from there to access the app"
-        ]
-      },
-      "acceptanceCriteria": [
-        "Landing page displays the RevReel brand name/logo prominently",
-        "A tagline or brief description of the platform is shown",
-        "The 'Join RevReel' button is visually prominent and clearly actionable",
-        "Page uses the dark theme, neon effects, and Barlow font consistent with the rest of the app",
-        "Page is responsive and looks good on mobile and desktop"
+        "Tapping a notification item navigates to the referenced user's profile page within the app.",
+        "No external browser navigation or Google search is triggered when tapping a notification.",
+        "The correct username/principal is passed to the profile route so the right profile loads.",
+        "Navigation works for all notification types that reference a user."
       ]
     }
   ],
   "constraints": [
-    "Do not modify files in frontend/src/hooks/ (immutable paths)",
-    "Do not modify frontend/src/main.tsx or frontend/src/components/ui/",
-    "Use Internet Identity (via useInternetIdentity hook) for authentication — no other auth provider",
-    "Preserve all existing routes and their functionality"
+    "Do not modify any files listed in frontend.immutablePaths.",
+    "Use the existing TanStack Router navigation pattern already established in App.tsx."
   ],
   "nonGoals": [
-    "Adding onboarding steps or multi-step sign-up flows after authentication",
-    "Collecting user data (email, username) on the landing page before authentication",
-    "Adding marketing or pricing sections to the landing page",
-    "Changing backend logic or data models"
+    "Redesigning the Notifications page UI.",
+    "Adding new notification types.",
+    "Changing notification read/unread logic."
   ],
   "imageRequirements": {
-    "required": [
-      "Dark cinematic car culture hero background with motion blur street racing lights and asphalt texture (landing-hero.dim_1920x1080.png)"
-    ],
+    "required": [],
     "edits": []
   }
 }
