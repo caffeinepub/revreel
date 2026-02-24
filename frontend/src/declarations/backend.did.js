@@ -24,44 +24,6 @@ export const UserRole = IDL.Variant({
   'user' : IDL.Null,
   'guest' : IDL.Null,
 });
-export const Hashtag = IDL.Text;
-export const Category = IDL.Text;
-export const ExternalBlob = IDL.Vec(IDL.Nat8);
-export const VideoId = IDL.Text;
-export const UserId = IDL.Principal;
-export const Time = IDL.Int;
-export const CommentId = IDL.Nat;
-export const Comment = IDL.Record({
-  'id' : CommentId,
-  'authorId' : UserId,
-  'text' : IDL.Text,
-  'authorName' : IDL.Text,
-  'timestamp' : Time,
-  'videoId' : VideoId,
-});
-export const ReactionType = IDL.Variant({
-  'fire' : IDL.Null,
-  'hype' : IDL.Null,
-  'like' : IDL.Null,
-  'wild' : IDL.Null,
-  'respect' : IDL.Null,
-});
-export const Video = IDL.Record({
-  'id' : VideoId,
-  'title' : IDL.Text,
-  'thumbnail' : ExternalBlob,
-  'hashtags' : IDL.Vec(Hashtag),
-  'description' : IDL.Text,
-  'mediaUrl' : ExternalBlob,
-  'likes' : IDL.Vec(UserId),
-  'viewCount' : IDL.Nat,
-  'timestamp' : Time,
-  'mediaType' : IDL.Variant({ 'video' : IDL.Null, 'photo' : IDL.Null }),
-  'category' : Category,
-  'uploader' : UserId,
-  'comments' : IDL.Vec(Comment),
-  'reactions' : IDL.Vec(IDL.Tuple(UserId, ReactionType)),
-});
 
 export const idlService = IDL.Service({
   '_caffeineStorageBlobIsLive' : IDL.Func(
@@ -94,19 +56,6 @@ export const idlService = IDL.Service({
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
-  'uploadVideo' : IDL.Func(
-      [
-        IDL.Text,
-        IDL.Text,
-        IDL.Vec(Hashtag),
-        Category,
-        ExternalBlob,
-        ExternalBlob,
-        IDL.Variant({ 'video' : IDL.Null, 'photo' : IDL.Null }),
-      ],
-      [Video],
-      [],
-    ),
 });
 
 export const idlInitArgs = [];
@@ -127,44 +76,6 @@ export const idlFactory = ({ IDL }) => {
     'admin' : IDL.Null,
     'user' : IDL.Null,
     'guest' : IDL.Null,
-  });
-  const Hashtag = IDL.Text;
-  const Category = IDL.Text;
-  const ExternalBlob = IDL.Vec(IDL.Nat8);
-  const VideoId = IDL.Text;
-  const UserId = IDL.Principal;
-  const Time = IDL.Int;
-  const CommentId = IDL.Nat;
-  const Comment = IDL.Record({
-    'id' : CommentId,
-    'authorId' : UserId,
-    'text' : IDL.Text,
-    'authorName' : IDL.Text,
-    'timestamp' : Time,
-    'videoId' : VideoId,
-  });
-  const ReactionType = IDL.Variant({
-    'fire' : IDL.Null,
-    'hype' : IDL.Null,
-    'like' : IDL.Null,
-    'wild' : IDL.Null,
-    'respect' : IDL.Null,
-  });
-  const Video = IDL.Record({
-    'id' : VideoId,
-    'title' : IDL.Text,
-    'thumbnail' : ExternalBlob,
-    'hashtags' : IDL.Vec(Hashtag),
-    'description' : IDL.Text,
-    'mediaUrl' : ExternalBlob,
-    'likes' : IDL.Vec(UserId),
-    'viewCount' : IDL.Nat,
-    'timestamp' : Time,
-    'mediaType' : IDL.Variant({ 'video' : IDL.Null, 'photo' : IDL.Null }),
-    'category' : Category,
-    'uploader' : UserId,
-    'comments' : IDL.Vec(Comment),
-    'reactions' : IDL.Vec(IDL.Tuple(UserId, ReactionType)),
   });
   
   return IDL.Service({
@@ -198,19 +109,6 @@ export const idlFactory = ({ IDL }) => {
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
-    'uploadVideo' : IDL.Func(
-        [
-          IDL.Text,
-          IDL.Text,
-          IDL.Vec(Hashtag),
-          Category,
-          ExternalBlob,
-          ExternalBlob,
-          IDL.Variant({ 'video' : IDL.Null, 'photo' : IDL.Null }),
-        ],
-        [Video],
-        [],
-      ),
   });
 };
 

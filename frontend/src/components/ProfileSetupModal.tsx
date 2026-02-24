@@ -2,158 +2,175 @@ import React, { useState, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Flame, User, Camera } from 'lucide-react';
-import { useCreateUser } from '../hooks/useQueries';
-import { ExternalBlob } from '../backend';
-import { toast } from 'sonner';
+import { Textarea } from '@/components/ui/textarea';
+import { useCreateUser, ExternalBlob } from '../hooks/useQueries';
+import { useActor } from '../hooks/useActor';
+import { User, Camera, Loader2 } from 'lucide-react';
 
 export default function ProfileSetupModal() {
   const [username, setUsername] = useState('');
   const [bio, setBio] = useState('');
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { actor, isFetching: actorFetching } = useActor();
   const createUser = useCreateUser();
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-    setAvatarFile(file);
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setAvatarPreview(event.target?.result as string);
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
+    if (file) {
+      setAvatarFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username.trim()) return;
+    setError(null);
+
+    if (!username.trim()) {
+      setError('Username is required');
+      return;
+    }
+
+    if (!actor || actorFetching) {
+      setError('Please wait for the app to finish loading, then try again.');
+      return;
+    }
 
     try {
-      let avatar: ExternalBlob;
+      let avatarBlob: ExternalBlob;
       let avatarUrl = '';
 
       if (avatarFile) {
-        const bytes = new Uint8Array(await avatarFile.arrayBuffer());
-        avatar = ExternalBlob.fromBytes(bytes);
+        const arrayBuffer = await avatarFile.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+        avatarBlob = ExternalBlob.fromBytes(uint8Array);
         avatarUrl = avatarPreview || '';
       } else {
-        const defaultUrl = `${window.location.origin}/assets/generated/default-avatar.dim_128x128.png`;
-        avatar = ExternalBlob.fromURL(defaultUrl);
-        avatarUrl = '';
+        avatarBlob = ExternalBlob.fromURL('/assets/generated/default-avatar.dim_128x128.png');
+        avatarUrl = '/assets/generated/default-avatar.dim_128x128.png';
       }
 
       await createUser.mutateAsync({
         username: username.trim(),
         bio: bio.trim(),
-        avatar,
+        avatar: avatarBlob,
         avatarUrl,
       });
-      toast.success('Profile created! Welcome to RevReel 🔥');
-    } catch {
-      toast.error('Failed to create profile. Please try again.');
+    } catch (err: any) {
+      console.error('Profile creation error:', err);
+      setError(err?.message || 'Failed to create profile. Please try again.');
     }
   };
 
-  const displayAvatar = avatarPreview || '/assets/generated/default-avatar.dim_128x128.png';
+  const isLoading = createUser.isPending || actorFetching;
 
   return (
     <Dialog open={true}>
       <DialogContent
-        className="bg-card border-border max-w-md mx-auto"
+        className="sm:max-w-md bg-card border-border"
         onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
       >
         <DialogHeader>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-full bg-neon/10 border border-neon/30 flex items-center justify-center">
-              <Flame className="w-5 h-5 text-neon" />
-            </div>
-            <DialogTitle className="font-display text-2xl text-foreground">SET UP YOUR PROFILE</DialogTitle>
-          </div>
+          <DialogTitle className="text-xl font-display font-bold text-primary neon-text">
+            Welcome to RevReel!
+          </DialogTitle>
           <DialogDescription className="text-muted-foreground">
-            Choose your racer name and tell the community about yourself.
+            Set up your profile to join the community.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-          {/* Avatar picker */}
-          <div className="flex flex-col items-center gap-2">
+        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+          {/* Avatar Upload */}
+          <div className="flex flex-col items-center gap-3">
             <div
-              className="relative w-20 h-20 rounded-full border-4 border-neon/30 overflow-hidden bg-secondary cursor-pointer group"
-              onClick={() => avatarInputRef.current?.click()}
+              className="relative w-20 h-20 rounded-full bg-muted border-2 border-primary/50 overflow-hidden cursor-pointer hover:border-primary transition-colors"
+              onClick={() => fileInputRef.current?.click()}
             >
-              <img
-                src={displayAvatar}
-                alt="Avatar preview"
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src =
-                    '/assets/generated/default-avatar.dim_128x128.png';
-                }}
-              />
-              <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              {avatarPreview ? (
+                <img src={avatarPreview} alt="Avatar preview" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <User className="w-8 h-8 text-muted-foreground" />
+                </div>
+              )}
+              <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
                 <Camera className="w-5 h-5 text-white" />
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => avatarInputRef.current?.click()}
-              className="text-xs text-neon font-display hover:underline"
-            >
-              {avatarPreview ? 'CHANGE PHOTO' : 'ADD PHOTO (OPTIONAL)'}
-            </button>
             <input
-              ref={avatarInputRef}
+              ref={fileInputRef}
               type="file"
               accept="image/*"
               className="hidden"
               onChange={handleAvatarChange}
             />
+            <p className="text-xs text-muted-foreground">Click to upload avatar (optional)</p>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="username" className="font-display text-sm text-foreground">
-              RACER NAME *
+          {/* Username */}
+          <div className="space-y-1.5">
+            <Label htmlFor="username" className="text-sm font-medium">
+              Username <span className="text-destructive">*</span>
             </Label>
-            <div className="relative">
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                id="username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="e.g. NightRacer_88"
-                className="pl-10 bg-secondary border-border text-foreground placeholder:text-muted-foreground"
-                maxLength={30}
-                required
-              />
-            </div>
+            <Input
+              id="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="e.g. SpeedDemon99"
+              className="bg-muted border-border focus:border-primary"
+              maxLength={30}
+              disabled={isLoading}
+            />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="bio" className="font-display text-sm text-foreground">
-              BIO
+          {/* Bio */}
+          <div className="space-y-1.5">
+            <Label htmlFor="bio" className="text-sm font-medium">
+              Bio <span className="text-muted-foreground text-xs">(optional)</span>
             </Label>
             <Textarea
               id="bio"
               value={bio}
               onChange={(e) => setBio(e.target.value)}
-              placeholder="Tell us about your ride and racing style..."
-              className="bg-secondary border-border text-foreground placeholder:text-muted-foreground resize-none"
+              placeholder="Tell the community about yourself and your ride..."
+              className="bg-muted border-border focus:border-primary resize-none"
               rows={3}
-              maxLength={150}
+              maxLength={200}
+              disabled={isLoading}
             />
           </div>
 
+          {/* Error */}
+          {error && (
+            <div className="p-3 rounded bg-destructive/10 border border-destructive/30 text-destructive text-sm">
+              {error}
+            </div>
+          )}
+
+          {/* Submit */}
           <Button
             type="submit"
-            disabled={!username.trim() || createUser.isPending}
-            className="w-full bg-neon text-primary-foreground font-display text-lg py-5 hover:bg-neon/90 neon-glow disabled:opacity-50"
+            className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
+            disabled={isLoading || !username.trim()}
           >
-            {createUser.isPending ? 'CREATING...' : 'START RACING 🔥'}
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Creating Profile...
+              </>
+            ) : (
+              'Create Profile'
+            )}
           </Button>
         </form>
       </DialogContent>

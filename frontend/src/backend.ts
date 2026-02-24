@@ -89,62 +89,21 @@ export class ExternalBlob {
         return this;
     }
 }
-export interface Video {
-    id: VideoId;
-    title: string;
-    thumbnail: ExternalBlob;
-    hashtags: Array<Hashtag>;
-    description: string;
-    mediaUrl: ExternalBlob;
-    likes: Array<UserId>;
-    viewCount: bigint;
-    timestamp: Time;
-    mediaType: Variant_video_photo;
-    category: Category;
-    uploader: UserId;
-    comments: Array<Comment>;
-    reactions: Array<[UserId, ReactionType]>;
-}
-export type CommentId = bigint;
-export type Time = bigint;
-export interface Comment {
-    id: CommentId;
-    authorId: UserId;
-    text: string;
-    authorName: string;
-    timestamp: Time;
-    videoId: VideoId;
-}
-export interface _CaffeineStorageRefillInformation {
-    proposed_top_up_amount?: bigint;
-}
 export interface _CaffeineStorageCreateCertificateResult {
     method: string;
     blob_hash: string;
 }
-export type UserId = Principal;
-export type Hashtag = string;
-export type VideoId = string;
-export type Category = string;
 export interface _CaffeineStorageRefillResult {
     success?: boolean;
     topped_up_amount?: bigint;
 }
-export enum ReactionType {
-    fire = "fire",
-    hype = "hype",
-    like = "like",
-    wild = "wild",
-    respect = "respect"
+export interface _CaffeineStorageRefillInformation {
+    proposed_top_up_amount?: bigint;
 }
 export enum UserRole {
     admin = "admin",
     user = "user",
     guest = "guest"
-}
-export enum Variant_video_photo {
-    video = "video",
-    photo = "photo"
 }
 export interface backendInterface {
     _caffeineStorageBlobIsLive(hash: Uint8Array): Promise<boolean>;
@@ -157,9 +116,8 @@ export interface backendInterface {
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     getCallerUserRole(): Promise<UserRole>;
     isCallerAdmin(): Promise<boolean>;
-    uploadVideo(title: string, description: string, hashtags: Array<Hashtag>, category: Category, thumbnail: ExternalBlob, mediaUrl: ExternalBlob, mediaType: Variant_video_photo): Promise<Video>;
 }
-import type { Category as _Category, Comment as _Comment, ExternalBlob as _ExternalBlob, Hashtag as _Hashtag, ReactionType as _ReactionType, Time as _Time, UserId as _UserId, UserRole as _UserRole, Video as _Video, VideoId as _VideoId, _CaffeineStorageRefillInformation as __CaffeineStorageRefillInformation, _CaffeineStorageRefillResult as __CaffeineStorageRefillResult } from "./declarations/backend.did.d.ts";
+import type { UserRole as _UserRole, _CaffeineStorageRefillInformation as __CaffeineStorageRefillInformation, _CaffeineStorageRefillResult as __CaffeineStorageRefillResult } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
     constructor(private actor: ActorSubclass<_SERVICE>, private _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, private _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, private processError?: (error: unknown) => never){}
     async _caffeineStorageBlobIsLive(arg0: Uint8Array): Promise<boolean> {
@@ -302,32 +260,9 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async uploadVideo(arg0: string, arg1: string, arg2: Array<Hashtag>, arg3: Category, arg4: ExternalBlob, arg5: ExternalBlob, arg6: Variant_video_photo): Promise<Video> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.uploadVideo(arg0, arg1, arg2, arg3, await to_candid_ExternalBlob_n12(this._uploadFile, this._downloadFile, arg4), await to_candid_ExternalBlob_n12(this._uploadFile, this._downloadFile, arg5), to_candid_variant_n13(this._uploadFile, this._downloadFile, arg6));
-                return from_candid_Video_n14(this._uploadFile, this._downloadFile, result);
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.uploadVideo(arg0, arg1, arg2, arg3, await to_candid_ExternalBlob_n12(this._uploadFile, this._downloadFile, arg4), await to_candid_ExternalBlob_n12(this._uploadFile, this._downloadFile, arg5), to_candid_variant_n13(this._uploadFile, this._downloadFile, arg6));
-            return from_candid_Video_n14(this._uploadFile, this._downloadFile, result);
-        }
-    }
-}
-async function from_candid_ExternalBlob_n16(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _ExternalBlob): Promise<ExternalBlob> {
-    return await _downloadFile(value);
-}
-function from_candid_ReactionType_n20(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _ReactionType): ReactionType {
-    return from_candid_variant_n21(_uploadFile, _downloadFile, value);
 }
 function from_candid_UserRole_n10(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _UserRole): UserRole {
     return from_candid_variant_n11(_uploadFile, _downloadFile, value);
-}
-async function from_candid_Video_n14(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _Video): Promise<Video> {
-    return await from_candid_record_n15(_uploadFile, _downloadFile, value);
 }
 function from_candid__CaffeineStorageRefillResult_n4(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: __CaffeineStorageRefillResult): _CaffeineStorageRefillResult {
     return from_candid_record_n5(_uploadFile, _downloadFile, value);
@@ -337,58 +272,6 @@ function from_candid_opt_n6(_uploadFile: (file: ExternalBlob) => Promise<Uint8Ar
 }
 function from_candid_opt_n7(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [bigint]): bigint | null {
     return value.length === 0 ? null : value[0];
-}
-async function from_candid_record_n15(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    id: _VideoId;
-    title: string;
-    thumbnail: _ExternalBlob;
-    hashtags: Array<_Hashtag>;
-    description: string;
-    mediaUrl: _ExternalBlob;
-    likes: Array<_UserId>;
-    viewCount: bigint;
-    timestamp: _Time;
-    mediaType: {
-        video: null;
-    } | {
-        photo: null;
-    };
-    category: _Category;
-    uploader: _UserId;
-    comments: Array<_Comment>;
-    reactions: Array<[_UserId, _ReactionType]>;
-}): Promise<{
-    id: VideoId;
-    title: string;
-    thumbnail: ExternalBlob;
-    hashtags: Array<Hashtag>;
-    description: string;
-    mediaUrl: ExternalBlob;
-    likes: Array<UserId>;
-    viewCount: bigint;
-    timestamp: Time;
-    mediaType: Variant_video_photo;
-    category: Category;
-    uploader: UserId;
-    comments: Array<Comment>;
-    reactions: Array<[UserId, ReactionType]>;
-}> {
-    return {
-        id: value.id,
-        title: value.title,
-        thumbnail: await from_candid_ExternalBlob_n16(_uploadFile, _downloadFile, value.thumbnail),
-        hashtags: value.hashtags,
-        description: value.description,
-        mediaUrl: await from_candid_ExternalBlob_n16(_uploadFile, _downloadFile, value.mediaUrl),
-        likes: value.likes,
-        viewCount: value.viewCount,
-        timestamp: value.timestamp,
-        mediaType: from_candid_variant_n17(_uploadFile, _downloadFile, value.mediaType),
-        category: value.category,
-        uploader: value.uploader,
-        comments: value.comments,
-        reactions: from_candid_vec_n18(_uploadFile, _downloadFile, value.reactions)
-    };
 }
 function from_candid_record_n5(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     success: [] | [boolean];
@@ -402,12 +285,6 @@ function from_candid_record_n5(_uploadFile: (file: ExternalBlob) => Promise<Uint
         topped_up_amount: record_opt_to_undefined(from_candid_opt_n7(_uploadFile, _downloadFile, value.topped_up_amount))
     };
 }
-function from_candid_tuple_n19(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [_UserId, _ReactionType]): [UserId, ReactionType] {
-    return [
-        value[0],
-        from_candid_ReactionType_n20(_uploadFile, _downloadFile, value[1])
-    ];
-}
 function from_candid_variant_n11(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     admin: null;
 } | {
@@ -416,32 +293,6 @@ function from_candid_variant_n11(_uploadFile: (file: ExternalBlob) => Promise<Ui
     guest: null;
 }): UserRole {
     return "admin" in value ? UserRole.admin : "user" in value ? UserRole.user : "guest" in value ? UserRole.guest : value;
-}
-function from_candid_variant_n17(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    video: null;
-} | {
-    photo: null;
-}): Variant_video_photo {
-    return "video" in value ? Variant_video_photo.video : "photo" in value ? Variant_video_photo.photo : value;
-}
-function from_candid_variant_n21(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    fire: null;
-} | {
-    hype: null;
-} | {
-    like: null;
-} | {
-    wild: null;
-} | {
-    respect: null;
-}): ReactionType {
-    return "fire" in value ? ReactionType.fire : "hype" in value ? ReactionType.hype : "like" in value ? ReactionType.like : "wild" in value ? ReactionType.wild : "respect" in value ? ReactionType.respect : value;
-}
-function from_candid_vec_n18(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<[_UserId, _ReactionType]>): Array<[UserId, ReactionType]> {
-    return value.map((x)=>from_candid_tuple_n19(_uploadFile, _downloadFile, x));
-}
-async function to_candid_ExternalBlob_n12(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: ExternalBlob): Promise<_ExternalBlob> {
-    return await _uploadFile(value);
 }
 function to_candid_UserRole_n8(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserRole): _UserRole {
     return to_candid_variant_n9(_uploadFile, _downloadFile, value);
@@ -460,17 +311,6 @@ function to_candid_record_n3(_uploadFile: (file: ExternalBlob) => Promise<Uint8A
     return {
         proposed_top_up_amount: value.proposed_top_up_amount ? candid_some(value.proposed_top_up_amount) : candid_none()
     };
-}
-function to_candid_variant_n13(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Variant_video_photo): {
-    video: null;
-} | {
-    photo: null;
-} {
-    return value == Variant_video_photo.video ? {
-        video: null
-    } : value == Variant_video_photo.photo ? {
-        photo: null
-    } : value;
 }
 function to_candid_variant_n9(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserRole): {
     admin: null;

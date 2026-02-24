@@ -1,94 +1,25 @@
-import { useState, useRef } from 'react';
-import { X, Send, AtSign } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { useGetComments, useAddComment, type Comment, useGetAllUsers, type UserProfile } from '../hooks/useQueries';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
-import { useGetComments, useAddComment, useGetAllUsers } from '../hooks/useQueries';
-import { Comment } from '../backend';
+import { X, Send, Loader2, MessageCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface CommentsPanelProps {
   videoId: string;
   onClose: () => void;
 }
 
-function renderCommentText(text: string) {
-  const parts = text.split(/(@\w+)/g);
-  return parts.map((part, i) => {
-    if (/^@\w+$/.test(part)) {
-      return <span key={i} className="text-neon-orange font-semibold">{part}</span>;
-    }
-    return <span key={i}>{part}</span>;
-  });
-}
-
-function timeAgo(ts: bigint): string {
-  const diff = Date.now() - Number(ts) / 1_000_000;
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h`;
-  return `${Math.floor(hrs / 24)}d`;
-}
-
-function CommentItem({ comment }: { comment: Comment }) {
-  const displayName = comment.authorName || 'User';
-  const initial = displayName[0]?.toUpperCase() ?? '?';
-
-  return (
-    <div className="bg-card/40 rounded-lg p-3">
-      <div className="flex items-center gap-2 mb-1">
-        <div className="w-6 h-6 rounded-full bg-neon-orange/20 flex items-center justify-center text-xs text-neon-orange font-bold flex-shrink-0">
-          {initial}
-        </div>
-        <span className="text-sm font-semibold text-foreground">{displayName}</span>
-      </div>
-      <p className="text-sm text-foreground/90 ml-8">{renderCommentText(comment.text)}</p>
-      <p className="text-xs text-muted-foreground ml-8 mt-1">{timeAgo(comment.timestamp)}</p>
-    </div>
-  );
-}
-
 export default function CommentsPanel({ videoId, onClose }: CommentsPanelProps) {
-  const { identity } = useInternetIdentity();
-  const { data: comments, isLoading } = useGetComments(videoId);
-  const { data: allUsers } = useGetAllUsers();
-  const addComment = useAddComment();
   const [text, setText] = useState('');
-  const [mentionQuery, setMentionQuery] = useState('');
-  const [showMentions, setShowMentions] = useState(false);
-  const [cursorPos, setCursorPos] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { identity } = useInternetIdentity();
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    const pos = e.target.selectionStart ?? 0;
-    setText(val);
-    setCursorPos(pos);
+  const { data: comments = [], isLoading } = useGetComments(videoId);
+  const addComment = useAddComment();
 
-    const textBeforeCursor = val.slice(0, pos);
-    const mentionMatch = textBeforeCursor.match(/@(\w*)$/);
-    if (mentionMatch) {
-      setMentionQuery(mentionMatch[1]);
-      setShowMentions(true);
-    } else {
-      setShowMentions(false);
-      setMentionQuery('');
-    }
-  };
-
-  const filteredUsers = (allUsers ?? []).filter(u =>
-    mentionQuery === '' || u.username.toLowerCase().includes(mentionQuery.toLowerCase())
-  ).slice(0, 5);
-
-  const insertMention = (username: string) => {
-    const textBeforeCursor = text.slice(0, cursorPos);
-    const textAfterCursor = text.slice(cursorPos);
-    const newTextBefore = textBeforeCursor.replace(/@\w*$/, `@${username} `);
-    const newText = newTextBefore + textAfterCursor;
-    setText(newText);
-    setShowMentions(false);
-    setMentionQuery('');
-    inputRef.current?.focus();
-  };
+  const sortedComments = [...comments].sort((a, b) => {
+    return Number(b.timestamp) - Number(a.timestamp);
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,87 +28,94 @@ export default function CommentsPanel({ videoId, onClose }: CommentsPanelProps) 
       await addComment.mutateAsync({ videoId, text: text.trim() });
       setText('');
     } catch (err) {
-      console.error(err);
+      console.error('Failed to post comment:', err);
     }
   };
 
-  const sortedComments = comments
-    ? [...comments].sort((a, b) => Number(b.timestamp) - Number(a.timestamp))
-    : [];
+  const formatTime = (timestamp: bigint) => {
+    const date = new Date(Number(timestamp) / 1_000_000);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const mins = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    return `${days}d ago`;
+  };
 
   return (
-    <div className="absolute inset-0 bg-background/95 backdrop-blur-sm flex flex-col z-20">
+    <div className="flex flex-col h-full bg-card">
+      {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-border">
-        <h3 className="font-display font-bold text-foreground">
-          Comments {sortedComments.length > 0 && <span className="text-muted-foreground text-sm font-normal">({sortedComments.length})</span>}
-        </h3>
-        <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
+        <div className="flex items-center gap-2">
+          <MessageCircle className="w-5 h-5 text-primary" />
+          <h3 className="font-display font-bold text-lg">
+            Comments {comments.length > 0 && <span className="text-muted-foreground text-sm">({comments.length})</span>}
+          </h3>
+        </div>
+        <button onClick={onClose} className="p-1 rounded hover:bg-muted transition-colors">
           <X className="w-5 h-5" />
         </button>
       </div>
 
+      {/* Comments List */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {isLoading ? (
-          <div className="space-y-3">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-16 bg-card/50 animate-pulse rounded-lg" />
-            ))}
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-6 h-6 animate-spin text-primary" />
           </div>
         ) : sortedComments.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground text-sm">
-            No comments yet. Be the first!
+          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+            <MessageCircle className="w-10 h-10 mb-2 opacity-30" />
+            <p className="text-sm">No comments yet. Be the first!</p>
           </div>
         ) : (
-          sortedComments.map(comment => (
-            <CommentItem key={String(comment.id)} comment={comment} />
+          sortedComments.map((comment: Comment) => (
+            <div key={comment.id.toString()} className="flex gap-3">
+              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                <span className="text-xs font-bold text-primary">
+                  {(comment.authorName || 'U').slice(0, 1).toUpperCase()}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline gap-2">
+                  <span className="font-semibold text-sm">{comment.authorName || 'Unknown'}</span>
+                  <span className="text-xs text-muted-foreground">{formatTime(comment.timestamp)}</span>
+                </div>
+                <p className="text-sm text-foreground/90 break-words">{comment.text}</p>
+              </div>
+            </div>
           ))
         )}
       </div>
 
+      {/* Input */}
       {identity ? (
-        <div className="p-4 border-t border-border relative">
-          {showMentions && filteredUsers.length > 0 && (
-            <div className="absolute bottom-full left-4 right-4 mb-1 bg-card border border-border rounded-lg overflow-hidden shadow-lg z-10">
-              {filteredUsers.map(user => (
-                <button
-                  key={user.id.toString()}
-                  onClick={() => insertMention(user.username)}
-                  className="w-full flex items-center gap-2 px-3 py-2 hover:bg-neon-orange/10 transition-colors text-left"
-                >
-                  {user.avatarUrl ? (
-                    <img src={user.avatarUrl} alt={user.username} className="w-6 h-6 rounded-full object-cover" />
-                  ) : (
-                    <div className="w-6 h-6 rounded-full bg-neon-orange/20 flex items-center justify-center text-xs text-neon-orange">
-                      {user.username[0]?.toUpperCase()}
-                    </div>
-                  )}
-                  <span className="text-sm text-foreground">@{user.username}</span>
-                </button>
-              ))}
-            </div>
-          )}
-          <form onSubmit={handleSubmit} className="flex gap-2">
-            <div className="flex-1 relative">
-              <input
-                ref={inputRef}
-                value={text}
-                onChange={handleInputChange}
-                placeholder="Add a comment... (use @ to mention)"
-                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-neon-orange/50 pr-8"
-              />
-              {text.includes('@') && (
-                <AtSign className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-neon-orange/50" />
-              )}
-            </div>
-            <button
-              type="submit"
-              disabled={!text.trim() || addComment.isPending}
-              className="bg-neon-orange text-black rounded-lg px-3 py-2 disabled:opacity-50 hover:bg-neon-yellow transition-colors"
-            >
+        <form onSubmit={handleSubmit} className="p-4 border-t border-border flex gap-2">
+          <input
+            ref={inputRef}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Add a comment..."
+            className="flex-1 bg-muted border border-border rounded-full px-4 py-2 text-sm focus:outline-none focus:border-primary transition-colors"
+            maxLength={500}
+            disabled={addComment.isPending}
+          />
+          <Button
+            type="submit"
+            size="icon"
+            className="rounded-full bg-primary text-primary-foreground hover:bg-primary/90 flex-shrink-0"
+            disabled={addComment.isPending || !text.trim()}
+          >
+            {addComment.isPending ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
               <Send className="w-4 h-4" />
-            </button>
-          </form>
-        </div>
+            )}
+          </Button>
+        </form>
       ) : (
         <div className="p-4 border-t border-border text-center text-sm text-muted-foreground">
           Log in to leave a comment

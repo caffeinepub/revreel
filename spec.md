@@ -1,10 +1,12 @@
 # Specification
 
 ## Summary
-**Goal:** Replace the landing page hero car image with a JDM tuner/import style car image.
+**Goal:** Roll back the application to its Version 22 state to restore stable account recognition and registration behavior.
 
 **Planned changes:**
-- Generate a new tuner/import style car image asset
-- Update `LandingPage.tsx` to use the new car image in the hero section
+- Revert all backend (main.mo) and frontend source files to their Version 22 equivalents
+- Restore logic so existing users are recognized upon login via Internet Identity and are not prompted to create a new account
+- Restore registration flow so new users can successfully complete profile setup without a "failed to register or create" error
+- Ensure the ProfileSetupModal does not appear for users who already have an existing profile
 
-**User-visible outcome:** The landing page hero section displays a sleek JDM tuner/import style sport car instead of the previous car image.
+**User-visible outcome:** Existing users can log in and access their profile, feed, and all authenticated features without errors. New users can register successfully without encountering failures.

@@ -10,46 +10,9 @@ import type { ActorMethod } from '@icp-sdk/core/agent';
 import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
-export type Category = string;
-export interface Comment {
-  'id' : CommentId,
-  'authorId' : UserId,
-  'text' : string,
-  'authorName' : string,
-  'timestamp' : Time,
-  'videoId' : VideoId,
-}
-export type CommentId = bigint;
-export type ExternalBlob = Uint8Array;
-export type Hashtag = string;
-export type ReactionType = { 'fire' : null } |
-  { 'hype' : null } |
-  { 'like' : null } |
-  { 'wild' : null } |
-  { 'respect' : null };
-export type Time = bigint;
-export type UserId = Principal;
 export type UserRole = { 'admin' : null } |
   { 'user' : null } |
   { 'guest' : null };
-export interface Video {
-  'id' : VideoId,
-  'title' : string,
-  'thumbnail' : ExternalBlob,
-  'hashtags' : Array<Hashtag>,
-  'description' : string,
-  'mediaUrl' : ExternalBlob,
-  'likes' : Array<UserId>,
-  'viewCount' : bigint,
-  'timestamp' : Time,
-  'mediaType' : { 'video' : null } |
-    { 'photo' : null },
-  'category' : Category,
-  'uploader' : UserId,
-  'comments' : Array<Comment>,
-  'reactions' : Array<[UserId, ReactionType]>,
-}
-export type VideoId = string;
 export interface _CaffeineStorageCreateCertificateResult {
   'method' : string,
   'blob_hash' : string,
@@ -81,19 +44,6 @@ export interface _SERVICE {
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
-  'uploadVideo' : ActorMethod<
-    [
-      string,
-      string,
-      Array<Hashtag>,
-      Category,
-      ExternalBlob,
-      ExternalBlob,
-      { 'video' : null } |
-        { 'photo' : null },
-    ],
-    Video
-  >,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

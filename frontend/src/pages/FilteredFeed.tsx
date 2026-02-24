@@ -1,29 +1,11 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import React from 'react';
 import { useParams, Link } from '@tanstack/react-router';
 import { useGetVideosByCategory, useGetVideosByHashtag, useGetCallerUserProfile } from '../hooks/useQueries';
 import VideoCard from '../components/VideoCard';
-import { ArrowLeft, Hash, Layers } from 'lucide-react';
-
-const MUTE_STORAGE_KEY = 'revreel_feed_muted';
+import { ArrowLeft, Hash, Layers, Loader2 } from 'lucide-react';
 
 export default function FilteredFeed() {
   const { type, value } = useParams({ from: '/app-layout/filter/$type/$value' });
-
-  const [activeIndex, setActiveIndex] = useState(0);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  const [isMuted, setIsMuted] = useState<boolean>(() => {
-    const stored = sessionStorage.getItem(MUTE_STORAGE_KEY);
-    return stored === null ? false : stored === 'true';
-  });
-
-  const handleMuteToggle = useCallback(() => {
-    setIsMuted((prev) => {
-      const next = !prev;
-      sessionStorage.setItem(MUTE_STORAGE_KEY, String(next));
-      return next;
-    });
-  }, []);
 
   const categoryQuery = useGetVideosByCategory(type === 'category' ? value : '');
   const hashtagQuery = useGetVideosByHashtag(type === 'hashtag' ? value : '');
@@ -31,78 +13,47 @@ export default function FilteredFeed() {
 
   const { data: videos, isLoading } = type === 'category' ? categoryQuery : hashtagQuery;
 
-  const handleScroll = useCallback(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    const scrollTop = container.scrollTop;
-    const height = container.clientHeight;
-    setActiveIndex(Math.round(scrollTop / height));
-  }, []);
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    container.addEventListener('scroll', handleScroll, { passive: true });
-    return () => container.removeEventListener('scroll', handleScroll);
-  }, [handleScroll]);
-
   const label = type === 'hashtag' ? `#${value}` : String(value).toUpperCase();
   const Icon = type === 'hashtag' ? Hash : Layers;
 
   return (
-    <div className="relative h-[calc(100vh-7rem)] overflow-hidden">
-      {/* Header overlay */}
-      <div className="absolute top-0 left-0 right-0 z-30 flex items-center gap-3 px-4 pt-3 pb-2 bg-gradient-to-b from-black/70 to-transparent">
-        <Link to="/discover" className="w-8 h-8 rounded-full bg-black/50 flex items-center justify-center backdrop-blur-sm">
-          <ArrowLeft className="w-4 h-4 text-white" />
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <div className="sticky top-0 z-30 flex items-center gap-3 px-4 py-3 bg-background/90 backdrop-blur-sm border-b border-border">
+        <Link to="/discover" className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+          <ArrowLeft className="w-4 h-4 text-foreground" />
         </Link>
         <div className="flex items-center gap-2">
-          <Icon className="w-4 h-4 text-neon" />
-          <span className="font-display text-white text-sm tracking-wider">{label}</span>
+          <Icon className="w-4 h-4 text-primary" />
+          <span className="font-display text-foreground text-sm tracking-wider font-bold">{label}</span>
           {videos && (
-            <span className="text-white/60 text-xs">· {videos.length} reels</span>
+            <span className="text-muted-foreground text-xs">· {videos.length} posts</span>
           )}
         </div>
       </div>
 
       {isLoading ? (
-        <div className="h-full flex items-center justify-center bg-black">
-          <div className="text-center space-y-4">
-            <div className="w-12 h-12 border-2 border-neon rounded-full border-t-transparent animate-spin mx-auto" />
-            <p className="text-white/60 font-display text-lg">LOADING...</p>
-          </div>
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
       ) : !videos || videos.length === 0 ? (
-        <div className="h-full flex items-center justify-center bg-black">
-          <div className="text-center space-y-4 px-6">
-            <Icon className="w-12 h-12 text-white/30 mx-auto" />
-            <h3 className="font-display text-2xl text-white">NO REELS FOUND</h3>
-            <p className="text-white/60 text-sm">No videos for {label} yet.</p>
-            <Link
-              to="/upload"
-              className="inline-block px-6 py-3 bg-neon text-primary-foreground font-display rounded-lg"
-            >
-              BE THE FIRST 🔥
-            </Link>
-          </div>
+        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground px-6 text-center">
+          <Icon className="w-12 h-12 mb-3 opacity-30" />
+          <p className="text-lg font-semibold">No posts found</p>
+          <p className="text-sm mt-1">No videos for {label} yet.</p>
+          <Link
+            to="/upload"
+            className="mt-4 inline-block px-6 py-2 bg-primary text-primary-foreground font-bold rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            Be the first 🔥
+          </Link>
         </div>
       ) : (
-        <div
-          ref={containerRef}
-          className="h-full overflow-y-scroll scrollbar-hide"
-          style={{ scrollSnapType: 'y mandatory' }}
-        >
-          {videos.map((video, index) => (
-            <div
-              key={video.id}
-              className="w-full flex-shrink-0"
-              style={{ height: '100%', scrollSnapAlign: 'start' }}
-            >
+        <div className="divide-y divide-border">
+          {videos.map((video) => (
+            <div key={video.id} className="snap-start snap-always">
               <VideoCard
                 video={video}
-                isActive={index === activeIndex}
-                isMuted={isMuted}
-                onMuteToggle={handleMuteToggle}
                 currentUserProfile={currentUserProfile ?? null}
               />
             </div>

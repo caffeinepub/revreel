@@ -1,91 +1,107 @@
-import { useState } from 'react';
-import { Flag } from 'lucide-react';
-import { useInternetIdentity } from '../hooks/useInternetIdentity';
-import { usePostChallenge, useGetAllVideos } from '../hooks/useQueries';
-import { Video } from '../backend';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import React, { useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { usePostChallenge, useGetVideosByUser, type Video } from '../hooks/useQueries';
+import { Loader2, Zap } from 'lucide-react';
 
-interface Props {
-  video: Video;
+interface ChallengeModalProps {
+  open: boolean;
   onClose: () => void;
+  challengedUserId: string;
+  originalVideoId: string;
 }
 
-export default function ChallengeModal({ video, onClose }: Props) {
-  const { identity } = useInternetIdentity();
-  const { data: allVideos } = useGetAllVideos();
-  const postChallenge = usePostChallenge();
-  const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
+export default function ChallengeModal({ open, onClose, challengedUserId, originalVideoId }: ChallengeModalProps) {
+  const [selectedVideoId, setSelectedVideoId] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
 
-  const currentUserId = identity?.getPrincipal().toString();
-  const myVideos = allVideos?.filter((v) => v.uploader.toString() === currentUserId) ?? [];
+  const { data: myVideos = [], isLoading: videosLoading } = useGetVideosByUser('');
+  const postChallenge = usePostChallenge();
 
   const handleSubmit = async () => {
-    if (!selectedVideoId || !identity) return;
+    if (!selectedVideoId) {
+      setError('Please select a video to challenge with');
+      return;
+    }
+    setError(null);
     try {
       await postChallenge.mutateAsync({
-        originalVideoId: video.id,
-        responseVideoId: selectedVideoId,
-        challengedPrincipal: video.uploader.toString(),
+        challengedId: challengedUserId,
+        videoId: selectedVideoId,
+        originalVideoId,
       });
       onClose();
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to send challenge');
     }
   };
 
   return (
-    <Dialog open onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="bg-card border-border max-w-sm">
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="sm:max-w-md bg-card border-border">
         <DialogHeader>
-          <DialogTitle className="font-display text-xl text-foreground flex items-center gap-2">
-            <Flag className="w-5 h-5 text-neon-orange" />
-            Challenge
+          <DialogTitle className="text-xl font-display font-bold text-primary neon-text flex items-center gap-2">
+            <Zap className="w-5 h-5" />
+            Send Challenge
           </DialogTitle>
+          <DialogDescription className="text-muted-foreground">
+            Select one of your videos to challenge this racer.
+          </DialogDescription>
         </DialogHeader>
-        <p className="text-sm text-muted-foreground mb-3">
-          Select one of your videos to challenge{' '}
-          <span className="text-neon-orange font-semibold">
-            {video.uploader.toString().slice(0, 8)}...
-          </span>
-        </p>
-        {myVideos.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-4">
-            You need to upload a video first to challenge someone.
-          </p>
-        ) : (
-          <div className="space-y-2 max-h-60 overflow-y-auto">
-            {myVideos.map((v) => (
-              <button
-                key={v.id}
-                onClick={() => setSelectedVideoId(v.id)}
-                className={`w-full flex items-center gap-3 p-2 rounded-lg border transition-all text-left ${
-                  selectedVideoId === v.id
-                    ? 'border-neon-orange bg-neon-orange/10'
-                    : 'border-border hover:border-neon-orange/40'
-                }`}
-              >
-                <img
-                  src={v.thumbnail.getDirectURL()}
-                  alt={v.title}
-                  className="w-16 h-10 object-cover rounded"
-                />
-                <span className="text-sm text-foreground line-clamp-1">{v.title}</span>
-              </button>
-            ))}
+
+        <div className="space-y-4 mt-2">
+          {videosLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          ) : myVideos.length === 0 ? (
+            <p className="text-muted-foreground text-sm text-center py-4">
+              You need to upload a video first to send a challenge.
+            </p>
+          ) : (
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {myVideos.map((video: Video) => (
+                <div
+                  key={video.id}
+                  onClick={() => setSelectedVideoId(video.id)}
+                  className={`p-3 rounded border cursor-pointer transition-colors ${
+                    selectedVideoId === video.id
+                      ? 'border-primary bg-primary/10'
+                      : 'border-border hover:border-primary/50 hover:bg-muted'
+                  }`}
+                >
+                  <p className="font-medium text-sm">{video.title}</p>
+                  <p className="text-xs text-muted-foreground">{video.likes.length} likes</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {error && (
+            <div className="p-3 rounded bg-destructive/10 border border-destructive/30 text-destructive text-sm">
+              {error}
+            </div>
+          )}
+
+          <div className="flex gap-2">
+            <Button variant="outline" className="flex-1" onClick={onClose} disabled={postChallenge.isPending}>
+              Cancel
+            </Button>
+            <Button
+              className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
+              onClick={handleSubmit}
+              disabled={postChallenge.isPending || !selectedVideoId}
+            >
+              {postChallenge.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                'Send Challenge'
+              )}
+            </Button>
           </div>
-        )}
-        <div className="flex gap-2 mt-3">
-          <Button variant="outline" onClick={onClose} className="flex-1 border-border">
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={!selectedVideoId || postChallenge.isPending}
-            className="flex-1 bg-neon-orange text-black hover:bg-neon-yellow font-bold"
-          >
-            {postChallenge.isPending ? 'Sending...' : 'Challenge!'}
-          </Button>
         </div>
       </DialogContent>
     </Dialog>

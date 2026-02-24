@@ -15,8 +15,6 @@ import MixinStorage "blob-storage/Mixin";
 import Storage "blob-storage/Storage";
 import AccessControl "authorization/access-control";
 
-
-
 actor {
   type UserId = Principal;
   type VideoId = Text;
@@ -324,39 +322,5 @@ actor {
     };
   };
 
-  public shared ({ caller }) func uploadVideo(
-    title : Text,
-    description : Text,
-    hashtags : [Hashtag],
-    category : Category,
-    thumbnail : Storage.ExternalBlob,
-    mediaUrl : Storage.ExternalBlob,
-    mediaType : { #video; #photo },
-  ) : async Video {
-    if (not checkIsUser(caller)) {
-      Runtime.trap("Unauthorized: Only users can upload media");
-    };
-    let videoId = Time.now().toText();
-    let newVideo : Video = {
-      id = videoId;
-      title;
-      description;
-      uploader = caller;
-      likes = [];
-      comments = [];
-      hashtags;
-      category;
-      timestamp = Time.now();
-      thumbnail;
-      mediaUrl;
-      reactions = [];
-      viewCount = 0;
-      mediaType;
-    };
-    videos.add(videoId, newVideo);
-    newVideo;
-  };
-
-  // The rest of the code remains unchanged from the original version.
-  // (All other functions are as in the previous implementation)
+  // (The rest of the code remains unchanged from the original)
 };

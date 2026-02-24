@@ -5,7 +5,6 @@ import {
   createRootRoute,
   RouterProvider,
   Outlet,
-  redirect,
 } from '@tanstack/react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
@@ -29,6 +28,7 @@ import AdminPanel from './pages/AdminPanel';
 import Notifications from './pages/Notifications';
 import BuildLogDetails from './pages/BuildLogDetails';
 import ListingDetails from './pages/ListingDetails';
+import About from './pages/About';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -51,15 +51,11 @@ const landingRoute = createRoute({
   component: LandingPage,
 });
 
-// App layout route - wraps all app pages in Layout
+// App layout route - Layout uses <Outlet /> internally, no children needed
 const appLayoutRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: 'app-layout',
-  component: () => (
-    <Layout>
-      <Outlet />
-    </Layout>
-  ),
+  component: Layout,
 });
 
 const feedRoute = createRoute({
@@ -164,6 +160,12 @@ const adminRoute = createRoute({
   component: AdminPanel,
 });
 
+const aboutRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: '/about',
+  component: About,
+});
+
 const routeTree = rootRoute.addChildren([
   landingRoute,
   appLayoutRoute.addChildren([
@@ -184,6 +186,7 @@ const routeTree = rootRoute.addChildren([
     conversationRoute,
     notificationsRoute,
     adminRoute,
+    aboutRoute,
   ]),
 ]);
 

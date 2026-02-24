@@ -1,13 +1,12 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { Upload as UploadIcon, Film, Image, X, Tag, Loader2 } from 'lucide-react';
-import { ExternalBlob, Variant_video_photo } from '../backend';
-import { useUploadVideo } from '../hooks/useQueries';
+import { ExternalBlob, Variant_video_photo, useUploadVideo } from '../hooks/useQueries';
 import AuthGuard from '../components/AuthGuard';
 
 const CATEGORIES = [
   'Drift', 'Drag Racing', 'Track Day', 'Car Show',
-  'Build', 'Off-Road', 'Street', 'Other'
+  'Build', 'Off-Road', 'Street', 'Other',
 ];
 
 type MediaType = 'reel' | 'photo';
@@ -63,7 +62,7 @@ export default function Upload() {
   };
 
   const removeHashtag = (tag: string) => {
-    setHashtags(hashtags.filter(h => h !== tag));
+    setHashtags(hashtags.filter((h) => h !== tag));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -96,19 +95,18 @@ export default function Upload() {
           (pct) => setThumbnailProgress(pct)
         );
       } else {
-        // Use a placeholder thumbnail
         thumbnailBlob = ExternalBlob.fromURL('/assets/generated/placeholder-thumb.dim_640x360.png');
       }
 
-      const backendMediaType = isPhoto ? Variant_video_photo.photo : Variant_video_photo.video;
+      const backendMediaType: Variant_video_photo = isPhoto ? { photo: null } : { video: null };
 
       await uploadVideo.mutateAsync({
         title: title.trim(),
         description: description.trim(),
         hashtags,
         category,
-        thumbnailBlob,
-        videoBlob: mediaBlob,
+        thumbnail: thumbnailBlob,
+        mediaUrl: mediaBlob,
         mediaType: backendMediaType,
       });
 
@@ -122,9 +120,7 @@ export default function Upload() {
     <AuthGuard>
       <div className="min-h-screen bg-background pb-24 pt-20">
         <div className="max-w-lg mx-auto px-4">
-          <h1 className="text-3xl font-display font-bold text-foreground mb-6">
-            Upload
-          </h1>
+          <h1 className="text-3xl font-display font-bold text-foreground mb-6">Upload</h1>
 
           {/* Media Type Toggle */}
           <div className="flex rounded-xl overflow-hidden border border-border mb-6 bg-card">
@@ -175,18 +171,9 @@ export default function Upload() {
               >
                 {previewUrl ? (
                   isPhoto ? (
-                    <img
-                      src={previewUrl}
-                      alt="Preview"
-                      className="w-full h-64 object-cover"
-                    />
+                    <img src={previewUrl} alt="Preview" className="w-full h-64 object-cover" />
                   ) : (
-                    <video
-                      src={previewUrl}
-                      className="w-full h-64 object-cover"
-                      muted
-                      playsInline
-                    />
+                    <video src={previewUrl} className="w-full h-64 object-cover" muted playsInline />
                   )
                 ) : (
                   <div className="flex flex-col items-center justify-center h-48 gap-3 text-muted-foreground">
@@ -194,9 +181,7 @@ export default function Upload() {
                     <span className="text-base font-medium">
                       Tap to select {isPhoto ? 'a photo' : 'a video'}
                     </span>
-                    <span className="text-sm">
-                      {isPhoto ? 'JPEG, PNG, WebP' : 'MP4, MOV, WebM'}
-                    </span>
+                    <span className="text-sm">{isPhoto ? 'JPEG, PNG, WebP' : 'MP4, MOV, WebM'}</span>
                   </div>
                 )}
                 {previewUrl && (
@@ -236,7 +221,7 @@ export default function Upload() {
               )}
             </div>
 
-            {/* Thumbnail (optional for photos, shown for reels) */}
+            {/* Thumbnail (for reels only) */}
             {!isPhoto && (
               <div>
                 <label className="block text-sm font-semibold text-foreground mb-2">
@@ -247,11 +232,7 @@ export default function Upload() {
                   className="relative border-2 border-dashed border-border rounded-xl overflow-hidden cursor-pointer hover:border-neon-orange/60 transition-colors bg-card"
                 >
                   {thumbnailPreviewUrl ? (
-                    <img
-                      src={thumbnailPreviewUrl}
-                      alt="Thumbnail preview"
-                      className="w-full h-36 object-cover"
-                    />
+                    <img src={thumbnailPreviewUrl} alt="Thumbnail preview" className="w-full h-36 object-cover" />
                   ) : (
                     <div className="flex flex-col items-center justify-center h-28 gap-2 text-muted-foreground">
                       <Image size={28} />
@@ -298,13 +279,11 @@ export default function Upload() {
 
             {/* Title */}
             <div>
-              <label className="block text-sm font-semibold text-foreground mb-2">
-                Title *
-              </label>
+              <label className="block text-sm font-semibold text-foreground mb-2">Title *</label>
               <input
                 type="text"
                 value={title}
-                onChange={e => setTitle(e.target.value)}
+                onChange={(e) => setTitle(e.target.value)}
                 placeholder={isPhoto ? 'Give your photo a title...' : 'Give your reel a title...'}
                 maxLength={100}
                 className="w-full px-4 py-3 rounded-xl bg-card border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-neon-orange text-base"
@@ -313,12 +292,10 @@ export default function Upload() {
 
             {/* Description */}
             <div>
-              <label className="block text-sm font-semibold text-foreground mb-2">
-                Description
-              </label>
+              <label className="block text-sm font-semibold text-foreground mb-2">Description</label>
               <textarea
                 value={description}
-                onChange={e => setDescription(e.target.value)}
+                onChange={(e) => setDescription(e.target.value)}
                 placeholder="Tell the story behind this..."
                 rows={3}
                 maxLength={500}
@@ -328,11 +305,9 @@ export default function Upload() {
 
             {/* Category */}
             <div>
-              <label className="block text-sm font-semibold text-foreground mb-2">
-                Category *
-              </label>
+              <label className="block text-sm font-semibold text-foreground mb-2">Category *</label>
               <div className="grid grid-cols-4 gap-2">
-                {CATEGORIES.map(cat => (
+                {CATEGORIES.map((cat) => (
                   <button
                     key={cat}
                     type="button"
@@ -356,7 +331,7 @@ export default function Upload() {
                 Hashtags
               </label>
               <div className="flex flex-wrap gap-2 mb-2">
-                {hashtags.map(tag => (
+                {hashtags.map((tag) => (
                   <span
                     key={tag}
                     className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-neon-orange/20 border border-neon-orange/40 text-neon-orange text-sm font-medium"
@@ -375,7 +350,7 @@ export default function Upload() {
               <input
                 type="text"
                 value={hashtagInput}
-                onChange={e => setHashtagInput(e.target.value)}
+                onChange={(e) => setHashtagInput(e.target.value)}
                 onKeyDown={handleHashtagKeyDown}
                 placeholder="Type a tag and press Enter..."
                 className="w-full px-4 py-3 rounded-xl bg-card border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-neon-orange text-base"

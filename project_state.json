@@ -1,31 +1,24 @@
 {
   "schemaVersion": "1.0.0",
   "projectStateVersion": 3,
-  "summary": "Project appears to involve a landing page featuring a car image, likely an automotive or car-related web app.",
+  "summary": "New project",
   "architectural_notes": [],
-  "known_issues": [],
-  "isFixRequest": false,
-  "imageRequirements": "## Required Images\n- A sleek lowered JDM tuner import style sport car with aftermarket wide-body kit, large aftermarket wheels, aggressive front splitter, and colorful racing livery under dramatic studio-style lighting (tuner-car-hero.dim_1200x600.png)",
+  "known_issues": [
+    "Account registration/login system is broken: existing accounts not recognized, prompts to create new account, then shows 'failed to register or create' error — user requested rollback to version 22"
+  ],
+  "isFixRequest": true,
   "existing_features": [
     {
-      "id": "feature-replace-the-existing-car-image-on-the-landing-page-hero-section-with-a-newly-generated-tuner-import-style-car-image-use-the-generated-image-asset-from-frontend-public-assets-generated-and-render-it-in-landingpage-tsx",
-      "title": "Replace the existing car image on the landing page hero section with a newly generated tuner import style car image. Use the generated image asset from frontend/public/assets/generated and render it in LandingPage.tsx.",
+      "id": "feature-roll-back-the-application-to-the-state-it-was-in-at-version-22-this-includes-reverting-all-backend-main-mo-and-frontend-source-files-to-their-version-22-equivalents-to-restore-stable-account-recognition-and-registration-behavior",
+      "title": "Roll back the application to the state it was in at Version 22. This includes reverting all backend (main.mo) and frontend source files to their Version 22 equivalents to restore stable account recognition and registration behavior.",
       "reqIds": [
         "REQ-1"
       ],
       "version": 1
     }
   ],
-  "new_feature_requests": [
-    {
-      "id": "AR-1",
-      "summary": "Replace landing page car image with a tuner import style car",
-      "reqIds": [],
-      "status": "pending"
-    }
-  ],
-  "gameProjectType": "none",
-  "projectName": "RevReel",
+  "new_feature_requests": [],
+  "projectName": "Rollback to Version 22 – Fix account recognition and registration errors",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

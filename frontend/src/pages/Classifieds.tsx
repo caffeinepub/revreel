@@ -1,124 +1,85 @@
 import React, { useState } from 'react';
-import { Link } from '@tanstack/react-router';
-import { Plus, Tag, Car, DollarSign } from 'lucide-react';
 import { type Listing, useGetAllActiveListings } from '../hooks/useQueries';
+import { Link } from '@tanstack/react-router';
+import { ShoppingBag, Loader2, Plus, Tag } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import PostListingModal from '../components/PostListingModal';
 
-const CATEGORIES = ['Cars', 'Parts', 'Wheels', 'Audio', 'Exterior', 'Interior', 'Tools', 'Other'];
-
-function ListingCard({ listing }: { listing: Listing }) {
-  return (
-    <Link to="/classifieds/$listingId" params={{ listingId: String(listing.id) }} className="block">
-      <div className="bg-card border border-border rounded-2xl overflow-hidden hover:border-neon-orange/40 transition-colors">
-        {listing.imageUrl ? (
-          <img
-            src={listing.imageUrl}
-            alt={listing.title}
-            className="w-full h-44 object-cover"
-          />
-        ) : (
-          <div className="w-full h-44 bg-muted flex items-center justify-center">
-            <Car size={40} className="text-muted-foreground opacity-40" />
-          </div>
-        )}
-        <div className="p-4">
-          <div className="flex items-start justify-between gap-2 mb-1">
-            <h3 className="font-bold text-foreground text-base leading-tight line-clamp-1">{listing.title}</h3>
-            <span className="flex-shrink-0 flex items-center gap-1 text-neon-orange font-bold text-base">
-              <DollarSign size={14} />
-              {listing.price}
-            </span>
-          </div>
-          <p className="text-muted-foreground text-sm line-clamp-2 mb-2">{listing.description}</p>
-          <div className="flex items-center justify-between">
-            <span className="px-2 py-0.5 rounded-full bg-neon-orange/20 text-neon-orange text-xs font-bold">
-              {listing.category}
-            </span>
-            <span className="text-muted-foreground text-xs">{listing.condition}</span>
-          </div>
-        </div>
-      </div>
-    </Link>
-  );
-}
-
 export default function Classifieds() {
-  const [showModal, setShowModal] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const { data: listings = [], isLoading } = useGetAllActiveListings();
   const { identity } = useInternetIdentity();
-  const isAuthenticated = !!identity;
+  const [showModal, setShowModal] = useState(false);
 
-  const filtered = selectedCategory
-    ? listings.filter(l => l.category === selectedCategory)
-    : listings;
+  const activeListings = listings.filter((l: Listing) => l.isActive);
 
   return (
-    <div className="min-h-screen bg-background pb-24 pt-20">
-      <div className="max-w-lg mx-auto px-4">
-        <div className="flex items-center justify-between mb-5">
-          <h1 className="text-3xl font-display font-bold text-foreground">Classifieds</h1>
-          {isAuthenticated && (
-            <button
-              onClick={() => setShowModal(true)}
-              className="flex items-center gap-2 px-5 py-3 rounded-xl bg-neon-orange text-black font-bold text-base hover:bg-neon-orange/90 transition-colors"
-            >
-              <Plus size={18} />
-              Post
-            </button>
-          )}
+    <div className="max-w-4xl mx-auto px-4 py-6">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-2">
+          <ShoppingBag className="w-6 h-6 text-primary" />
+          <h1 className="font-display text-2xl font-black text-primary neon-text">Classifieds</h1>
         </div>
-
-        {/* Category filter */}
-        <div className="flex gap-2 overflow-x-auto pb-2 mb-5 scrollbar-hide">
-          <button
-            onClick={() => setSelectedCategory(null)}
-            className={`flex-shrink-0 px-4 py-2.5 rounded-full text-sm font-bold transition-colors ${
-              !selectedCategory
-                ? 'bg-neon-orange text-black'
-                : 'bg-card border border-border text-muted-foreground hover:text-foreground'
-            }`}
+        {identity && (
+          <Button
+            onClick={() => setShowModal(true)}
+            className="bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
           >
-            All
-          </button>
-          {CATEGORIES.map(cat => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat === selectedCategory ? null : cat)}
-              className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-bold transition-colors ${
-                selectedCategory === cat
-                  ? 'bg-neon-orange text-black'
-                  : 'bg-card border border-border text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <Tag size={12} />
-              {cat}
-            </button>
-          ))}
-        </div>
-
-        {isLoading ? (
-          <div className="flex justify-center py-16">
-            <div className="w-8 h-8 border-2 border-neon-orange border-t-transparent rounded-full animate-spin" />
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="text-center py-16 text-muted-foreground">
-            <Tag size={48} className="mx-auto mb-4 opacity-30" />
-            <p className="text-lg font-medium">No listings found</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-4">
-            {filtered.map(listing => (
-              <ListingCard key={listing.id} listing={listing} />
-            ))}
-          </div>
+            <Plus className="w-4 h-4 mr-1" />
+            Post Listing
+          </Button>
         )}
       </div>
 
-      {showModal && (
-        <PostListingModal open={showModal} onClose={() => setShowModal(false)} />
+      {isLoading ? (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      ) : activeListings.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+          <ShoppingBag className="w-12 h-12 mb-3 opacity-30" />
+          <p className="text-lg font-semibold">No listings yet</p>
+          <p className="text-sm mt-1">Be the first to post a listing!</p>
+        </div>
+      ) : (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {activeListings.map((listing: Listing) => (
+            <Link
+              key={listing.id.toString()}
+              to="/classifieds/$listingId"
+              params={{ listingId: listing.id.toString() }}
+              className="block rounded-xl bg-card border border-border hover:border-primary/50 transition-colors overflow-hidden"
+            >
+              {listing.imageUrl ? (
+                <img
+                  src={listing.imageUrl}
+                  alt={listing.title}
+                  className="w-full h-40 object-cover"
+                />
+              ) : (
+                <div className="w-full h-40 bg-muted flex items-center justify-center">
+                  <ShoppingBag className="w-10 h-10 text-muted-foreground/30" />
+                </div>
+              )}
+              <div className="p-4">
+                <h3 className="font-bold text-sm truncate">{listing.title}</h3>
+                <p className="text-primary font-bold text-lg mt-1">${listing.price}</p>
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-xs text-muted-foreground">
+                    {listing.year} {listing.make} {listing.model}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1 mt-1">
+                  <Tag className="w-3 h-3 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">{listing.condition}</span>
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
       )}
+
+      <PostListingModal open={showModal} onClose={() => setShowModal(false)} />
     </div>
   );
 }

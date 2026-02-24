@@ -1,41 +1,39 @@
 {
   "kind": "build_request",
-  "title": "Replace landing page car image with a tuner import style car",
-  "projectName": "RevReel",
-  "priority": "normal",
+  "title": "Rollback to Version 22 – Fix account recognition and registration errors",
+  "priority": "high",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Replace the existing car image on the landing page hero section with a newly generated tuner import style car image. Use the generated image asset from frontend/public/assets/generated and render it in LandingPage.tsx.",
-      "target": "frontend",
+      "text": "Roll back the application to the state it was in at Version 22. This includes reverting all backend (main.mo) and frontend source files to their Version 22 equivalents to restore stable account recognition and registration behavior.",
+      "target": "both",
       "source": {
         "messageIds": [
-          "msg-4"
+          "msg-12"
         ],
         "quotes": [
-          "Make the picture of the car on the landing page a tuner import style car"
+          "Change it back to version 22 it's still not recognizing I have a account and prompts me to create one then says failed to register or create"
         ]
       },
       "acceptanceCriteria": [
-        "The landing page displays a tuner/import style car image (e.g., lowered Japanese sport compact with aftermarket body kit, wide-body styling, racing livery, or similar JDM/import tuner aesthetic)",
-        "The old car image is replaced by the new generated image",
-        "The image renders correctly across desktop and mobile viewports"
+        "Existing users who previously created an account are recognized upon login via Internet Identity and are NOT prompted to create a new account.",
+        "New users who go through the profile setup flow can successfully register without receiving a 'failed to register or create' error.",
+        "The ProfileSetupModal does not appear for users who already have an existing profile.",
+        "Users can log in and access their profile, feed, and all authenticated features without errors."
       ]
     }
   ],
   "constraints": [
-    "Do not modify files listed in frontend.immutablePaths",
-    "Only LandingPage.tsx and the image asset need to change"
+    "Do not introduce any new features or UI changes beyond what was present in Version 22.",
+    "Do not modify immutable paths: frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, frontend/src/components/ui."
   ],
   "nonGoals": [
-    "Redesigning the overall landing page layout or hero section",
-    "Changing any other images or visual assets across the app",
-    "Backend changes"
+    "Adding new features or pages not present in Version 22.",
+    "Changing the visual design or theme.",
+    "Modifying the About page contact/Instagram section added after Version 22 unless it was not present in Version 22."
   ],
   "imageRequirements": {
-    "required": [
-      "A sleek lowered JDM tuner import style sport car with aftermarket wide-body kit, large aftermarket wheels, aggressive front splitter, and colorful racing livery under dramatic studio-style lighting (tuner-car-hero.dim_1200x600.png)"
-    ],
+    "required": [],
     "edits": []
   }
 }

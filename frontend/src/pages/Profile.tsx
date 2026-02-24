@@ -1,6 +1,10 @@
 import React, { useState, useRef } from 'react';
 import { useParams, Link } from '@tanstack/react-router';
-import { Settings, MessageCircle, Grid3X3, Bookmark, Wrench, Trophy, Star, Zap, Wind, Flame, Camera, Loader2, AlertCircle, BadgeCheck, BarChart2, Eye, Heart, Users, UserPlus, Video, Trash2 } from 'lucide-react';
+import {
+  Settings, MessageCircle, Grid3X3, Bookmark, Wrench, Trophy, Star, Zap,
+  Wind, Flame, Camera, Loader2, AlertCircle, BadgeCheck, BarChart2, Eye,
+  Heart, Users, UserPlus, Video, Trash2,
+} from 'lucide-react';
 import {
   type Video as VideoType,
   type Badge,
@@ -111,29 +115,36 @@ export default function Profile() {
   const avatarSrc =
     profile.avatarUrl && profile.avatarUrl.length > 0
       ? profile.avatarUrl
-      : profile.avatar.getDirectURL() || '/assets/generated/default-avatar.dim_128x128.png';
+      : '/assets/generated/default-avatar.dim_128x128.png';
 
   return (
     <div className="min-h-screen bg-background">
       {/* Profile Header */}
       <div className="relative">
         <div className="h-32 bg-gradient-to-br from-neon/20 via-background to-background relative overflow-hidden">
-          <div className="absolute inset-0 opacity-20"
-            style={{ backgroundImage: 'url(/assets/generated/feed-bg.dim_1080x1920.png)', backgroundSize: 'cover', backgroundPosition: 'center' }}
+          <div
+            className="absolute inset-0 opacity-20"
+            style={{
+              backgroundImage: 'url(/assets/generated/feed-bg.dim_1080x1920.png)',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+            }}
           />
         </div>
 
         {/* Avatar */}
         <div className="absolute left-4 bottom-0 translate-y-1/2">
           <div
-            className={`relative w-20 h-20 rounded-full border-4 border-background overflow-hidden bg-card neon-border group ${isOwnProfile ? 'cursor-pointer' : ''}`}
+            className={`relative w-20 h-20 rounded-full border-4 border-background overflow-hidden bg-card group ${isOwnProfile ? 'cursor-pointer' : ''}`}
             onClick={handleAvatarClick}
           >
             <img
               src={avatarSrc}
               alt={profile.username}
               className="w-full h-full object-cover"
-              onError={(e) => { (e.target as HTMLImageElement).src = '/assets/generated/default-avatar.dim_128x128.png'; }}
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = '/assets/generated/default-avatar.dim_128x128.png';
+              }}
             />
             {isOwnProfile && (
               <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -348,10 +359,12 @@ export default function Profile() {
         )}
       </Tabs>
 
+      {/* Edit Profile Modal */}
       {showEditModal && callerProfile && (
         <EditProfileModal
-          profile={callerProfile}
+          open={showEditModal}
           onClose={() => setShowEditModal(false)}
+          currentProfile={callerProfile}
         />
       )}
     </div>
@@ -359,7 +372,7 @@ export default function Profile() {
 }
 
 function VideoThumbnail({ video, isOwner }: { video: VideoType; isOwner: boolean }) {
-  const thumbnailUrl = video.thumbnail.getDirectURL() || '/assets/generated/placeholder-thumb.dim_640x360.png';
+  const thumbnailUrl = video.thumbnail?.getDirectURL?.() || '/assets/generated/placeholder-thumb.dim_640x360.png';
   const deleteVideo = useDeleteVideo();
 
   const handleDelete = async () => {
@@ -378,7 +391,9 @@ function VideoThumbnail({ video, isOwner }: { video: VideoType; isOwner: boolean
           src={thumbnailUrl}
           alt={video.title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          onError={(e) => { (e.target as HTMLImageElement).src = '/assets/generated/placeholder-thumb.dim_640x360.png'; }}
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = '/assets/generated/placeholder-thumb.dim_640x360.png';
+          }}
         />
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors" />
         <div className="absolute bottom-1 left-1 flex items-center gap-1">
@@ -427,7 +442,7 @@ function ProfileSkeleton() {
         <div className="h-6 w-40 bg-card/50 animate-pulse rounded" />
         <div className="h-4 w-24 bg-card/50 animate-pulse rounded" />
         <div className="flex gap-6 mt-4">
-          {[1, 2, 3, 4].map(i => (
+          {[1, 2, 3, 4].map((i) => (
             <div key={i} className="text-center space-y-1">
               <div className="h-6 w-8 bg-card/50 animate-pulse rounded mx-auto" />
               <div className="h-3 w-12 bg-card/50 animate-pulse rounded" />

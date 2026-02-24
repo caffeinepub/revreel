@@ -1,145 +1,156 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useParams, useNavigate } from '@tanstack/react-router';
-import { ArrowLeft, Send, Trash2, Loader2 } from 'lucide-react';
-import { type DirectMessage, useGetConversation, useSendMessage, useMarkAsRead, useDeleteMessage, useGetUserProfile } from '../hooks/useQueries';
+import { useParams } from '@tanstack/react-router';
+import {
+  type DirectMessage,
+  useGetMessages,
+  useSendMessage,
+  useMarkAsRead,
+  useDeleteMessage,
+  useGetUserProfile,
+} from '../hooks/useQueries';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
-
-function formatTime(timestamp: bigint): string {
-  const date = new Date(Number(timestamp) / 1_000_000);
-  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
+import AuthGuard from '../components/AuthGuard';
+import { Send, Loader2, Trash2, ArrowLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Link } from '@tanstack/react-router';
 
 export default function Conversation() {
-  const { userId } = useParams({ from: '/app-layout/messages/$userId' });
-  const navigate = useNavigate();
-  const { identity } = useInternetIdentity();
-  const currentUserId = identity?.getPrincipal().toString();
-
-  const [text, setText] = useState('');
+  const { userId } = useParams({ strict: false }) as { userId: string };
+  const [msgText, setMsgText] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
+  const { identity } = useInternetIdentity();
 
-  const { data: messages = [], isLoading } = useGetConversation(userId);
+  const { data: messages = [], isLoading } = useGetMessages(userId);
   const { data: otherProfile } = useGetUserProfile(userId);
   const sendMessage = useSendMessage();
   const markAsRead = useMarkAsRead();
   const deleteMessage = useDeleteMessage();
 
+  const myPrincipal = identity?.getPrincipal().toString();
+
+  useEffect(() => {
+    if (userId) {
+      markAsRead.mutate({ otherUser: userId });
+    }
+  }, [userId]);
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  useEffect(() => {
-    // Mark messages as read on mount
-    messages.forEach((msg: DirectMessage) => {
-      if (!msg.isRead && msg.toUser.toString() === currentUserId) {
-        markAsRead.mutate({ otherUser: userId, messageId: msg.id });
-      }
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const handleSend = async () => {
-    if (!text.trim() || sendMessage.isPending) return;
-    const msgText = text.trim();
-    setText('');
-    await sendMessage.mutateAsync({ otherUser: userId, text: msgText });
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!msgText.trim() || !identity) return;
+    try {
+      await sendMessage.mutateAsync({ toUser: userId, text: msgText.trim() });
+      setMsgText('');
+    } catch (err) {
+      console.error('Failed to send message:', err);
     }
   };
 
-  const otherName = otherProfile?.username || userId.slice(0, 8) + '...';
+  const handleDelete = (msg: DirectMessage) => {
+    deleteMessage.mutate({ messageId: msg.id, otherUser: userId });
+  };
+
+  const formatTime = (timestamp: bigint) => {
+    return new Date(Number(timestamp) / 1_000_000).toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
 
   return (
-    <div className="flex flex-col h-screen bg-background">
-      {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-card pt-safe">
-        <button
-          onClick={() => navigate({ to: '/inbox' })}
-          className="w-11 h-11 flex items-center justify-center rounded-full hover:bg-muted transition-colors text-foreground"
-        >
-          <ArrowLeft size={22} />
-        </button>
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-          <div className="w-10 h-10 rounded-full overflow-hidden border border-border flex-shrink-0">
-            <img
-              src={otherProfile?.avatarUrl || '/assets/generated/default-avatar.dim_128x128.png'}
-              alt={otherName}
-              className="w-full h-full object-cover"
-            />
+    <AuthGuard>
+      <div className="flex flex-col h-[calc(100svh-3.5rem)]">
+        {/* Header */}
+        <div className="flex items-center gap-3 p-4 border-b border-border bg-card">
+          <Link to="/inbox" className="p-1 rounded hover:bg-muted transition-colors">
+            <ArrowLeft className="w-5 h-5" />
+          </Link>
+          <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden">
+            {otherProfile?.avatarUrl ? (
+              <img src={otherProfile.avatarUrl} alt={otherProfile.username} className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-xs font-bold text-primary">
+                {(otherProfile?.username || userId).slice(0, 2).toUpperCase()}
+              </span>
+            )}
           </div>
-          <span className="font-bold text-foreground text-base truncate">{otherName}</span>
+          <div>
+            <p className="font-semibold text-sm">{otherProfile?.username || userId.slice(0, 12) + '...'}</p>
+          </div>
         </div>
-      </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-        {isLoading ? (
-          <div className="flex justify-center py-8">
-            <div className="w-7 h-7 border-2 border-neon-orange border-t-transparent rounded-full animate-spin" />
-          </div>
-        ) : messages.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
-            <p className="text-base">No messages yet. Say hello!</p>
-          </div>
-        ) : (
-          messages.map((msg: DirectMessage) => {
-            const isOwn = msg.fromUser.toString() === currentUserId;
-            return (
-              <div key={String(msg.id)} className={`flex ${isOwn ? 'justify-end' : 'justify-start'} group`}>
-                <div className={`relative max-w-[75%] px-4 py-3 rounded-2xl text-sm ${
-                  isOwn
-                    ? 'bg-neon-orange text-black rounded-br-sm'
-                    : 'bg-card border border-border text-foreground rounded-bl-sm'
-                }`}>
-                  <p className="leading-relaxed">{msg.text}</p>
-                  <p className={`text-xs mt-1 ${isOwn ? 'text-black/60' : 'text-muted-foreground'}`}>
-                    {formatTime(msg.timestamp)}
-                  </p>
-                  {isOwn && (
-                    <button
-                      onClick={() => deleteMessage.mutate({ otherUser: userId, messageId: msg.id })}
-                      className="absolute -top-2 -left-2 w-7 h-7 flex items-center justify-center rounded-full bg-red-500/20 text-red-400 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/40"
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })
-        )}
-        <div ref={bottomRef} />
-      </div>
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          ) : messages.length === 0 ? (
+            <div className="flex items-center justify-center py-8 text-muted-foreground text-sm">
+              No messages yet. Say hello!
+            </div>
+          ) : (
+            [...messages]
+              .sort((a, b) => Number(a.timestamp) - Number(b.timestamp))
+              .map((msg: DirectMessage) => {
+                const isMe = msg.fromUser?.toString() === myPrincipal;
+                return (
+                  <div key={msg.id.toString()} className={`flex ${isMe ? 'justify-end' : 'justify-start'} group`}>
+                    <div className={`max-w-[70%] flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
+                      <div
+                        className={`px-4 py-2 rounded-2xl text-sm ${
+                          isMe
+                            ? 'bg-primary text-primary-foreground rounded-br-sm'
+                            : 'bg-card border border-border rounded-bl-sm'
+                        }`}
+                      >
+                        {msg.text}
+                      </div>
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <span className="text-xs text-muted-foreground">{formatTime(msg.timestamp)}</span>
+                        {isMe && (
+                          <button
+                            onClick={() => handleDelete(msg)}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-muted"
+                          >
+                            <Trash2 className="w-3 h-3 text-muted-foreground" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+          )}
+          <div ref={bottomRef} />
+        </div>
 
-      {/* Input */}
-      <div className="px-4 py-3 border-t border-border bg-card pb-safe">
-        <div className="flex items-end gap-3">
-          <textarea
-            value={text}
-            onChange={e => setText(e.target.value)}
-            onKeyDown={handleKeyDown}
+        {/* Input */}
+        <form onSubmit={handleSend} className="p-4 border-t border-border flex gap-2">
+          <input
+            value={msgText}
+            onChange={(e) => setMsgText(e.target.value)}
             placeholder="Type a message..."
-            rows={1}
-            className="flex-1 px-4 py-3 rounded-2xl bg-background border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-neon-orange resize-none text-base"
+            className="flex-1 bg-muted border border-border rounded-full px-4 py-2 text-sm focus:outline-none focus:border-primary transition-colors"
+            disabled={sendMessage.isPending}
           />
-          <button
-            onClick={handleSend}
-            disabled={!text.trim() || sendMessage.isPending}
-            className="w-12 h-12 flex items-center justify-center rounded-full bg-neon-orange text-black hover:bg-neon-orange/90 disabled:opacity-50 transition-colors flex-shrink-0"
+          <Button
+            type="submit"
+            size="icon"
+            className="rounded-full bg-primary text-primary-foreground hover:bg-primary/90 flex-shrink-0"
+            disabled={sendMessage.isPending || !msgText.trim()}
           >
             {sendMessage.isPending ? (
-              <Loader2 size={20} className="animate-spin" />
+              <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
-              <Send size={20} />
+              <Send className="w-4 h-4" />
             )}
-          </button>
-        </div>
+          </Button>
+        </form>
       </div>
-    </div>
+    </AuthGuard>
   );
 }
