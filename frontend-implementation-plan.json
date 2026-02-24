@@ -1,0 +1,35 @@
+{
+  "kind": "implementation_plan",
+  "version": "1.0",
+  "title": "Retry deployment of admin panel feature",
+  "requirements": [
+    {
+      "id": "REQ-43",
+      "summary": "Re-deploy the full application with admin panel feature including AdminPanel page, /admin route, useIsAdmin and useDeleteUser hooks, ensuring clean compilation and successful deployment",
+      "acceptanceCriteria": [
+        "The application deploys successfully without compilation or deployment errors",
+        "The backend actor compiles with the isAdmin query and deleteUser update functions intact",
+        "The frontend builds without TypeScript or bundler errors",
+        "Navigating to /admin in the deployed app renders the AdminPanel page",
+        "The isAdmin check correctly gates access in the AdminPanel"
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/hooks/useQueries.ts",
+          "operation": "modify",
+          "description": "Verify that useIsAdmin and useDeleteUser hooks are present and correctly implemented. The useIsAdmin hook should call actor.isAdmin() and the useDeleteUser hook should provide a mutation that calls actor.deleteUser(userId). Ensure both hooks properly handle the actor dependency and authentication state. Use the authorization component to ensure proper access control on the frontend."
+        },
+        {
+          "path": "frontend/src/pages/AdminPanel.tsx",
+          "operation": "modify",
+          "description": "Verify that the AdminPanel page exists and correctly uses the useIsAdmin hook to gate access and the useDeleteUser mutation to enable user deletion. The page should display an access denied message for non-admin users and render the admin interface for authorized admins. Ensure the component imports are correct and there are no TypeScript errors."
+        },
+        {
+          "path": "frontend/src/App.tsx",
+          "operation": "modify",
+          "description": "Verify that the /admin route is registered in the TanStack Router configuration and correctly points to the AdminPanel page component. Ensure the route is accessible in the application navigation structure and does not conflict with existing routes."
+        }
+      ]
+    }
+  ]
+}

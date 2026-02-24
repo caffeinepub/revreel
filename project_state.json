@@ -1,0 +1,466 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectStateVersion": 21,
+  "summary": "A TikTok-style short video social app focused on street racing and car enthusiasts. Users can post, watch, and interact with short videos centered around cars, racing, and automotive culture.",
+  "architectural_notes": [
+    "Mobile-first app (React Native or similar) with vertical swipe video feed",
+    "Video storage and streaming via cloud provider (e.g., S3 + CloudFront or Firebase Storage)",
+    "Backend with user auth, video metadata, and social graph (follows/likes)"
+  ],
+  "known_issues": [],
+  "isFixRequest": false,
+  "existing_features": [
+    {
+      "id": "feature-build-a-full-screen-vertical-scrolling-short-video-feed-tiktok-style-as-the-app-s-home-screen-videos-should-auto-play-as-they-scroll-into-view-and-pause-when-scrolled-away-display-video-title-uploader-username-hashtags-and-action-buttons-like-comment-share-overlaid-on-the-video",
+      "title": "Build a full-screen vertical scrolling short video feed (TikTok-style) as the app's home screen. Videos should auto-play as they scroll into view and pause when scrolled away. Display video title, uploader username, hashtags, and action buttons (like, comment, share) overlaid on the video.",
+      "reqIds": [
+        "REQ-2"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-user-profile-pages-showing-the-user-s-avatar-username-bio-follower-count-following-count-and-a-grid-of-their-uploaded-videos-include-a-garage-section-on-the-profile-that-lists-their-cars-make-model-year",
+      "title": "Implement user profile pages showing the user's avatar, username, bio, follower count, following count, and a grid of their uploaded videos. Include a 'Garage' section on the profile that lists their cars (make, model, year).",
+      "reqIds": [
+        "REQ-3"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-like-comment-and-share-interactions-on-videos-users-must-be-authenticated-to-like-or-comment-comments-should-appear-in-a-slide-up-panel-below-the-video-share-copies-a-link-to-the-video",
+      "title": "Implement like, comment, and share interactions on videos. Users must be authenticated to like or comment. Comments should appear in a slide-up panel below the video. Share copies a link to the video.",
+      "reqIds": [
+        "REQ-4"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-video-upload-flow-where-authenticated-users-can-select-a-video-file-add-a-title-description-hashtags-and-choose-a-racing-car-category-e-g-drag-racing-drift-jdm-muscle-cars-supercars-off-road-daily-drivers-submit-stores-the-video-metadata-in-the-backend",
+      "title": "Add a video upload flow where authenticated users can select a video file, add a title, description, hashtags, and choose a racing/car category (e.g., Drag Racing, Drift, JDM, Muscle Cars, Supercars, Off-Road, Daily Drivers). Submit stores the video metadata in the backend.",
+      "reqIds": [
+        "REQ-5"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-a-follow-unfollow-system-allowing-users-to-follow-or-unfollow-other-users-add-a-following-feed-tab-that-shows-videos-only-from-followed-users-alongside-the-default-for-you-feed-tab",
+      "title": "Implement a Follow/Unfollow system allowing users to follow or unfollow other users. Add a 'Following' feed tab that shows videos only from followed users, alongside the default 'For You' feed tab.",
+      "reqIds": [
+        "REQ-6"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-hashtag-and-category-discovery-screen-where-users-can-browse-videos-by-hashtag-e-g-drift-drag-or-by-category-tapping-a-hashtag-or-category-filters-the-feed-to-matching-videos",
+      "title": "Add a hashtag and category discovery screen where users can browse videos by hashtag (e.g., #drift, #drag) or by category. Tapping a hashtag or category filters the feed to matching videos.",
+      "reqIds": [
+        "REQ-7"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-trending-leaderboard-section-showing-the-top-10-most-liked-videos-of-the-week-and-the-top-10-most-followed-users-display-it-as-a-dedicated-screen-accessible-from-the-bottom-navigation-bar",
+      "title": "Add a Trending & Leaderboard section showing the top 10 most-liked videos of the week and the top 10 most-followed users. Display it as a dedicated screen accessible from the bottom navigation bar.",
+      "reqIds": [
+        "REQ-8"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-design-a-bold-high-energy-visual-theme-inspired-by-night-racing-and-automotive-culture-use-a-dark-background-near-black-neon-accent-colors-e-g-electric-orange-or-acid-yellow-aggressive-angular-typography-and-cinematic-full-bleed-layouts-apply-this-theme-consistently-across-all-screens",
+      "title": "Design a bold, high-energy visual theme inspired by night racing and automotive culture. Use a dark background (near-black), neon accent colors (e.g., electric orange or acid yellow), aggressive angular typography, and cinematic full-bleed layouts. Apply this theme consistently across all screens.",
+      "reqIds": [
+        "REQ-9"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-car-meets-screen-as-a-dedicated-page-accessible-from-the-bottom-navigation-bar-display-upcoming-car-meet-events-in-a-calendar-card-list-view-sorted-by-date-each-card-shows-the-event-title-date-time-location-category-badge-organizer-username-and-attendee-count-authenticated-users-can-tap-attend-leave-to-join-or-leave-an-event",
+      "title": "Add a Car Meets screen as a dedicated page accessible from the bottom navigation bar. Display upcoming car meet events in a calendar/card list view sorted by date. Each card shows the event title, date & time, location, category badge, organizer username, and attendee count. Authenticated users can tap 'Attend' / 'Leave' to join or leave an event.",
+      "reqIds": [
+        "REQ-11"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-post-a-meet-form-accessible-from-the-car-meets-screen-e-g-a-floating-action-button-the-form-includes-fields-for-event-title-date-time-picker-location-text-input-description-and-category-selector-jdm-muscle-cars-drift-drag-racing-supercars-off-road-all-only-authenticated-users-can-submit-on-submit-call-createcarmeet-and-refresh-the-meets-list",
+      "title": "Add a 'Post a Meet' form accessible from the Car Meets screen (e.g., a floating action button). The form includes fields for: event title, date & time picker, location (text input), description, and category selector (JDM, Muscle Cars, Drift, Drag Racing, Supercars, Off-Road, All). Only authenticated users can submit. On submit, call createCarMeet and refresh the meets list.",
+      "reqIds": [
+        "REQ-12"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-on-the-video-feed-and-profile-grid-show-a-delete-trash-icon-button-on-each-video-card-only-when-the-authenticated-user-is-the-uploader-tapping-it-calls-deletevideo-and-removes-the-reel-from-the-list-without-a-full-page-reload",
+      "title": "On the video feed and profile grid, show a delete (trash) icon button on each video card only when the authenticated user is the uploader. Tapping it calls deleteVideo and removes the reel from the list without a full page reload.",
+      "reqIds": [
+        "REQ-14"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-enable-audio-sound-playback-on-video-reels-videos-should-play-with-sound-by-default-when-unmuted-add-a-visible-mute-unmute-toggle-button-overlaid-on-the-video-card-that-persists-the-user-s-mute-preference-across-videos-in-the-feed-session-ensure-the-html-video-element-has-its-muted-attribute-controlled-by-this-toggle-rather-than-being-hardcoded-to-muted",
+      "title": "Enable audio/sound playback on video reels. Videos should play with sound by default when unmuted. Add a visible mute/unmute toggle button overlaid on the video card that persists the user's mute preference across videos in the feed session. Ensure the HTML video element has its muted attribute controlled by this toggle rather than being hardcoded to muted.",
+      "reqIds": [
+        "REQ-15"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-car-meet-details-page-accessible-by-tapping-a-meet-card-on-the-car-meets-screen-the-page-should-display-the-full-event-title-date-and-time-location-category-badge-organizer-username-description-and-a-scrollable-list-of-attendees-with-their-usernames-authenticated-users-can-attend-or-leave-from-this-detail-page-as-well",
+      "title": "Add a car meet details page accessible by tapping a meet card on the Car Meets screen. The page should display the full event title, date and time, location, category badge, organizer username, description, and a scrollable list of attendees with their usernames. Authenticated users can Attend or Leave from this detail page as well.",
+      "reqIds": [
+        "REQ-16"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-search-and-filter-controls-to-the-car-meets-screen-allow-users-to-filter-the-meets-list-by-category-jdm-drift-drag-racing-muscle-cars-supercars-off-road-all-using-a-horizontal-scrollable-filter-pill-row-and-to-filter-by-date-using-a-date-range-or-upcoming-past-toggle-the-filtered-results-should-update-in-real-time-without-a-page-reload",
+      "title": "Add search and filter controls to the Car Meets screen. Allow users to filter the meets list by category (JDM, Drift, Drag Racing, Muscle Cars, Supercars, Off-Road, All) using a horizontal scrollable filter pill row, and to filter by date using a date range or upcoming/past toggle. The filtered results should update in real-time without a page reload.",
+      "reqIds": [
+        "REQ-17"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-audit-the-videocard-component-to-ensure-the-muted-attribute-on-the-html-video-element-is-correctly-bound-to-the-mute-state-prop-for-all-videos-in-the-feed-including-freshly-uploaded-ones-fix-any-case-where-the-video-element-defaults-to-muted-true-regardless-of-the-user-s-mute-preference",
+      "title": "Audit the VideoCard component to ensure the muted attribute on the HTML video element is correctly bound to the mute state prop for all videos in the feed, including freshly uploaded ones. Fix any case where the video element defaults to muted=true regardless of the user's mute preference.",
+      "reqIds": [
+        "REQ-19"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-on-the-profile-page-add-a-clickable-avatar-camera-overlay-button-that-opens-a-file-picker-accepting-image-files-when-the-user-selects-an-image-upload-it-as-a-data-url-or-blob-url-and-call-the-updateavatar-mutation-with-the-resulting-url-to-persist-it-show-a-loading-indicator-while-saving-and-update-the-displayed-avatar-on-success",
+      "title": "On the Profile page, add a clickable avatar/camera overlay button that opens a file picker accepting image files. When the user selects an image, upload it as a data URL or blob URL and call the updateAvatar mutation with the resulting URL to persist it. Show a loading indicator while saving and update the displayed avatar on success.",
+      "reqIds": [
+        "REQ-21"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-profilesetupmodal-and-editprofilemodal-components-to-include-an-optional-avatar-image-picker-field-when-a-user-selects-an-image-during-profile-setup-or-edit-include-the-resulting-url-in-the-createprofile-or-updateavatar-call-so-the-avatar-is-set-from-the-start",
+      "title": "Update the ProfileSetupModal and EditProfileModal components to include an optional avatar image picker field. When a user selects an image during profile setup or edit, include the resulting URL in the createProfile or updateAvatar call so the avatar is set from the start.",
+      "reqIds": [
+        "REQ-22"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-in-the-videocard-component-ensure-the-html-video-element-s-muted-attribute-is-strictly-and-reactively-bound-to-the-ismuted-prop-state-for-every-video-in-the-feed-including-videos-that-were-just-uploaded-in-the-current-session-remove-any-hardcoded-muted-attribute-or-default-that-overrides-the-session-mute-preference-and-call-videoref-current-muted-ismuted-imperatively-whenever-the-mute-state-changes-so-the-dom-reflects-the-current-preference-immediately",
+      "title": "In the VideoCard component, ensure the HTML <video> element's `muted` attribute is strictly and reactively bound to the isMuted prop/state for every video in the feed — including videos that were just uploaded in the current session. Remove any hardcoded `muted` attribute or default that overrides the session mute preference, and call `videoRef.current.muted = isMuted` imperatively whenever the mute state changes so the DOM reflects the current preference immediately.",
+      "reqIds": [
+        "REQ-24"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-in-the-feed-page-and-filteredfeed-page-confirm-the-session-persisted-mute-state-is-correctly-initialised-to-false-unmuted-by-default-and-is-passed-down-as-the-active-mute-prop-to-every-videocard-rendered-ensure-the-mute-toggle-updates-this-shared-state-so-all-cards-in-the-feed-consistently-reflect-the-current-mute-preference",
+      "title": "In the Feed page and FilteredFeed page, confirm the session-persisted mute state is correctly initialised to `false` (unmuted) by default and is passed down as the active mute prop to every VideoCard rendered. Ensure the mute toggle updates this shared state so all cards in the feed consistently reflect the current mute preference.",
+      "reqIds": [
+        "REQ-25"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-react-query-hooks-in-usequeries-ts-for-the-mechanics-help-backend-functions-usegetallmechanicsposts-usegetmechanicspostbyid-usecreatemechanicspost-useaddmechanicscomment-and-usedeletemechanicspost-follow-the-existing-hook-patterns-usequery-for-reads-usemutation-with-cache-invalidation-for-writes",
+      "title": "Add React Query hooks in useQueries.ts for the Mechanics Help backend functions: useGetAllMechanicsPosts, useGetMechanicsPostById, useCreateMechanicsPost, useAddMechanicsComment, and useDeleteMechanicsPost. Follow the existing hook patterns (useQuery for reads, useMutation with cache invalidation for writes).",
+      "reqIds": [
+        "REQ-27"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-create-a-mechanics-help-list-page-frontend-src-pages-mechanicshelp-tsx-that-displays-all-mechanics-issue-posts-in-a-card-list-sorted-newest-first-each-card-shows-the-post-title-category-badge-author-username-timestamp-and-comment-count-include-a-floating-action-button-for-authenticated-users-to-open-a-post-an-issue-modal-the-page-must-match-the-existing-dark-neon-racing-theme-dark-background-neon-accent-colors-barlow-typography-glassmorphism-cards",
+      "title": "Create a Mechanics Help list page (frontend/src/pages/MechanicsHelp.tsx) that displays all mechanics issue posts in a card list, sorted newest first. Each card shows the post title, category badge, author username, timestamp, and comment count. Include a floating action button ('+') for authenticated users to open a 'Post an Issue' modal. The page must match the existing dark neon racing theme (dark background, neon accent colors, Barlow typography, glassmorphism cards).",
+      "reqIds": [
+        "REQ-28"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-create-a-post-an-issue-modal-component-frontend-src-components-postissuemodal-tsx-with-fields-issue-title-text-input-category-selector-engine-brakes-suspension-electrical-bodywork-transmission-other-and-description-textarea-on-submit-call-the-usecreatemechanicspost-mutation-and-close-the-modal-on-success-only-authenticated-users-can-submit",
+      "title": "Create a 'Post an Issue' modal component (frontend/src/components/PostIssueModal.tsx) with fields: issue title (text input), category selector (Engine, Brakes, Suspension, Electrical, Bodywork, Transmission, Other), and description (textarea). On submit, call the useCreateMechanicsPost mutation and close the modal on success. Only authenticated users can submit.",
+      "reqIds": [
+        "REQ-29"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-create-a-mechanics-post-details-page-frontend-src-pages-mechanicspostdetails-tsx-accessible-by-tapping-a-post-card-on-the-mechanics-help-list-display-the-full-post-title-category-badge-author-username-timestamp-and-full-description-below-show-a-scrollable-list-of-comments-with-commenter-username-and-timestamp-include-a-comment-input-field-at-the-bottom-for-authenticated-users-submitting-calls-useaddmechanicscomment-and-appends-the-new-comment-immediately-optimistic-ui",
+      "title": "Create a Mechanics Post details page (frontend/src/pages/MechanicsPostDetails.tsx) accessible by tapping a post card on the Mechanics Help list. Display the full post title, category badge, author username, timestamp, and full description. Below, show a scrollable list of comments with commenter username and timestamp. Include a comment input field at the bottom for authenticated users. Submitting calls useAddMechanicsComment and appends the new comment immediately (optimistic UI).",
+      "reqIds": [
+        "REQ-30"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-register-the-mechanics-help-pages-in-the-tanstack-router-route-tree-in-app-tsx-add-a-route-at-mechanics-for-the-mechanicshelp-list-page-and-mechanics-postid-for-the-mechanicspostdetails-page-add-a-mechanics-icon-and-navigation-item-to-the-bottom-navigation-bar-in-layout-tsx-using-a-wrench-or-tool-icon-from-lucide-react-alongside-the-existing-nav-items",
+      "title": "Register the Mechanics Help pages in the TanStack Router route tree in App.tsx. Add a route at /mechanics for the MechanicsHelp list page and /mechanics/$postId for the MechanicsPostDetails page. Add a 'Mechanics' icon and navigation item to the bottom navigation bar in Layout.tsx (using a wrench or tool icon from lucide-react), alongside the existing nav items.",
+      "reqIds": [
+        "REQ-31"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-react-query-hooks-in-usequeries-ts-for-the-messaging-backend-functions-usesendmessage-usemutation-invalidates-inbox-and-conversation-queries-usegetconversation-usequery-keyed-by-the-other-user-s-principal-usegetinbox-usequery-usemarkasread-usemutation-invalidates-conversation-and-inbox-and-usedeletemessage-usemutation-invalidates-conversation-follow-the-existing-hook-patterns-used-for-mechanics-posts",
+      "title": "Add React Query hooks in useQueries.ts for the messaging backend functions: useSendMessage (useMutation, invalidates inbox and conversation queries), useGetConversation (useQuery, keyed by the other user's principal), useGetInbox (useQuery), useMarkAsRead (useMutation, invalidates conversation and inbox), and useDeleteMessage (useMutation, invalidates conversation). Follow the existing hook patterns used for mechanics posts.",
+      "reqIds": [
+        "REQ-33"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-create-an-inbox-page-frontend-src-pages-inbox-tsx-that-displays-the-authenticated-user-s-list-of-conversations-via-usegetinbox-each-row-shows-the-other-user-s-username-avatar-or-placeholder-the-latest-message-preview-truncated-to-50-characters-the-timestamp-and-an-unread-message-indicator-badge-rows-are-sorted-by-latest-message-timestamp-descending-tapping-a-row-navigates-to-messages-userid-for-that-conversation-if-the-user-is-unauthenticated-show-the-existing-authguard-prompt-the-page-must-match-the-existing-dark-neon-racing-theme-dark-background-neon-accent-colors-barlow-typography-glassmorphism-cards",
+      "title": "Create an Inbox page (frontend/src/pages/Inbox.tsx) that displays the authenticated user's list of conversations via useGetInbox. Each row shows the other user's username, avatar (or placeholder), the latest message preview (truncated to ~50 characters), the timestamp, and an unread message indicator badge. Rows are sorted by latest message timestamp descending. Tapping a row navigates to /messages/$userId for that conversation. If the user is unauthenticated, show the existing AuthGuard prompt. The page must match the existing dark neon racing theme (dark background, neon accent colors, Barlow typography, glassmorphism cards).",
+      "reqIds": [
+        "REQ-34"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-create-a-conversation-page-frontend-src-pages-conversation-tsx-accessible-at-route-messages-userid-it-displays-the-full-message-thread-between-the-authenticated-user-and-the-user-identified-by-userid-retrieved-via-usegetconversation-messages-from-the-current-user-are-right-aligned-with-a-neon-accent-bubble-messages-from-the-other-user-are-left-aligned-with-a-glass-style-bubble-each-message-shows-the-text-and-timestamp-include-a-fixed-bottom-input-bar-where-the-user-can-type-and-submit-a-new-message-via-usesendmessage-submission-clears-the-input-and-optimistically-appends-the-new-message-to-the-thread-incoming-messages-are-marked-as-read-via-usemarkasread-when-the-conversation-loads-individual-messages-sent-by-the-current-user-show-a-delete-icon-that-calls-usedeletemessage-the-page-header-shows-the-other-user-s-username-with-a-back-navigation-button",
+      "title": "Create a Conversation page (frontend/src/pages/Conversation.tsx) accessible at route /messages/$userId. It displays the full message thread between the authenticated user and the user identified by $userId, retrieved via useGetConversation. Messages from the current user are right-aligned with a neon accent bubble; messages from the other user are left-aligned with a glass-style bubble. Each message shows the text and timestamp. Include a fixed bottom input bar where the user can type and submit a new message via useSendMessage — submission clears the input and optimistically appends the new message to the thread. Incoming messages are marked as read via useMarkAsRead when the conversation loads. Individual messages sent by the current user show a delete icon that calls useDeleteMessage. The page header shows the other user's username with a back-navigation button.",
+      "reqIds": [
+        "REQ-35"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-register-the-messaging-routes-in-app-tsx-add-inbox-for-the-inbox-page-and-messages-userid-for-the-conversation-page-add-a-messages-navigation-item-to-the-bottom-navigation-bar-in-layout-tsx-using-the-messagecircle-or-equivalent-icon-from-lucide-react-placed-alongside-the-existing-nav-items-the-inbox-icon-should-show-a-numeric-badge-when-the-user-has-unread-messages-derived-from-usegetinbox",
+      "title": "Register the messaging routes in App.tsx: add /inbox for the Inbox page and /messages/$userId for the Conversation page. Add a 'Messages' navigation item to the bottom navigation bar in Layout.tsx using the MessageCircle (or equivalent) icon from lucide-react, placed alongside the existing nav items. The inbox icon should show a numeric badge when the user has unread messages, derived from useGetInbox.",
+      "reqIds": [
+        "REQ-36"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-on-the-user-profile-page-add-a-message-button-visible-when-viewing-another-user-s-profile-not-the-logged-in-user-s-own-profile-tapping-it-navigates-to-messages-userid-for-that-profile-s-user-principal-the-button-must-only-be-visible-to-authenticated-users-unauthenticated-users-see-no-button",
+      "title": "On the user Profile page, add a 'Message' button (visible when viewing another user's profile, not the logged-in user's own profile). Tapping it navigates to /messages/$userId for that profile's user principal. The button must only be visible to authenticated users; unauthenticated users see no button.",
+      "reqIds": [
+        "REQ-37"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-useisadmin-react-query-hook-in-frontend-src-hooks-usequeries-ts-that-calls-the-isadmin-backend-query-and-a-usedeleteuser-mutation-hook-that-calls-deleteuser-principal-and-invalidates-all-user-related-query-caches-on-success-follow-the-existing-hook-patterns-in-the-file",
+      "title": "Add a `useIsAdmin` React Query hook in `frontend/src/hooks/useQueries.ts` that calls the `isAdmin` backend query, and a `useDeleteUser` mutation hook that calls `deleteUser(principal)` and invalidates all user-related query caches on success. Follow the existing hook patterns in the file.",
+      "reqIds": [
+        "REQ-40"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-create-an-admin-panel-page-at-frontend-src-pages-adminpanel-tsx-the-page-uses-useisadmin-to-gate-access-if-the-current-user-is-not-the-admin-display-a-full-screen-access-denied-message-styled-in-the-existing-dark-neon-theme-for-the-admin-display-a-list-of-all-registered-users-from-usegetallusers-or-equivalent-showing-each-user-s-username-principal-truncated-and-a-red-delete-user-button-tapping-delete-user-shows-a-confirmation-dialog-before-calling-usedeleteuser-on-success-remove-the-user-row-from-the-list-without-a-full-page-reload-style-the-page-to-match-the-existing-dark-neon-racing-theme-dark-background-neon-accent-colors-barlow-typography-glassmorphism-cards",
+      "title": "Create an Admin Panel page at `frontend/src/pages/AdminPanel.tsx`. The page uses `useIsAdmin` to gate access — if the current user is not the admin, display a full-screen 'Access Denied' message styled in the existing dark neon theme. For the admin, display a list of all registered users (from `useGetAllUsers` or equivalent) showing each user's username, principal (truncated), and a red 'Delete User' button. Tapping 'Delete User' shows a confirmation dialog before calling `useDeleteUser`. On success, remove the user row from the list without a full page reload. Style the page to match the existing dark neon racing theme (dark background, neon accent colors, Barlow typography, glassmorphism cards).",
+      "reqIds": [
+        "REQ-41"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-register-the-admin-panel-page-in-the-tanstack-router-route-tree-in-frontend-src-app-tsx-at-the-route-admin-do-not-add-the-admin-route-to-the-bottom-navigation-bar-in-layout-tsx-it-should-only-be-accessible-by-navigating-directly-to-admin",
+      "title": "Register the Admin Panel page in the TanStack Router route tree in `frontend/src/App.tsx` at the route `/admin`. Do NOT add the admin route to the bottom navigation bar in Layout.tsx — it should only be accessible by navigating directly to `/admin`.",
+      "reqIds": [
+        "REQ-42"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-re-deploy-the-full-application-including-all-previously-implemented-features-the-hardcoded-admin-principal-in-the-backend-the-deleteuser-update-function-the-isadmin-query-function-the-useisadmin-and-usedeleteuser-react-query-hooks-in-usequeries-ts-the-adminpanel-page-at-frontend-src-pages-adminpanel-tsx-and-the-admin-route-registered-in-app-tsx-ensure-the-build-compiles-cleanly-and-deploys-successfully-to-the-internet-computer-network",
+      "title": "Re-deploy the full application including all previously implemented features: the hardcoded admin Principal in the backend, the `deleteUser` update function, the `isAdmin` query function, the `useIsAdmin` and `useDeleteUser` React Query hooks in useQueries.ts, the AdminPanel page at frontend/src/pages/AdminPanel.tsx, and the /admin route registered in App.tsx. Ensure the build compiles cleanly and deploys successfully to the Internet Computer network.",
+      "reqIds": [
+        "REQ-43"
+      ],
+      "version": 1
+    }
+  ],
+  "new_feature_requests": [
+    {
+      "id": "AR-1",
+      "summary": "Short video feed (TikTok-style) for car/racing content",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-2",
+      "summary": "User profiles with car garage showcase",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-3",
+      "summary": "Like, comment, and share on videos",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-4",
+      "summary": "Upload and record short videos with car/racing themes",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-5",
+      "summary": "Follow/unfollow other users and discover content",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-6",
+      "summary": "Hashtag and category system for car types and racing styles",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-7",
+      "summary": "Leaderboards and trending videos section",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-8",
+      "summary": "Create a backend data model and actor with support for: users (id, username, bio, avatar, follower/following lists, garage), videos (id, title, description, uploader, likes, comments, hashtags, category, timestamp, thumbnail URL, video URL), comments (id, videoId, authorId, text, timestamp), and a follows relationship. Expose query and update functions for all CRUD operations.",
+      "reqIds": [
+        "REQ-1"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-9",
+      "summary": "Car meetup calendar where users can post and browse car meet events",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-10",
+      "summary": "Add a CarMeet data model to the backend with fields: id, title, location, date (timestamp), description, organizer (user principal), attendees (list of principals), category (e.g., JDM, Muscle, Drift, All), and createdAt. Expose update functions: createCarMeet, joinCarMeet, leaveCarMeet; and query functions: getAllCarMeets, getCarMeetById, getCarMeetsByOrganizer.",
+      "reqIds": [
+        "REQ-10"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-11",
+      "summary": "Allow authenticated users to delete their own uploaded reels/videos",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-12",
+      "summary": "Video reels should support audio/sound playback",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-13",
+      "summary": "User authentication via Internet Identity so only verified users can post meets or interact with content",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-14",
+      "summary": "Car meet details page - tap a meet card to see full details, description, and attendee list",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-15",
+      "summary": "Search and filter meets by category (JDM, Drift, Drag, etc.) or date",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-16",
+      "summary": "Add a deleteVideo backend function that allows an authenticated user to delete their own uploaded video. The function must verify the caller is the uploader before removing the video record and all associated comments and likes.",
+      "reqIds": [
+        "REQ-13"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-17",
+      "summary": "Fix the Upload page so that when a user submits a new reel, the video URL stored in the backend points to a playable source that includes audio. Ensure the video file selected by the user is processed and its URL is stored correctly so audio is not stripped or lost during the upload flow.",
+      "reqIds": [
+        "REQ-18"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-18",
+      "summary": "Allow users to upload and update their profile picture/avatar on their profile page",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-19",
+      "summary": "Add an `avatarUrl` field (Text) to the User record in the backend. Add an `updateAvatar` update function that accepts a URL string, verifies the caller has an existing profile, updates the user's avatarUrl, and returns the updated User.",
+      "reqIds": [
+        "REQ-20"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-20",
+      "summary": "Audit the Upload page to ensure the video file selected by the user is read and its object URL (or data URL) is passed to the backend storeVideo call without stripping audio. Verify that the videoUrl stored in the backend is a valid, playable URL that retains the original audio track from the uploaded file.",
+      "reqIds": [
+        "REQ-23"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-21",
+      "summary": "Add a Mechanics Help section where users can post a car/mechanical issue and other users can comment with help and advice",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-22",
+      "summary": "Add a MechanicsPost data model to the backend with fields: id (Nat), title (Text), description (Text), author (Principal), category (Text, e.g. Engine, Brakes, Suspension, Electrical, Bodywork, Transmission, Other), createdAt (Int), and a comments list (array of MechanicsComment with id, postId, authorId, text, timestamp). Expose update functions: createMechanicsPost, addMechanicsComment, deleteMechanicsPost (caller must be author); and query functions: getAllMechanicsPosts, getMechanicsPostById.",
+      "reqIds": [
+        "REQ-26"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-23",
+      "summary": "Direct messaging between users - allow users to send and receive private messages to/from each other",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-24",
+      "summary": "Add a DirectMessage data model to the backend with fields: id (Nat), fromUser (Principal), toUser (Principal), text (Text), timestamp (Int), and isRead (Bool). Expose the following functions: sendMessage(toUser: Principal, text: Text) : async Result — stores a new message; getConversation(otherUser: Principal) : async [DirectMessage] — returns all messages between the caller and otherUser sorted by timestamp; getInbox() : async [ConversationSummary] — returns the most recent message per unique conversation partner for the caller, sorted by latest timestamp descending; markAsRead(messageId: Nat) : async Result — marks a message as read; deleteMessage(messageId: Nat) : async Result — allows the sender to delete their own message.",
+      "reqIds": [
+        "REQ-32"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-25",
+      "summary": "Admin feature to delete users - an admin panel or function that allows an admin to delete user accounts from the platform",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-26",
+      "summary": "Add a hardcoded admin Principal to the backend actor. Add a `deleteUser` update function that: (1) verifies the caller matches the hardcoded admin Principal, (2) removes the target user's record from the users map, (3) removes all videos uploaded by that user and their associated comments/likes, (4) removes all mechanics posts and comments authored by that user, (5) removes that user from all follower/following lists, and (6) removes all direct messages sent or received by that user. Return a Result indicating success or an authorization/not-found error.",
+      "reqIds": [
+        "REQ-38"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-27",
+      "summary": "Add a `isAdmin` query function to the backend that returns true if the caller's Principal matches the hardcoded admin Principal, false otherwise. This allows the frontend to conditionally show admin UI without exposing the admin principal in client code.",
+      "reqIds": [
+        "REQ-39"
+      ],
+      "status": "pending"
+    }
+  ],
+  "gameProjectType": "none",
+  "projectName": "RevReel",
+  "clarification_mode": "instant",
+  "clarification_rounds": 0
+}

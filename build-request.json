@@ -1,0 +1,42 @@
+{
+  "kind": "build_request",
+  "title": "Retry deployment of admin panel feature",
+  "priority": "normal",
+  "requirements": [
+    {
+      "id": "REQ-43",
+      "text": "Re-deploy the full application including all previously implemented features: the hardcoded admin Principal in the backend, the `deleteUser` update function, the `isAdmin` query function, the `useIsAdmin` and `useDeleteUser` React Query hooks in useQueries.ts, the AdminPanel page at frontend/src/pages/AdminPanel.tsx, and the /admin route registered in App.tsx. Ensure the build compiles cleanly and deploys successfully to the Internet Computer network.",
+      "target": "both",
+      "source": {
+        "messageIds": [
+          "msg-1",
+          "msg-2"
+        ],
+        "quotes": [
+          "Retry the deployment",
+          "retry building the admin delete-users feature"
+        ]
+      },
+      "acceptanceCriteria": [
+        "The application deploys successfully without compilation or deployment errors",
+        "The backend actor compiles with the isAdmin query and deleteUser update functions intact",
+        "The frontend builds without TypeScript or bundler errors",
+        "Navigating to /admin in the deployed app renders the AdminPanel page",
+        "The isAdmin check correctly gates access in the AdminPanel"
+      ]
+    }
+  ],
+  "constraints": [
+    "Do not introduce new features or change existing logic — this is a clean retry of the last build",
+    "Do not alter the hardcoded admin Principal already defined in the backend"
+  ],
+  "nonGoals": [
+    "Adding any new features beyond what was already implemented",
+    "Changing the admin panel UI or backend admin logic",
+    "Modifying any other existing pages or components"
+  ],
+  "imageRequirements": {
+    "required": [],
+    "edits": []
+  }
+}
