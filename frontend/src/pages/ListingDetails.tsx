@@ -5,7 +5,8 @@ import { useGetListingById, useDeactivateListing, useGetUserProfile } from '../h
 import { Button } from '@/components/ui/button';
 
 export default function ListingDetails() {
-  const { listingId } = useParams({ from: '/app-layout/classifieds/$listingId' });
+  const params = useParams({ strict: false }) as { listingId?: string };
+  const listingId = params.listingId ?? '';
   const navigate = useNavigate();
   const { identity } = useInternetIdentity();
 

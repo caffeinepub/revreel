@@ -322,5 +322,46 @@ actor {
     };
   };
 
-  // (The rest of the code remains unchanged from the original)
+  // Get the caller's own profile. Requires the caller to be a registered user.
+  public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
+    if (not checkIsUser(caller)) {
+      Runtime.trap("Unauthorized: Only users can get their profile");
+    };
+    users.get(caller).map(func(u) { u.profile });
+  };
+
+  // Save (create or update) the caller's own profile. Requires the caller to be a registered user.
+  public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
+    if (not checkIsUser(caller)) {
+      Runtime.trap("Unauthorized: Only users can save their profile");
+    };
+    // Ensure the profile id matches the caller
+    let profileWithCorrectId : UserProfile = { profile with id = caller };
+    switch (users.get(caller)) {
+      case (null) {
+        // New user: create with empty followers/following
+        let newUser : InternalUser = {
+          profile = profileWithCorrectId;
+          followers = Set.empty<UserId>();
+          following = Set.empty<UserId>();
+        };
+        users.add(caller, newUser);
+      };
+      case (?existingUser) {
+        // Existing user: preserve followers/following, update profile
+        let updatedUser : InternalUser = {
+          existingUser with profile = profileWithCorrectId
+        };
+        users.add(caller, updatedUser);
+      };
+    };
+  };
+
+  // Get any user's profile by principal. Caller must be the same user or an admin.
+  public query ({ caller }) func getUserProfile(user : Principal) : async ?UserProfile {
+    if (caller != user and not checkIsAdmin(caller)) {
+      Runtime.trap("Unauthorized: Can only view your own profile");
+    };
+    users.get(user).map(func(u) { u.profile });
+  };
 };

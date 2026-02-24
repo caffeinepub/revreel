@@ -18,7 +18,7 @@ export default function CarMeetCard({ meet }: CarMeetCardProps) {
   const leaveMeet = useLeaveCarMeet();
 
   const isAttending = currentUserId
-    ? meet.attendees.some(a => a.toString() === currentUserId)
+    ? meet.attendees.some((a) => a.toString() === currentUserId)
     : false;
 
   const meetDate = new Date(Number(meet.date) / 1_000_000);

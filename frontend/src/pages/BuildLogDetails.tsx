@@ -39,7 +39,7 @@ export default function BuildLogDetails() {
     e.preventDefault();
     if (!log || !stageTitle.trim()) return;
     await addStage.mutateAsync({
-      buildLogId: log.id,
+      buildId: Number(log.id),
       title: stageTitle.trim(),
       description: stageDesc.trim(),
       imageUrl: stageImage.trim(),
@@ -53,8 +53,8 @@ export default function BuildLogDetails() {
   const handleDelete = async () => {
     if (!log) return;
     if (confirm('Delete this build log?')) {
-      await deleteBuildLog.mutateAsync({ id: log.id });
-      navigate({ to: '/feed' });
+      await deleteBuildLog.mutateAsync({ buildId: Number(log.id) });
+      navigate({ to: '/builds' });
     }
   };
 
@@ -79,11 +79,11 @@ export default function BuildLogDetails() {
       <div className="max-w-2xl mx-auto px-4 py-6">
         {/* Back */}
         <button
-          onClick={() => navigate({ to: '/feed' })}
+          onClick={() => navigate({ to: '/builds' })}
           className="flex items-center gap-1 text-muted-foreground hover:text-foreground text-sm mb-4 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back
+          Back to Builds
         </button>
 
         {/* Header */}

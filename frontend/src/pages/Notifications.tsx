@@ -96,19 +96,14 @@ export default function Notifications() {
                 className={`flex items-start gap-3 p-4 rounded-lg border cursor-pointer transition-colors ${
                   notif.isRead
                     ? 'bg-card border-border hover:border-primary/30'
-                    : 'bg-primary/5 border-primary/30 hover:border-primary/60'
+                    : 'bg-primary/5 border-primary/30 hover:border-primary/50'
                 }`}
               >
-                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                  <Bell className="w-5 h-5 text-primary" />
-                </div>
+                <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${notif.isRead ? 'bg-muted-foreground/30' : 'bg-primary'}`} />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium">{notif.message}</p>
-                  <p className="text-muted-foreground text-xs mt-0.5">{timeAgo(notif.createdAt)}</p>
+                  <p className="text-sm text-foreground">{notif.message}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{timeAgo(notif.createdAt)}</p>
                 </div>
-                {!notif.isRead && (
-                  <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0 mt-2" />
-                )}
               </div>
             ))}
           </div>

@@ -5,12 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useGetCarMeetDetails, useJoinCarMeet, useLeaveCarMeet } from '../hooks/useQueries';
+import { useGetCarMeetDetails, useJoinCarMeet, useLeaveCarMeet, type UserProfile } from '../hooks/useQueries';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import { toast } from 'sonner';
 
 const CATEGORY_COLORS: Record<string, string> = {
-  jdm: 'bg-neon/20 text-neon border-neon/40',
+  jdm: 'bg-neon-orange/20 text-neon-orange border-neon-orange/40',
   muscle: 'bg-orange-500/20 text-orange-400 border-orange-500/40',
   drift: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40',
   drag: 'bg-red-500/20 text-red-400 border-red-500/40',
@@ -60,7 +60,7 @@ function DetailsSkeleton() {
 }
 
 export default function CarMeetDetails() {
-  const { meetId } = useParams({ from: '/app-layout/meets/$meetId' });
+  const { meetId } = useParams({ strict: false }) as { meetId: string };
   const navigate = useNavigate();
   const { identity } = useInternetIdentity();
   const isAuthenticated = !!identity;
@@ -72,7 +72,7 @@ export default function CarMeetDetails() {
   const [actionLoading, setActionLoading] = useState(false);
 
   const isAttending = currentPrincipal
-    ? (meet?.attendees ?? []).some((a) => a.id.toString() === currentPrincipal)
+    ? (meet?.attendees ?? []).some((a: UserProfile) => a.id.toString() === currentPrincipal)
     : false;
 
   const upcoming = meet ? isUpcoming(meet.date) : false;
@@ -109,7 +109,7 @@ export default function CarMeetDetails() {
         <Car className="w-12 h-12 text-muted-foreground" />
         <h2 className="font-display text-2xl text-foreground">MEET NOT FOUND</h2>
         <p className="text-muted-foreground text-center">This car meet doesn't exist or was removed.</p>
-        <Link to="/meets" className="text-neon font-display text-sm tracking-wider hover:underline">
+        <Link to="/meets" className="text-neon-orange font-display text-sm tracking-wider hover:underline">
           ← BACK TO MEETS
         </Link>
       </div>
@@ -140,10 +140,10 @@ export default function CarMeetDetails() {
         <div className="flex items-center gap-2">
           <span className={`inline-flex items-center gap-1.5 text-xs font-display tracking-wider px-3 py-1 rounded-full border ${
             upcoming
-              ? 'bg-neon/10 text-neon border-neon/30'
+              ? 'bg-neon-orange/10 text-neon-orange border-neon-orange/30'
               : 'bg-muted text-muted-foreground border-border/40'
           }`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${upcoming ? 'bg-neon animate-pulse' : 'bg-muted-foreground'}`} />
+            <span className={`w-1.5 h-1.5 rounded-full ${upcoming ? 'bg-neon-orange animate-pulse' : 'bg-muted-foreground'}`} />
             {upcoming ? 'UPCOMING' : 'PAST EVENT'}
           </span>
         </div>
@@ -157,15 +157,15 @@ export default function CarMeetDetails() {
               params={{ userId: meet.organizer.id.toString() }}
               className="flex items-center gap-2.5 group w-fit"
             >
-              <Avatar className="w-8 h-8 border border-neon/30">
+              <Avatar className="w-8 h-8 border border-neon-orange/30">
                 <AvatarImage src={organizerAvatarUrl} alt={meet.organizer.username} />
-                <AvatarFallback className="bg-neon/10 text-neon text-xs font-display">
+                <AvatarFallback className="bg-neon-orange/10 text-neon-orange text-xs font-display">
                   {meet.organizer.username.slice(0, 2).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               <div>
                 <p className="text-xs text-muted-foreground">Organized by</p>
-                <p className="text-sm font-display text-neon group-hover:text-neon/80 transition-colors">
+                <p className="text-sm font-display text-neon-orange group-hover:text-neon-orange/80 transition-colors">
                   {meet.organizer.username}
                 </p>
               </div>
@@ -173,97 +173,91 @@ export default function CarMeetDetails() {
           )}
         </div>
 
-        {/* Details card */}
-        <div className="rounded-xl border border-border/60 bg-card/60 backdrop-blur-sm overflow-hidden">
-          <div className="h-0.5 bg-gradient-to-r from-neon via-neon/60 to-transparent" />
-          <div className="p-4 space-y-3">
-            <div className="flex items-start gap-3">
-              <Calendar className="w-4 h-4 text-neon/70 mt-0.5 shrink-0" />
-              <div>
-                <p className="text-sm text-foreground font-medium">{formatDate(meet.date)}</p>
-                <p className="text-xs text-muted-foreground">{formatTime(meet.date)}</p>
-              </div>
+        {/* Date & Location */}
+        <div className="bg-card/60 border border-border/60 rounded-xl p-4 space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-neon-orange/10 flex items-center justify-center flex-shrink-0">
+              <Calendar className="w-4 h-4 text-neon-orange" />
             </div>
-            <div className="flex items-start gap-3">
-              <MapPin className="w-4 h-4 text-neon/70 mt-0.5 shrink-0" />
-              <p className="text-sm text-foreground">{meet.location}</p>
+            <div>
+              <p className="text-sm font-semibold text-foreground">{formatDate(meet.date)}</p>
+              <p className="text-xs text-muted-foreground">{formatTime(meet.date)}</p>
             </div>
-            <div className="flex items-center gap-3">
-              <Users className="w-4 h-4 text-neon/70 shrink-0" />
-              <p className="text-sm text-foreground">
-                <span className="font-display text-neon">{meet.attendees.length}</span>
-                {' '}{meet.attendees.length === 1 ? 'racer attending' : 'racers attending'}
-              </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-neon-orange/10 flex items-center justify-center flex-shrink-0">
+              <MapPin className="w-4 h-4 text-neon-orange" />
             </div>
+            <p className="text-sm font-semibold text-foreground">{meet.location}</p>
           </div>
         </div>
 
         {/* Description */}
         {meet.description && (
-          <div className="space-y-2">
-            <h3 className="font-display text-sm tracking-wider text-muted-foreground">ABOUT THIS MEET</h3>
-            <p className="text-foreground/90 text-sm leading-relaxed">{meet.description}</p>
+          <div>
+            <h3 className="font-display text-sm tracking-wider text-muted-foreground mb-2">ABOUT THIS MEET</h3>
+            <p className="text-foreground/80 text-sm leading-relaxed">{meet.description}</p>
           </div>
         )}
 
+        {/* Attend Button */}
+        <Button
+          onClick={handleAttend}
+          disabled={actionLoading}
+          className={`w-full font-display tracking-wider ${
+            isAttending
+              ? 'bg-muted text-muted-foreground hover:bg-red-500/20 hover:text-red-400 border border-border'
+              : 'bg-neon-orange text-black hover:bg-neon-orange/90'
+          }`}
+        >
+          {actionLoading ? (
+            <span className="flex items-center gap-2">
+              <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+              {isAttending ? 'LEAVING...' : 'JOINING...'}
+            </span>
+          ) : isAttending ? (
+            'LEAVE MEET'
+          ) : (
+            <>
+              <Users className="w-4 h-4 mr-2" />
+              ATTEND MEET
+            </>
+          )}
+        </Button>
+
         {/* Attendees */}
-        <div className="space-y-3">
-          <h3 className="font-display text-sm tracking-wider text-muted-foreground flex items-center gap-2">
-            <Users className="w-4 h-4 text-neon/60" />
+        <div>
+          <h3 className="font-display text-sm tracking-wider text-muted-foreground mb-3">
             ATTENDEES ({meet.attendees.length})
           </h3>
           {meet.attendees.length === 0 ? (
             <p className="text-muted-foreground text-sm">No attendees yet. Be the first!</p>
           ) : (
-            <ScrollArea className="max-h-64">
-              <div className="space-y-2 pr-2">
-                {meet.attendees.map((attendee) => (
+            <ScrollArea className="h-48">
+              <div className="space-y-2 pr-3">
+                {meet.attendees.map((attendee: UserProfile) => (
                   <Link
                     key={attendee.id.toString()}
                     to="/profile/$userId"
                     params={{ userId: attendee.id.toString() }}
-                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary/50 transition-colors"
+                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors"
                   >
-                    <Avatar className="w-8 h-8 border border-border/40">
+                    <Avatar className="w-8 h-8">
                       <AvatarImage
                         src={attendee.avatarUrl || attendee.avatar?.getDirectURL() || '/assets/generated/default-avatar.dim_128x128.png'}
                         alt={attendee.username}
                       />
-                      <AvatarFallback className="bg-neon/10 text-neon text-xs font-display">
+                      <AvatarFallback className="bg-neon-orange/10 text-neon-orange text-xs">
                         {attendee.username.slice(0, 2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="text-sm text-foreground font-medium">{attendee.username}</span>
+                    <span className="text-sm font-medium text-foreground">{attendee.username}</span>
                   </Link>
                 ))}
               </div>
             </ScrollArea>
           )}
         </div>
-
-        {/* Attend/Leave Button */}
-        {isAuthenticated && upcoming && (
-          <Button
-            onClick={handleAttend}
-            disabled={actionLoading}
-            className={`w-full font-display tracking-wider py-6 text-base ${
-              isAttending
-                ? 'bg-secondary text-foreground border border-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/40'
-                : 'bg-neon text-primary-foreground hover:bg-neon/90 neon-glow'
-            }`}
-          >
-            {actionLoading ? (
-              <span className="flex items-center gap-2">
-                <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                {isAttending ? 'LEAVING...' : 'JOINING...'}
-              </span>
-            ) : isAttending ? (
-              'LEAVE MEET'
-            ) : (
-              'ATTEND MEET 🚗'
-            )}
-          </Button>
-        )}
       </div>
     </div>
   );

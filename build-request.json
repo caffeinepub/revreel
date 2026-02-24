@@ -1,36 +1,57 @@
 {
   "kind": "build_request",
-  "title": "Rollback to Version 22 – Fix account recognition and registration errors",
+  "title": "Fix missing upload button for reels and pictures",
+  "projectName": "RevReel",
   "priority": "high",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Roll back the application to the state it was in at Version 22. This includes reverting all backend (main.mo) and frontend source files to their Version 22 equivalents to restore stable account recognition and registration behavior.",
-      "target": "both",
+      "text": "Add a clearly visible upload button (or FAB) accessible from the main navigation or Feed page that navigates authenticated users to the Upload page (/upload route). The button must be present and tappable on both mobile and desktop layouts.",
+      "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-12"
+          "msg-6"
         ],
         "quotes": [
-          "Change it back to version 22 it's still not recognizing I have a account and prompts me to create one then says failed to register or create"
+          "The uploads of reels and pictures don't work no button to upload"
         ]
       },
       "acceptanceCriteria": [
-        "Existing users who previously created an account are recognized upon login via Internet Identity and are NOT prompted to create a new account.",
-        "New users who go through the profile setup flow can successfully register without receiving a 'failed to register or create' error.",
-        "The ProfileSetupModal does not appear for users who already have an existing profile.",
-        "Users can log in and access their profile, feed, and all authenticated features without errors."
+        "An upload button or icon is visible in the bottom navigation bar or as a floating action button on the Feed, Profile, and Discover pages.",
+        "Tapping/clicking the upload button navigates to the /upload route.",
+        "The button is only functional when the user is authenticated; unauthenticated users see the AuthGuard login prompt.",
+        "The button is present on both mobile (small screens) and desktop layouts."
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "text": "Verify and fix the Upload page (/upload) so that users can successfully upload both video (reels) and image (picture) files. The file input must accept video and image MIME types, the submit/upload button must be visible and enabled when a file is selected, and the chunked upload flow must complete without errors.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-6"
+        ],
+        "quotes": [
+          "The uploads of reels and pictures don't work no button to upload"
+        ]
+      },
+      "acceptanceCriteria": [
+        "The Upload page renders a file picker that accepts video/* and image/* MIME types.",
+        "A submit/upload button is visible on the Upload page and becomes enabled once a file, title, and category are provided.",
+        "Selecting a video file and submitting triggers the chunked upload progress indicator and completes successfully.",
+        "Selecting an image/photo file and submitting completes successfully.",
+        "On successful upload the user is navigated to the feed and the new post appears."
       ]
     }
   ],
   "constraints": [
-    "Do not introduce any new features or UI changes beyond what was present in Version 22.",
-    "Do not modify immutable paths: frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, frontend/src/components/ui."
+    "Do not modify files under frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, or frontend/src/components/ui.",
+    "Preserve the existing chunked upload logic in the Upload page; only fix UI/routing issues."
   ],
   "nonGoals": [
-    "Adding new features or pages not present in Version 22.",
-    "Changing the visual design or theme.",
-    "Modifying the About page contact/Instagram section added after Version 22 unless it was not present in Version 22."
+    "Changing the backend upload or blob-storage API.",
+    "Redesigning the Upload page form fields or layout beyond fixing the broken button.",
+    "Adding new media types beyond video and images."
   ],
   "imageRequirements": {
     "required": [],

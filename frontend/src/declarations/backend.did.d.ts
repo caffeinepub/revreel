@@ -10,6 +10,26 @@ import type { ActorMethod } from '@icp-sdk/core/agent';
 import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
+export type Badge = { 'buildMaster' : null } |
+  { 'verified' : null } |
+  { 'racingLegend' : null } |
+  { 'dragRacer' : null } |
+  { 'communityHelper' : null } |
+  { 'driftKing' : null } |
+  { 'mechanicPro' : null };
+export type ExternalBlob = Uint8Array;
+export type UserId = Principal;
+export interface UserProfile {
+  'id' : UserId,
+  'bio' : string,
+  'verified' : boolean,
+  'username' : string,
+  'badges' : Array<Badge>,
+  'joinedAt' : bigint,
+  'avatarUrl' : string,
+  'savedVideos' : Array<bigint>,
+  'avatar' : ExternalBlob,
+}
 export type UserRole = { 'admin' : null } |
   { 'user' : null } |
   { 'guest' : null };
@@ -42,8 +62,11 @@ export interface _SERVICE {
   '_caffeineStorageUpdateGatewayPrincipals' : ActorMethod<[], undefined>,
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
+  'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
+  'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
+  'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

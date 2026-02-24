@@ -24,6 +24,28 @@ export const UserRole = IDL.Variant({
   'user' : IDL.Null,
   'guest' : IDL.Null,
 });
+export const UserId = IDL.Principal;
+export const Badge = IDL.Variant({
+  'buildMaster' : IDL.Null,
+  'verified' : IDL.Null,
+  'racingLegend' : IDL.Null,
+  'dragRacer' : IDL.Null,
+  'communityHelper' : IDL.Null,
+  'driftKing' : IDL.Null,
+  'mechanicPro' : IDL.Null,
+});
+export const ExternalBlob = IDL.Vec(IDL.Nat8);
+export const UserProfile = IDL.Record({
+  'id' : UserId,
+  'bio' : IDL.Text,
+  'verified' : IDL.Bool,
+  'username' : IDL.Text,
+  'badges' : IDL.Vec(Badge),
+  'joinedAt' : IDL.Int,
+  'avatarUrl' : IDL.Text,
+  'savedVideos' : IDL.Vec(IDL.Nat),
+  'avatar' : ExternalBlob,
+});
 
 export const idlService = IDL.Service({
   '_caffeineStorageBlobIsLive' : IDL.Func(
@@ -54,8 +76,15 @@ export const idlService = IDL.Service({
   '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
   '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+  'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
+  'getUserProfile' : IDL.Func(
+      [IDL.Principal],
+      [IDL.Opt(UserProfile)],
+      ['query'],
+    ),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+  'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
 });
 
 export const idlInitArgs = [];
@@ -76,6 +105,28 @@ export const idlFactory = ({ IDL }) => {
     'admin' : IDL.Null,
     'user' : IDL.Null,
     'guest' : IDL.Null,
+  });
+  const UserId = IDL.Principal;
+  const Badge = IDL.Variant({
+    'buildMaster' : IDL.Null,
+    'verified' : IDL.Null,
+    'racingLegend' : IDL.Null,
+    'dragRacer' : IDL.Null,
+    'communityHelper' : IDL.Null,
+    'driftKing' : IDL.Null,
+    'mechanicPro' : IDL.Null,
+  });
+  const ExternalBlob = IDL.Vec(IDL.Nat8);
+  const UserProfile = IDL.Record({
+    'id' : UserId,
+    'bio' : IDL.Text,
+    'verified' : IDL.Bool,
+    'username' : IDL.Text,
+    'badges' : IDL.Vec(Badge),
+    'joinedAt' : IDL.Int,
+    'avatarUrl' : IDL.Text,
+    'savedVideos' : IDL.Vec(IDL.Nat),
+    'avatar' : ExternalBlob,
   });
   
   return IDL.Service({
@@ -107,8 +158,15 @@ export const idlFactory = ({ IDL }) => {
     '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
     '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+    'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
+    'getUserProfile' : IDL.Func(
+        [IDL.Principal],
+        [IDL.Opt(UserProfile)],
+        ['query'],
+      ),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+    'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
   });
 };
 

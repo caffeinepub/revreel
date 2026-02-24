@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { Link } from '@tanstack/react-router';
 import {
   useToggleLike,
@@ -26,7 +26,7 @@ import {
   Share2,
 } from 'lucide-react';
 
-interface VideoCardProps {
+export interface VideoCardProps {
   video: Video;
   currentUserProfile?: UserProfile | null;
 }
@@ -54,39 +54,21 @@ export default function VideoCard({ video, currentUserProfile }: VideoCardProps)
   const deleteVideo = useDeleteVideo();
 
   const myPrincipal = identity?.getPrincipal().toString();
-  const isLiked = myPrincipal ? video.likes.some((l: any) => l.toString() === myPrincipal) : false;
-  const isSaved = currentUserProfile?.savedVideos?.includes(Number(video.id)) ?? false;
-  const isOwner = myPrincipal ? video.uploader?.toString() === myPrincipal : false;
+  const isLiked = myPrincipal ? video.likes.some((l) => l.toString() === myPrincipal) : false;
+  const isSaved = currentUserProfile?.savedVideos?.some((id) => id.toString() === video.id) ?? false;
+  const isOwner = myPrincipal && video.uploader?.toString() === myPrincipal;
 
-  const isPhoto = 'photo' in video.mediaType;
-
-  useEffect(() => {
-    if (isPhoto) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            videoRef.current?.play().catch(() => {});
-            incrementView.mutate({ videoId: video.id });
-          } else {
-            videoRef.current?.pause();
-          }
-        });
-      },
-      { threshold: 0.5 }
-    );
-    if (videoRef.current) observer.observe(videoRef.current);
-    return () => observer.disconnect();
-  }, [video.id, isPhoto]);
+  const mediaUrl = video.mediaUrl?.getDirectURL?.() ?? '';
+  const thumbnailUrl = video.thumbnail?.getDirectURL?.() ?? '';
+  const isPhoto = 'photo' in (video.mediaType ?? {});
 
   const handleLike = () => {
     if (!identity) return;
     toggleLike.mutate({ videoId: video.id });
   };
 
-  const handleReaction = (reactionKey: string) => {
+  const handleReaction = (reaction: ReactionType) => {
     if (!identity) return;
-    const reaction: ReactionType = { [reactionKey]: null } as any;
     addReaction.mutate({ videoId: video.id, reaction });
     setShowReactions(false);
   };
@@ -102,52 +84,82 @@ export default function VideoCard({ video, currentUserProfile }: VideoCardProps)
 
   const handleDelete = () => {
     if (!isOwner) return;
-    if (confirm('Delete this post?')) {
+    if (confirm('Delete this video?')) {
       deleteVideo.mutate({ videoId: video.id });
     }
   };
 
-  const mediaUrl = video.mediaUrl?.getDirectURL?.() || '';
-  const thumbnailUrl = video.thumbnail?.getDirectURL?.() || '/assets/generated/placeholder-thumb.dim_640x360.png';
+  const handleVideoVisible = () => {
+    incrementView.mutate({ videoId: video.id });
+  };
+
+  const uploaderStr = video.uploader?.toString() ?? '';
 
   return (
-    <div className="relative w-full bg-black" style={{ minHeight: '100svh' }}>
+    <div className="relative w-full h-full bg-black overflow-hidden">
       {/* Media */}
       {isPhoto ? (
         <img
           src={mediaUrl || thumbnailUrl}
           alt={video.title}
-          className="w-full h-full object-contain"
-          style={{ minHeight: '100svh' }}
+          className="w-full h-full object-cover"
+          onLoad={handleVideoVisible}
         />
       ) : (
         <video
           ref={videoRef}
           src={mediaUrl}
           poster={thumbnailUrl}
-          className="w-full object-cover"
-          style={{ minHeight: '100svh' }}
+          className="w-full h-full object-cover"
           loop
-          muted
           playsInline
+          muted
+          autoPlay
+          onPlay={handleVideoVisible}
         />
       )}
 
-      {/* Overlay gradient */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 pointer-events-none" />
+      {/* Gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
 
-      {/* Right action bar */}
-      <div className="absolute right-3 bottom-32 flex flex-col items-center gap-5 z-10">
+      {/* Bottom info */}
+      <div className="absolute bottom-0 left-0 right-16 p-4">
+        <Link
+          to="/profile/$userId"
+          params={{ userId: uploaderStr }}
+          className="text-white font-bold text-sm mb-1 block hover:underline"
+        >
+          @{uploaderStr.slice(0, 8)}...
+        </Link>
+        <p className="text-white/90 text-sm font-medium line-clamp-2">{video.title}</p>
+        {video.hashtags.length > 0 && (
+          <p className="text-white/60 text-xs mt-1 line-clamp-1">
+            {video.hashtags.map((t) => `#${t}`).join(' ')}
+          </p>
+        )}
+      </div>
+
+      {/* Right side actions */}
+      <div className="absolute right-3 bottom-20 flex flex-col items-center gap-5">
         {/* Like */}
         <button
           onClick={handleLike}
           className="flex flex-col items-center gap-1"
-          disabled={!identity}
+          disabled={toggleLike.isPending}
         >
-          <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${isLiked ? 'bg-red-500/80' : 'bg-black/40 hover:bg-black/60'}`}>
-            <Heart className={`w-6 h-6 ${isLiked ? 'fill-white text-white' : 'text-white'}`} />
-          </div>
+          <Heart
+            className={`w-7 h-7 drop-shadow ${isLiked ? 'fill-red-500 text-red-500' : 'text-white'}`}
+          />
           <span className="text-white text-xs font-bold drop-shadow">{video.likes.length}</span>
+        </button>
+
+        {/* Comments */}
+        <button
+          onClick={() => setShowComments(true)}
+          className="flex flex-col items-center gap-1"
+        >
+          <MessageCircle className="w-7 h-7 text-white drop-shadow" />
+          <span className="text-white text-xs font-bold drop-shadow">💬</span>
         </button>
 
         {/* Reactions */}
@@ -155,20 +167,17 @@ export default function VideoCard({ video, currentUserProfile }: VideoCardProps)
           <button
             onClick={() => setShowReactions(!showReactions)}
             className="flex flex-col items-center gap-1"
-            disabled={!identity}
           >
-            <div className="w-12 h-12 rounded-full bg-black/40 hover:bg-black/60 flex items-center justify-center transition-colors">
-              <Flame className="w-6 h-6 text-orange-400" />
-            </div>
+            <Flame className="w-7 h-7 text-white drop-shadow" />
             <span className="text-white text-xs font-bold drop-shadow">{video.reactions.length}</span>
           </button>
           {showReactions && (
-            <div className="absolute right-14 bottom-0 bg-card border border-border rounded-xl p-2 flex flex-col gap-1 shadow-lg z-20">
+            <div className="absolute right-10 bottom-0 bg-card border border-border rounded-xl p-2 flex flex-col gap-1 z-10 min-w-[100px]">
               {Object.entries(reactionEmojis).map(([key, { icon, label }]) => (
                 <button
                   key={key}
-                  onClick={() => handleReaction(key)}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-muted transition-colors text-sm whitespace-nowrap"
+                  onClick={() => handleReaction({ [key]: null } as ReactionType)}
+                  className="flex items-center gap-2 px-2 py-1 rounded hover:bg-muted text-sm text-foreground"
                 >
                   {icon}
                   {label}
@@ -178,26 +187,15 @@ export default function VideoCard({ video, currentUserProfile }: VideoCardProps)
           )}
         </div>
 
-        {/* Comments */}
-        <button
-          onClick={() => setShowComments(true)}
-          className="flex flex-col items-center gap-1"
-        >
-          <div className="w-12 h-12 rounded-full bg-black/40 hover:bg-black/60 flex items-center justify-center transition-colors">
-            <MessageCircle className="w-6 h-6 text-white" />
-          </div>
-          <span className="text-white text-xs font-bold drop-shadow">{video.comments.length}</span>
-        </button>
-
         {/* Save */}
         <button
           onClick={handleSave}
           className="flex flex-col items-center gap-1"
-          disabled={!identity}
+          disabled={saveVideo.isPending || unsaveVideo.isPending}
         >
-          <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${isSaved ? 'bg-primary/80' : 'bg-black/40 hover:bg-black/60'}`}>
-            <Bookmark className={`w-6 h-6 ${isSaved ? 'fill-white text-white' : 'text-white'}`} />
-          </div>
+          <Bookmark
+            className={`w-7 h-7 drop-shadow ${isSaved ? 'fill-neon-orange text-neon-orange' : 'text-white'}`}
+          />
         </button>
 
         {/* Challenge */}
@@ -206,55 +204,26 @@ export default function VideoCard({ video, currentUserProfile }: VideoCardProps)
             onClick={() => setShowChallenge(true)}
             className="flex flex-col items-center gap-1"
           >
-            <div className="w-12 h-12 rounded-full bg-black/40 hover:bg-black/60 flex items-center justify-center transition-colors">
-              <Zap className="w-6 h-6 text-yellow-400" />
-            </div>
+            <Zap className="w-7 h-7 text-white drop-shadow" />
           </button>
         )}
 
-        {/* Delete */}
+        {/* Delete (owner only) */}
         {isOwner && (
           <button
             onClick={handleDelete}
             className="flex flex-col items-center gap-1"
+            disabled={deleteVideo.isPending}
           >
-            <div className="w-12 h-12 rounded-full bg-black/40 hover:bg-red-500/60 flex items-center justify-center transition-colors">
-              <Trash2 className="w-6 h-6 text-white" />
-            </div>
+            <Trash2 className="w-6 h-6 text-red-400 drop-shadow" />
           </button>
         )}
       </div>
 
-      {/* Bottom info */}
-      <div className="absolute bottom-4 left-3 right-20 z-10">
-        <Link
-          to="/profile/$userId"
-          params={{ userId: video.uploader?.toString() || '' }}
-          className="font-bold text-white text-sm hover:text-primary transition-colors"
-        >
-          @{video.uploader?.toString().slice(0, 8) || 'unknown'}
-        </Link>
-        <h3 className="text-white font-semibold text-sm mt-0.5 line-clamp-2">{video.title}</h3>
-        {video.description && (
-          <p className="text-white/70 text-xs mt-0.5 line-clamp-1">{video.description}</p>
-        )}
-        {video.hashtags.length > 0 && (
-          <p className="text-primary text-xs mt-0.5 line-clamp-1">
-            {video.hashtags.map((h) => `#${h}`).join(' ')}
-          </p>
-        )}
-        <div className="flex items-center gap-3 mt-1">
-          <span className="text-white/60 text-xs">{Number(video.viewCount).toLocaleString()} views</span>
-          <span className="text-white/40 text-xs capitalize">
-            {'photo' in video.mediaType ? '📷 Photo' : '🎬 Reel'}
-          </span>
-        </div>
-      </div>
-
       {/* Comments Panel */}
       {showComments && (
-        <div className="absolute inset-0 z-30 flex flex-col justify-end">
-          <div className="bg-card rounded-t-2xl h-2/3 overflow-hidden">
+        <div className="absolute inset-0 z-20 flex flex-col justify-end">
+          <div className="h-2/3 bg-card rounded-t-2xl overflow-hidden">
             <CommentsPanel videoId={video.id} onClose={() => setShowComments(false)} />
           </div>
         </div>
@@ -265,7 +234,7 @@ export default function VideoCard({ video, currentUserProfile }: VideoCardProps)
         <ChallengeModal
           open={showChallenge}
           onClose={() => setShowChallenge(false)}
-          challengedUserId={video.uploader?.toString() || ''}
+          challengedUserId={uploaderStr}
           originalVideoId={video.id}
         />
       )}

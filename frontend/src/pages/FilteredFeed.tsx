@@ -1,62 +1,61 @@
 import React from 'react';
-import { useParams, Link } from '@tanstack/react-router';
+import { useParams } from '@tanstack/react-router';
 import { useGetVideosByCategory, useGetVideosByHashtag, useGetCallerUserProfile } from '../hooks/useQueries';
 import VideoCard from '../components/VideoCard';
-import { ArrowLeft, Hash, Layers, Loader2 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ArrowLeft } from 'lucide-react';
+import { Link } from '@tanstack/react-router';
 
 export default function FilteredFeed() {
-  const { type, value } = useParams({ from: '/app-layout/filter/$type/$value' });
+  // Use strict: false to avoid route path mismatch issues
+  const params = useParams({ strict: false }) as { type?: string; value?: string };
+  const type = params.type ?? '';
+  const value = params.value ?? '';
+
+  const { data: currentUserProfile } = useGetCallerUserProfile();
 
   const categoryQuery = useGetVideosByCategory(type === 'category' ? value : '');
   const hashtagQuery = useGetVideosByHashtag(type === 'hashtag' ? value : '');
-  const { data: currentUserProfile } = useGetCallerUserProfile();
 
-  const { data: videos, isLoading } = type === 'category' ? categoryQuery : hashtagQuery;
+  const { data: videos = [], isLoading } = type === 'category' ? categoryQuery : hashtagQuery;
 
-  const label = type === 'hashtag' ? `#${value}` : String(value).toUpperCase();
-  const Icon = type === 'hashtag' ? Hash : Layers;
+  if (isLoading) {
+    return (
+      <div className="p-4 space-y-4">
+        <Skeleton className="h-8 w-48" />
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Skeleton key={i} className="h-64 rounded-xl" />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="sticky top-0 z-30 flex items-center gap-3 px-4 py-3 bg-background/90 backdrop-blur-sm border-b border-border">
-        <Link to="/discover" className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-          <ArrowLeft className="w-4 h-4 text-foreground" />
+      {/* Back header */}
+      <div className="sticky top-14 z-10 bg-background/95 backdrop-blur-sm border-b border-border px-4 py-3 flex items-center gap-3">
+        <Link to="/discover" className="text-muted-foreground hover:text-foreground transition-colors">
+          <ArrowLeft className="w-5 h-5" />
         </Link>
-        <div className="flex items-center gap-2">
-          <Icon className="w-4 h-4 text-primary" />
-          <span className="font-display text-foreground text-sm tracking-wider font-bold">{label}</span>
-          {videos && (
-            <span className="text-muted-foreground text-xs">· {videos.length} posts</span>
-          )}
+        <div>
+          <h1 className="font-display font-bold text-foreground">
+            {type === 'category' ? value.toUpperCase() : `#${value}`}
+          </h1>
+          <p className="text-xs text-muted-foreground">{videos.length} video{videos.length !== 1 ? 's' : ''}</p>
         </div>
       </div>
 
-      {isLoading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        </div>
-      ) : !videos || videos.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground px-6 text-center">
-          <Icon className="w-12 h-12 mb-3 opacity-30" />
-          <p className="text-lg font-semibold">No posts found</p>
-          <p className="text-sm mt-1">No videos for {label} yet.</p>
-          <Link
-            to="/upload"
-            className="mt-4 inline-block px-6 py-2 bg-primary text-primary-foreground font-bold rounded-lg hover:bg-primary/90 transition-colors"
-          >
-            Be the first 🔥
-          </Link>
+      {videos.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center px-4">
+          <p className="text-muted-foreground text-lg font-display">No videos found</p>
+          <p className="text-muted-foreground text-sm mt-2">
+            {type === 'category' ? `No videos in "${value}" category yet.` : `No videos tagged #${value} yet.`}
+          </p>
         </div>
       ) : (
         <div className="divide-y divide-border">
           {videos.map((video) => (
-            <div key={video.id} className="snap-start snap-always">
-              <VideoCard
-                video={video}
-                currentUserProfile={currentUserProfile ?? null}
-              />
-            </div>
+            <VideoCard key={video.id} video={video} currentUserProfile={currentUserProfile ?? null} />
           ))}
         </div>
       )}

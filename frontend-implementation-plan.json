@@ -1,47 +1,40 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Rollback to Version 22 – Fix account recognition and registration errors",
+  "title": "Fix missing upload button for reels and pictures",
   "requirements": [
     {
       "id": "REQ-1",
-      "summary": "Roll back frontend to Version 22 state to restore stable account recognition and registration behavior",
+      "summary": "Add a clearly visible upload button accessible from the main navigation or Feed page that navigates authenticated users to the Upload page",
       "acceptanceCriteria": [
-        "Existing users who previously created an account are recognized upon login via Internet Identity and are NOT prompted to create a new account.",
-        "New users who go through the profile setup flow can successfully register without receiving a 'failed to register or create' error.",
-        "The ProfileSetupModal does not appear for users who already have an existing profile.",
-        "Users can log in and access their profile, feed, and all authenticated features without errors."
+        "An upload button or icon is visible in the bottom navigation bar or as a floating action button on the Feed, Profile, and Discover pages.",
+        "Tapping/clicking the upload button navigates to the /upload route.",
+        "The button is only functional when the user is authenticated; unauthenticated users see the AuthGuard login prompt.",
+        "The button is present on both mobile (small screens) and desktop layouts."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/components/ProfileSetupModal.tsx",
-          "operation": "modify",
-          "description": "Revert ProfileSetupModal to Version 22 implementation, restoring the original profile creation logic that properly handles the useCreateUser mutation and prevents 'failed to register or create' errors. Ensure the modal correctly waits for actor availability before attempting profile creation and handles success/error states appropriately."
-        },
-        {
           "path": "frontend/src/components/Layout.tsx",
           "operation": "modify",
-          "description": "Revert Layout component to Version 22 implementation, restoring the original logic for determining when to show the ProfileSetupModal. Use the authorization component's guidance to prevent modal flash by properly checking actorFetching state and isFetched flag: showProfileSetup = isAuthenticated && !profileLoading && isFetched && userProfile === null. Ensure the useGetCallerUserProfile hook returns the correct loading and fetched states."
-        },
+          "description": "Add an upload button/icon to the bottom navigation bar (primaryNavItems or secondaryNavItems array) that routes to /upload. The button must use the Plus or Upload icon from lucide-react and include responsive styling for both mobile and desktop layouts. Ensure the navigation item is visible and tappable on all screen sizes."
+        }
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "summary": "Verify and fix the Upload page so that users can successfully upload both video and image files with proper file input, submit button visibility, and chunked upload completion",
+      "acceptanceCriteria": [
+        "The Upload page renders a file picker that accepts video/* and image/* MIME types.",
+        "A submit/upload button is visible on the Upload page and becomes enabled once a file, title, and category are provided.",
+        "Selecting a video file and submitting triggers the chunked upload progress indicator and completes successfully.",
+        "Selecting an image/photo file and submitting completes successfully.",
+        "On successful upload the user is navigated to the feed and the new post appears."
+      ],
+      "file_operations": [
         {
-          "path": "frontend/src/hooks/useQueries.ts",
+          "path": "frontend/src/pages/Upload.tsx",
           "operation": "modify",
-          "description": "Revert useGetCallerUserProfile hook to Version 22 implementation, ensuring it properly reflects actor dependency and prevents premature profile checks. Follow the authorization component pattern: return custom state with isLoading = actorFetching || query.isLoading and isFetched = !!actor && query.isFetched. Also revert useCreateUser mutation to Version 22 implementation if the mutation logic changed after that version."
-        },
-        {
-          "path": "frontend/src/pages/LandingPage.tsx",
-          "operation": "modify",
-          "description": "Revert LandingPage to Version 22 implementation, restoring the original authentication initialization flow and redirect logic that ensures proper actor setup before profile checks occur. Verify the loginStatus and identity checks match Version 22 behavior."
-        },
-        {
-          "path": "frontend/src/App.tsx",
-          "operation": "modify",
-          "description": "Revert App.tsx to Version 22 routing and provider setup if any changes were made after that version that could affect authentication flow or actor initialization timing."
-        },
-        {
-          "path": "frontend/src/components/AuthGuard.tsx",
-          "operation": "modify",
-          "description": "Revert AuthGuard to Version 22 implementation if changes were made after that version, ensuring the authentication gating logic properly handles loading states and identity checks without causing premature profile setup triggers."
+          "description": "Review and fix the Upload page to ensure: (1) the file input accept attribute includes both video/* and image/* MIME types; (2) the submit/upload button is visible and properly styled, with disabled state controlled by form validation (file selected, title and category provided); (3) the chunked upload progress indicator displays correctly during upload; (4) successful uploads navigate to /feed and the new video/photo appears in the feed. Preserve the existing chunked upload logic using ExternalBlob.fromBytes().withUploadProgress() as documented in the blob-storage component usage instructions. Verify that the form fields (title, description, category, hashtags, thumbnail) are wired correctly and that the createVideo mutation is called with the proper ExternalBlob instance."
         }
       ]
     }

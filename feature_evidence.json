@@ -2,13 +2,10 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-roll-back-the-application-to-the-state-it-was-in-at-version-22-this-includes-reverting-all-backend-main-mo-and-frontend-source-files-to-their-version-22-equivalents-to-restore-stable-account-recognition-and-registration-behavior",
-      "featureTitle": "Roll back the application to the state it was in at Version 22. This includes reverting all backend (main.mo) and frontend source files to their Version 22 equivalents to restore stable account recognition and registration behavior.",
+      "featureId": "feature-add-a-clearly-visible-upload-button-or-fab-accessible-from-the-main-navigation-or-feed-page-that-navigates-authenticated-users-to-the-upload-page-upload-route-the-button-must-be-present-and-tappable-on-both-mobile-and-desktop-layouts",
+      "featureTitle": "Add a clearly visible upload button (or FAB) accessible from the main navigation or Feed page that navigates authenticated users to the Upload page (/upload route). The button must be present and tappable on both mobile and desktop layouts.",
       "files": [
-        "frontend/src/App.tsx",
-        "frontend/src/components/Layout.tsx",
-        "frontend/src/components/ProfileSetupModal.tsx",
-        "frontend/src/hooks/useQueries.ts"
+        "frontend/src/components/Layout.tsx"
       ],
       "components": [
         "authorization@4.0.0",
@@ -21,6 +18,26 @@
       ],
       "testIds": [
         "REQ-1"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-verify-and-fix-the-upload-page-upload-so-that-users-can-successfully-upload-both-video-reels-and-image-picture-files-the-file-input-must-accept-video-and-image-mime-types-the-submit-upload-button-must-be-visible-and-enabled-when-a-file-is-selected-and-the-chunked-upload-flow-must-complete-without-errors",
+      "featureTitle": "Verify and fix the Upload page (/upload) so that users can successfully upload both video (reels) and image (picture) files. The file input must accept video and image MIME types, the submit/upload button must be visible and enabled when a file is selected, and the chunked upload flow must complete without errors.",
+      "files": [
+        "frontend/src/pages/Upload.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "blob-storage@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-2"
       ],
       "confidence": "high"
     }

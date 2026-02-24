@@ -1,24 +1,33 @@
 {
   "schemaVersion": "1.0.0",
   "projectStateVersion": 3,
-  "summary": "New project",
+  "summary": "Social media app with profiles, Builds, Marketplace pages, and media upload functionality (reels and pictures).",
   "architectural_notes": [],
   "known_issues": [
-    "Account registration/login system is broken: existing accounts not recognized, prompts to create new account, then shows 'failed to register or create' error — user requested rollback to version 22"
+    "Upload button for reels and pictures is missing/non-functional"
   ],
   "isFixRequest": true,
   "existing_features": [
     {
-      "id": "feature-roll-back-the-application-to-the-state-it-was-in-at-version-22-this-includes-reverting-all-backend-main-mo-and-frontend-source-files-to-their-version-22-equivalents-to-restore-stable-account-recognition-and-registration-behavior",
-      "title": "Roll back the application to the state it was in at Version 22. This includes reverting all backend (main.mo) and frontend source files to their Version 22 equivalents to restore stable account recognition and registration behavior.",
+      "id": "feature-add-a-clearly-visible-upload-button-or-fab-accessible-from-the-main-navigation-or-feed-page-that-navigates-authenticated-users-to-the-upload-page-upload-route-the-button-must-be-present-and-tappable-on-both-mobile-and-desktop-layouts",
+      "title": "Add a clearly visible upload button (or FAB) accessible from the main navigation or Feed page that navigates authenticated users to the Upload page (/upload route). The button must be present and tappable on both mobile and desktop layouts.",
       "reqIds": [
         "REQ-1"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-verify-and-fix-the-upload-page-upload-so-that-users-can-successfully-upload-both-video-reels-and-image-picture-files-the-file-input-must-accept-video-and-image-mime-types-the-submit-upload-button-must-be-visible-and-enabled-when-a-file-is-selected-and-the-chunked-upload-flow-must-complete-without-errors",
+      "title": "Verify and fix the Upload page (/upload) so that users can successfully upload both video (reels) and image (picture) files. The file input must accept video and image MIME types, the submit/upload button must be visible and enabled when a file is selected, and the chunked upload flow must complete without errors.",
+      "reqIds": [
+        "REQ-2"
       ],
       "version": 1
     }
   ],
   "new_feature_requests": [],
-  "projectName": "Rollback to Version 22 – Fix account recognition and registration errors",
+  "gameProjectType": "none",
+  "projectName": "RevReel",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

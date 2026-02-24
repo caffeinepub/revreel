@@ -1,11 +1,17 @@
-import React, { useState, useRef } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import React, { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useUpdateProfile, ExternalBlob, type UserProfile } from '../hooks/useQueries';
+import { User, Camera, Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { useUpdateProfile, ExternalBlob, type UserProfile } from '../hooks/useQueries';
-import { User, Camera, Loader2 } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 interface EditProfileModalProps {
   open: boolean;
@@ -14,25 +20,32 @@ interface EditProfileModalProps {
 }
 
 export default function EditProfileModal({ open, onClose, currentProfile }: EditProfileModalProps) {
+  const queryClient = useQueryClient();
+  const updateProfile = useUpdateProfile();
+
   const [username, setUsername] = useState(currentProfile.username);
   const [bio, setBio] = useState(currentProfile.bio);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(currentProfile.avatarUrl || null);
   const [error, setError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const updateProfile = useUpdateProfile();
+  useEffect(() => {
+    if (open) {
+      setUsername(currentProfile.username);
+      setBio(currentProfile.bio);
+      setAvatarPreview(currentProfile.avatarUrl || null);
+      setAvatarFile(null);
+      setError(null);
+    }
+  }, [open, currentProfile]);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setAvatarFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setAvatarPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
+    if (!file) return;
+    setAvatarFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => setAvatarPreview(reader.result as string);
+    reader.readAsDataURL(file);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -45,67 +58,71 @@ export default function EditProfileModal({ open, onClose, currentProfile }: Edit
     }
 
     try {
-      let avatar: ExternalBlob;
-      let avatarUrl: string;
+      let avatarBlob: ExternalBlob;
+      let avatarUrl = currentProfile.avatarUrl;
 
       if (avatarFile) {
-        const arrayBuffer = await avatarFile.arrayBuffer();
-        const uint8Array = new Uint8Array(arrayBuffer);
-        avatar = ExternalBlob.fromBytes(uint8Array);
-        avatarUrl = avatarPreview || currentProfile.avatarUrl || '';
+        const bytes = new Uint8Array(await avatarFile.arrayBuffer());
+        avatarBlob = ExternalBlob.fromBytes(bytes);
+        avatarUrl = avatarPreview ?? '';
+      } else if (currentProfile.avatarUrl) {
+        avatarBlob = ExternalBlob.fromURL(currentProfile.avatarUrl);
       } else {
-        const existingUrl = currentProfile.avatarUrl || '/assets/generated/default-avatar.dim_128x128.png';
-        avatar = ExternalBlob.fromURL(existingUrl);
-        avatarUrl = existingUrl;
+        avatarBlob = ExternalBlob.fromURL('/assets/generated/default-avatar.dim_128x128.png');
+        avatarUrl = '/assets/generated/default-avatar.dim_128x128.png';
       }
 
-      await updateProfile.mutateAsync({ username: username.trim(), bio: bio.trim(), avatar, avatarUrl });
+      await updateProfile.mutateAsync({
+        username: username.trim(),
+        bio: bio.trim(),
+        avatar: avatarBlob,
+        avatarUrl,
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
       onClose();
-    } catch (err: any) {
-      setError(err?.message || 'Failed to update profile. Please try again.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to update profile. Please try again.';
+      setError(message);
     }
   };
 
-  const currentAvatarUrl = avatarPreview || currentProfile.avatarUrl || '/assets/generated/default-avatar.dim_128x128.png';
-
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-md bg-card border-border">
+    <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
+      <DialogContent className="bg-card border-border max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-xl font-display font-bold text-primary neon-text">
-            Edit Profile
-          </DialogTitle>
-          <DialogDescription className="text-muted-foreground">
-            Update your RevReel profile information.
-          </DialogDescription>
+          <DialogTitle className="font-display text-xl font-bold">Edit Profile</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
-          {/* Avatar */}
+        <form onSubmit={handleSubmit} className="space-y-5 pt-2">
+          {/* Avatar Upload */}
           <div className="flex flex-col items-center gap-3">
-            <div
-              className="relative w-20 h-20 rounded-full bg-muted border-2 border-primary/50 overflow-hidden cursor-pointer hover:border-primary transition-colors"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              {currentAvatarUrl ? (
-                <img src={currentAvatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <User className="w-8 h-8 text-muted-foreground" />
-                </div>
-              )}
-              <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                <Camera className="w-5 h-5 text-white" />
+            <div className="relative">
+              <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-neon-orange/40 bg-muted">
+                {avatarPreview ? (
+                  <img src={avatarPreview} alt="Avatar preview" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <User className="w-10 h-10 text-muted-foreground" />
+                  </div>
+                )}
               </div>
+              <label
+                htmlFor="edit-avatar-upload"
+                className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-neon-orange flex items-center justify-center cursor-pointer hover:bg-neon-yellow transition-colors"
+              >
+                <Camera className="w-3.5 h-3.5 text-black" />
+              </label>
+              <input
+                id="edit-avatar-upload"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarChange}
+                disabled={updateProfile.isPending}
+              />
             </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleAvatarChange}
-            />
-            <p className="text-xs text-muted-foreground">Click to change avatar</p>
+            <span className="text-xs text-muted-foreground">Change profile photo</span>
           </div>
 
           {/* Username */}
@@ -117,48 +134,53 @@ export default function EditProfileModal({ open, onClose, currentProfile }: Edit
               id="edit-username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="bg-muted border-border focus:border-primary"
-              maxLength={30}
+              placeholder="e.g. driftking99"
               disabled={updateProfile.isPending}
+              maxLength={30}
+              className="bg-background border-border focus:border-neon-orange"
             />
           </div>
 
           {/* Bio */}
           <div className="space-y-1.5">
             <Label htmlFor="edit-bio" className="text-sm font-medium">
-              Bio
+              Bio <span className="text-muted-foreground text-xs">(optional)</span>
             </Label>
             <Textarea
               id="edit-bio"
               value={bio}
               onChange={(e) => setBio(e.target.value)}
-              className="bg-muted border-border focus:border-primary resize-none"
-              rows={3}
-              maxLength={200}
+              placeholder="Tell the community about yourself and your ride..."
               disabled={updateProfile.isPending}
+              maxLength={200}
+              rows={3}
+              className="bg-background border-border focus:border-neon-orange resize-none"
             />
           </div>
 
+          {/* Error */}
           {error && (
-            <div className="p-3 rounded bg-destructive/10 border border-destructive/30 text-destructive text-sm">
+            <div className="text-destructive text-sm bg-destructive/10 border border-destructive/20 rounded-lg px-3 py-2">
               {error}
             </div>
           )}
 
-          <div className="flex gap-2">
+          {/* Actions */}
+          <div className="flex gap-3 pt-1">
             <Button
               type="button"
               variant="outline"
-              className="flex-1"
               onClick={onClose}
               disabled={updateProfile.isPending}
+              className="flex-1"
             >
+              <X className="w-4 h-4 mr-1" />
               Cancel
             </Button>
             <Button
               type="submit"
-              className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
               disabled={updateProfile.isPending || !username.trim()}
+              className="flex-1 bg-neon-orange hover:bg-neon-yellow text-black font-bold"
             >
               {updateProfile.isPending ? (
                 <>

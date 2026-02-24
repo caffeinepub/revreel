@@ -1,168 +1,191 @@
-import React from 'react';
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
-  createRouter,
-  createRoute,
   createRootRoute,
+  createRoute,
+  createRouter,
   RouterProvider,
   Outlet,
-} from '@tanstack/react-router';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ThemeProvider } from 'next-themes';
-import { Toaster } from '@/components/ui/sonner';
-
-import Layout from './components/Layout';
-import LandingPage from './pages/LandingPage';
-import Feed from './pages/Feed';
-import Profile from './pages/Profile';
-import Upload from './pages/Upload';
-import Discover from './pages/Discover';
-import FilteredFeed from './pages/FilteredFeed';
-import Leaderboard from './pages/Leaderboard';
-import CarMeets from './pages/CarMeets';
-import CarMeetDetails from './pages/CarMeetDetails';
-import MechanicsHelp from './pages/MechanicsHelp';
-import MechanicsPostDetails from './pages/MechanicsPostDetails';
-import Inbox from './pages/Inbox';
-import Conversation from './pages/Conversation';
-import AdminPanel from './pages/AdminPanel';
-import Notifications from './pages/Notifications';
-import BuildLogDetails from './pages/BuildLogDetails';
-import ListingDetails from './pages/ListingDetails';
-import About from './pages/About';
+} from "@tanstack/react-router";
+import Layout from "./components/Layout";
+import Feed from "./pages/Feed";
+import Profile from "./pages/Profile";
+import Discover from "./pages/Discover";
+import Upload from "./pages/Upload";
+import Leaderboard from "./pages/Leaderboard";
+import CarMeets from "./pages/CarMeets";
+import CarMeetDetails from "./pages/CarMeetDetails";
+import MechanicsHelp from "./pages/MechanicsHelp";
+import MechanicsPostDetails from "./pages/MechanicsPostDetails";
+import Inbox from "./pages/Inbox";
+import Conversation from "./pages/Conversation";
+import AdminPanel from "./pages/AdminPanel";
+import LandingPage from "./pages/LandingPage";
+import FilteredFeed from "./pages/FilteredFeed";
+import Notifications from "./pages/Notifications";
+import BuildLogs from "./pages/BuildLogs";
+import BuildLogDetails from "./pages/BuildLogDetails";
+import Classifieds from "./pages/Classifieds";
+import ListingDetails from "./pages/ListingDetails";
+import About from "./pages/About";
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5,
-      gcTime: 1000 * 60 * 10,
+      retry: 1,
     },
   },
 });
 
-// Root route - renders bare Outlet (no layout)
+// Root route
 const rootRoute = createRootRoute({
   component: () => <Outlet />,
 });
 
-// Landing page at '/' - no layout shell
+// Landing page route (public)
 const landingRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/',
+  path: "/",
   component: LandingPage,
 });
 
-// App layout route - Layout uses <Outlet /> internally, no children needed
+// App layout route
 const appLayoutRoute = createRoute({
   getParentRoute: () => rootRoute,
-  id: 'app-layout',
+  id: "app-layout",
   component: Layout,
 });
 
+// Feed route
 const feedRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
-  path: '/feed',
+  path: "/feed",
   component: Feed,
 });
 
+// Profile route
+const profileRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/profile/$userId",
+  component: Profile,
+});
+
+// Discover route
 const discoverRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
-  path: '/discover',
+  path: "/discover",
   component: Discover,
 });
 
-const filteredFeedRoute = createRoute({
-  getParentRoute: () => appLayoutRoute,
-  path: '/filter/$type/$value',
-  component: FilteredFeed,
-});
-
-const leaderboardRoute = createRoute({
-  getParentRoute: () => appLayoutRoute,
-  path: '/leaderboard',
-  component: Leaderboard,
-});
-
-const meetsRoute = createRoute({
-  getParentRoute: () => appLayoutRoute,
-  path: '/meets',
-  component: CarMeets,
-});
-
-const meetDetailsRoute = createRoute({
-  getParentRoute: () => appLayoutRoute,
-  path: '/meets/$meetId',
-  component: CarMeetDetails,
-});
-
-const mechanicsRoute = createRoute({
-  getParentRoute: () => appLayoutRoute,
-  path: '/mechanics',
-  component: MechanicsHelp,
-});
-
-const mechanicsPostRoute = createRoute({
-  getParentRoute: () => appLayoutRoute,
-  path: '/mechanics/$postId',
-  component: MechanicsPostDetails,
-});
-
-const buildsRoute = createRoute({
-  getParentRoute: () => appLayoutRoute,
-  path: '/builds/$buildId',
-  component: BuildLogDetails,
-});
-
-const classifiedsRoute = createRoute({
-  getParentRoute: () => appLayoutRoute,
-  path: '/classifieds/$listingId',
-  component: ListingDetails,
-});
-
+// Upload route
 const uploadRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
-  path: '/upload',
+  path: "/upload",
   component: Upload,
 });
 
-const profileRoute = createRoute({
+// Leaderboard route
+const leaderboardRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
-  path: '/profile/$userId',
-  component: Profile,
+  path: "/leaderboard",
+  component: Leaderboard,
 });
 
-const profileSelfRoute = createRoute({
+// Car Meets route
+const carMeetsRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
-  path: '/profile',
-  component: Profile,
+  path: "/meets",
+  component: CarMeets,
 });
 
+// Car Meet Details route
+const carMeetDetailsRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/meets/$meetId",
+  component: CarMeetDetails,
+});
+
+// Mechanics Help route
+const mechanicsHelpRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/mechanics",
+  component: MechanicsHelp,
+});
+
+// Mechanics Post Details route
+const mechanicsPostDetailsRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/mechanics/$postId",
+  component: MechanicsPostDetails,
+});
+
+// Inbox route
 const inboxRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
-  path: '/inbox',
+  path: "/inbox",
   component: Inbox,
 });
 
+// Conversation route
 const conversationRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
-  path: '/messages/$userId',
+  path: "/messages/$userId",
   component: Conversation,
 });
 
-const notificationsRoute = createRoute({
+// Admin Panel route
+const adminPanelRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
-  path: '/notifications',
-  component: Notifications,
-});
-
-const adminRoute = createRoute({
-  getParentRoute: () => appLayoutRoute,
-  path: '/admin',
+  path: "/admin",
   component: AdminPanel,
 });
 
+// Filtered Feed route
+const filteredFeedRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/feed/filter",
+  component: FilteredFeed,
+});
+
+// Notifications route
+const notificationsRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/notifications",
+  component: Notifications,
+});
+
+// Build Logs list route
+const buildLogsRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/builds",
+  component: BuildLogs,
+});
+
+// Build Log Details route
+const buildLogDetailsRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/builds/$buildId",
+  component: BuildLogDetails,
+});
+
+// Classifieds (Marketplace) list route
+const classifiedsRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/classifieds",
+  component: Classifieds,
+});
+
+// Listing Details route
+const listingDetailsRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/classifieds/$listingId",
+  component: ListingDetails,
+});
+
+// About route
 const aboutRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
-  path: '/about',
+  path: "/about",
   component: About,
 });
 
@@ -170,29 +193,30 @@ const routeTree = rootRoute.addChildren([
   landingRoute,
   appLayoutRoute.addChildren([
     feedRoute,
-    discoverRoute,
-    filteredFeedRoute,
-    leaderboardRoute,
-    meetsRoute,
-    meetDetailsRoute,
-    mechanicsRoute,
-    mechanicsPostRoute,
-    buildsRoute,
-    classifiedsRoute,
-    uploadRoute,
     profileRoute,
-    profileSelfRoute,
+    discoverRoute,
+    uploadRoute,
+    leaderboardRoute,
+    carMeetsRoute,
+    carMeetDetailsRoute,
+    mechanicsHelpRoute,
+    mechanicsPostDetailsRoute,
     inboxRoute,
     conversationRoute,
+    adminPanelRoute,
+    filteredFeedRoute,
     notificationsRoute,
-    adminRoute,
+    buildLogsRoute,
+    buildLogDetailsRoute,
+    classifiedsRoute,
+    listingDetailsRoute,
     aboutRoute,
   ]),
 ]);
 
 const router = createRouter({ routeTree });
 
-declare module '@tanstack/react-router' {
+declare module "@tanstack/react-router" {
   interface Register {
     router: typeof router;
   }
@@ -200,11 +224,8 @@ declare module '@tanstack/react-router' {
 
 export default function App() {
   return (
-    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
-      <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
-        <Toaster />
-      </QueryClientProvider>
-    </ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>
   );
 }

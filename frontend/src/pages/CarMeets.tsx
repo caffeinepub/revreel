@@ -32,7 +32,7 @@ function MeetCard({
   onLoginPrompt: () => void;
 }) {
   const isAttending = currentUserId
-    ? meet.attendees.some(a => a.toString() === currentUserId)
+    ? meet.attendees.some((a) => a.toString() === currentUserId)
     : false;
 
   const meetDate = new Date(Number(meet.date) / 1_000_000);
@@ -180,8 +180,8 @@ export default function CarMeets() {
       {/* Page Header */}
       <div className="relative px-4 pt-6 pb-4">
         <div className="flex items-center gap-3 mb-1">
-          <Car className="w-6 h-6 text-neon" />
-          <h1 className="font-display text-3xl tracking-widest neon-text">CAR MEETS</h1>
+          <Car className="w-6 h-6 text-neon-orange" />
+          <h1 className="font-display text-3xl tracking-widest text-neon-orange">CAR MEETS</h1>
         </div>
         <p className="text-sm text-muted-foreground pl-9">Find and join local car meetups</p>
       </div>
@@ -195,8 +195,8 @@ export default function CarMeets() {
               onClick={() => setActiveCategory(filter)}
               className={`font-display text-xs tracking-wider px-3 py-1.5 rounded-full border transition-all whitespace-nowrap ${
                 activeCategory === filter
-                  ? 'bg-neon text-primary-foreground border-neon neon-glow'
-                  : 'bg-transparent text-muted-foreground border-border/60 hover:border-neon/40 hover:text-foreground'
+                  ? 'bg-neon-orange text-black border-neon-orange'
+                  : 'bg-transparent text-muted-foreground border-border/60 hover:border-neon-orange/40 hover:text-foreground'
               }`}
             >
               {filter}
@@ -212,7 +212,7 @@ export default function CarMeets() {
             onClick={() => setDateFilter('upcoming')}
             className={`font-display text-xs tracking-wider px-4 py-2 transition-all ${
               dateFilter === 'upcoming'
-                ? 'bg-neon text-primary-foreground'
+                ? 'bg-neon-orange text-black'
                 : 'bg-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -222,7 +222,7 @@ export default function CarMeets() {
             onClick={() => setDateFilter('past')}
             className={`font-display text-xs tracking-wider px-4 py-2 transition-all border-l border-border/60 ${
               dateFilter === 'past'
-                ? 'bg-neon text-primary-foreground'
+                ? 'bg-neon-orange text-black'
                 : 'bg-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -251,8 +251,8 @@ export default function CarMeets() {
           ))
         ) : sortedMeets.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="w-16 h-16 rounded-full bg-neon/10 border border-neon/20 flex items-center justify-center mb-4">
-              <Calendar className="w-8 h-8 text-neon/60" />
+            <div className="w-16 h-16 rounded-full bg-neon-orange/10 border border-neon-orange/20 flex items-center justify-center mb-4">
+              <Calendar className="w-8 h-8 text-neon-orange/60" />
             </div>
             <h3 className="font-display text-lg tracking-wider text-foreground mb-2">NO MEETS FOUND</h3>
             <p className="text-sm text-muted-foreground max-w-xs">
@@ -263,7 +263,7 @@ export default function CarMeets() {
             {isAuthenticated && dateFilter === 'upcoming' && (
               <Button
                 onClick={() => setShowPostModal(true)}
-                className="mt-6 font-display tracking-wider bg-neon text-primary-foreground hover:bg-neon/90 neon-glow"
+                className="mt-6 font-display tracking-wider bg-neon-orange text-black hover:bg-neon-orange/90"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 POST A MEET
@@ -290,7 +290,7 @@ export default function CarMeets() {
       {/* Floating Action Button */}
       <button
         onClick={handleFabClick}
-        className="fixed bottom-20 right-4 z-40 w-14 h-14 rounded-full bg-neon text-primary-foreground shadow-lg neon-glow flex items-center justify-center transition-transform hover:scale-105 active:scale-95"
+        className="fixed bottom-20 right-4 z-40 w-14 h-14 rounded-full bg-neon-orange text-black shadow-lg flex items-center justify-center transition-transform hover:scale-105 active:scale-95"
         aria-label="Post a meet"
       >
         <Plus className="w-6 h-6" />
