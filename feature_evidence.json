@@ -2,12 +2,10 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-re-deploy-the-full-application-including-all-previously-implemented-features-the-hardcoded-admin-principal-in-the-backend-the-deleteuser-update-function-the-isadmin-query-function-the-useisadmin-and-usedeleteuser-react-query-hooks-in-usequeries-ts-the-adminpanel-page-at-frontend-src-pages-adminpanel-tsx-and-the-admin-route-registered-in-app-tsx-ensure-the-build-compiles-cleanly-and-deploys-successfully-to-the-internet-computer-network",
-      "featureTitle": "Re-deploy the full application including all previously implemented features: the hardcoded admin Principal in the backend, the `deleteUser` update function, the `isAdmin` query function, the `useIsAdmin` and `useDeleteUser` React Query hooks in useQueries.ts, the AdminPanel page at frontend/src/pages/AdminPanel.tsx, and the /admin route registered in App.tsx. Ensure the build compiles cleanly and deploys successfully to the Internet Computer network.",
+      "featureId": "feature-create-a-dedicated-landing-page-route-that-serves-as-the-public-entry-point-to-revreel-the-page-should-prominently-feature-a-join-revreel-call-to-action-button-that-triggers-internet-identity-login-upon-successful-authentication-the-user-is-redirected-to-the-main-app-feed-feed-if-the-user-is-already-authenticated-automatically-redirect-them-to-feed-without-showing-the-landing-page",
+      "featureTitle": "Create a dedicated landing page (route '/') that serves as the public entry point to RevReel. The page should prominently feature a 'Join RevReel' call-to-action button that triggers Internet Identity login. Upon successful authentication, the user is redirected to the main app feed ('/feed'). If the user is already authenticated, automatically redirect them to '/feed' without showing the landing page.",
       "files": [
-        "frontend/src/App.tsx",
-        "frontend/src/hooks/useQueries.ts",
-        "frontend/src/pages/AdminPanel.tsx"
+        "frontend/src/pages/LandingPage.tsx"
       ],
       "components": [
         "authorization@4.0.0",
@@ -19,7 +17,47 @@
         "github-export-icp-cli@1.0.0"
       ],
       "testIds": [
-        "REQ-43"
+        "REQ-1"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-update-the-tanstack-router-route-configuration-in-app-tsx-to-register-the-new-landing-page-as-the-root-route-and-move-or-adjust-the-existing-default-route-so-the-feed-is-accessible-at-feed-ensure-the-layout-shell-is-only-applied-to-authenticated-app-routes-not-the-landing-page",
+      "featureTitle": "Update the TanStack Router route configuration in App.tsx to register the new landing page as the root route '/' and move or adjust the existing default route so the feed is accessible at '/feed'. Ensure the Layout shell is only applied to authenticated app routes, not the landing page.",
+      "files": [
+        "frontend/src/App.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "blob-storage@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-2"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-design-the-landing-page-with-a-visually-striking-hero-section-that-includes-the-revreel-logo-wordmark-a-bold-tagline-describing-the-car-culture-video-platform-and-the-join-revreel-authentication-button-use-the-existing-dark-theme-with-neon-accent-colors-glassmorphism-and-car-culture-aesthetic-consistent-with-the-rest-of-the-app-barlow-font-oklch-color-tokens-from-index-css",
+      "featureTitle": "Design the landing page with a visually striking hero section that includes the RevReel logo/wordmark, a bold tagline describing the car culture video platform, and the 'Join RevReel' authentication button. Use the existing dark theme with neon accent colors, glassmorphism, and car-culture aesthetic consistent with the rest of the app (Barlow font, OKLCH color tokens from index.css).",
+      "files": [
+        "frontend/src/pages/LandingPage.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "blob-storage@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-3"
       ],
       "confidence": "high"
     }

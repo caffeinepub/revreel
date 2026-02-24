@@ -1,330 +1,281 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { Link } from '@tanstack/react-router';
-import { Heart, MessageCircle, Share2, Play, Volume2, VolumeX, Trash2 } from 'lucide-react';
-import { type Video } from '../backend';
+import { useRef, useEffect, useState, useCallback } from 'react';
+import { Heart, MessageCircle, Share2, Trash2, Volume2, VolumeX, Bookmark, Flag, BadgeCheck } from 'lucide-react';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
-import { useToggleLike, useDeleteVideo } from '../hooks/useQueries';
-import { toast } from 'sonner';
+import { useToggleLike, useDeleteVideo, useGetUserProfile, useAddReaction, useRemoveReaction, useSaveVideo, useUnsaveVideo, useGetCallerUserProfile, useIncrementViewCount, useGetChallengesForVideo } from '../hooks/useQueries';
+import { Video, ReactionType } from '../backend';
 import CommentsPanel from './CommentsPanel';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
+import ChallengeModal from './ChallengeModal';
 
 interface VideoCardProps {
   video: Video;
   isActive: boolean;
   isMuted: boolean;
-  onToggleMute: () => void;
+  onMuteToggle: () => void;
 }
 
-export default function VideoCard({ video, isActive, isMuted, onToggleMute }: VideoCardProps) {
+const REACTIONS: { type: ReactionType; emoji: string; label: string }[] = [
+  { type: ReactionType.like, emoji: '👍', label: 'Like' },
+  { type: ReactionType.fire, emoji: '🔥', label: 'Fire' },
+  { type: ReactionType.hype, emoji: '⚡', label: 'Hype' },
+  { type: ReactionType.respect, emoji: '🤙', label: 'Respect' },
+  { type: ReactionType.wild, emoji: '😤', label: 'Wild' },
+];
+
+export default function VideoCard({ video, isActive, isMuted, onMuteToggle }: VideoCardProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const isMutedRef = useRef(isMuted);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [showComments, setShowComments] = useState(false);
-  const [liked, setLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(video.likes.length);
+  const viewCountedRef = useRef(false);
   const { identity } = useInternetIdentity();
+  const { data: userProfile } = useGetCallerUserProfile();
+  const { data: uploaderProfile } = useGetUserProfile(video.uploader.toString());
+  const { data: challenges } = useGetChallengesForVideo(undefined); // skip per-video to avoid too many calls
+
   const toggleLike = useToggleLike();
   const deleteVideo = useDeleteVideo();
+  const addReaction = useAddReaction();
+  const removeReaction = useRemoveReaction();
+  const saveVideo = useSaveVideo();
+  const unsaveVideo = useUnsaveVideo();
+  const incrementViewCount = useIncrementViewCount();
 
-  const isAuthenticated = !!identity;
+  const [showComments, setShowComments] = useState(false);
+  const [showReactions, setShowReactions] = useState(false);
+  const [showChallengeModal, setShowChallengeModal] = useState(false);
+
   const currentUserId = identity?.getPrincipal().toString();
-  const isOwner = !!currentUserId && video.uploader.toString() === currentUserId;
+  const isOwner = currentUserId && video.uploader.toString() === currentUserId;
+  const isLiked = currentUserId ? video.likes.some(l => l.toString() === currentUserId) : false;
 
-  // Keep ref in sync with prop so effects always read the latest value
+  const userReaction = currentUserId
+    ? video.reactions.find(([uid]) => uid.toString() === currentUserId)?.[1]
+    : undefined;
+
+  const isSaved = userProfile?.savedVideos?.some(id => id.toString() === video.id) ?? false;
+
+  // Reaction counts
+  const reactionCounts = REACTIONS.map(r => ({
+    ...r,
+    count: video.reactions.filter(([, rt]) => rt === r.type).length,
+  })).filter(r => r.count > 0);
+
   useEffect(() => {
     isMutedRef.current = isMuted;
   }, [isMuted]);
 
   useEffect(() => {
-    if (currentUserId) {
-      setLiked(video.likes.some((l) => l.toString() === currentUserId));
-    }
-    setLikeCount(video.likes.length);
-  }, [video.likes, currentUserId]);
-
-  // Sync muted state to video element imperatively — React's muted prop is not reactive after mount
-  useEffect(() => {
-    const videoEl = videoRef.current;
-    if (!videoEl) return;
-    videoEl.muted = isMuted;
-  }, [isMuted]);
-
-  // Play/pause based on active state; always read current muted value via ref
-  useEffect(() => {
     const videoEl = videoRef.current;
     if (!videoEl) return;
 
     if (isActive) {
-      // Apply current muted state from ref (always up-to-date) before attempting play
       videoEl.muted = isMutedRef.current;
-      videoEl.play()
-        .then(() => setIsPlaying(true))
-        .catch((err) => {
-          // If autoplay with audio is blocked, fall back to muted play
-          if (!videoEl.muted) {
-            videoEl.muted = true;
-            videoEl.play()
-              .then(() => setIsPlaying(true))
-              .catch(() => setIsPlaying(false));
-          } else {
-            setIsPlaying(false);
-          }
+      const playPromise = videoEl.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {
+          videoEl.muted = true;
+          videoEl.play().catch(() => {});
         });
+      }
+      // Increment view count once per activation
+      if (!viewCountedRef.current) {
+        viewCountedRef.current = true;
+        incrementViewCount.mutate(video.id);
+      }
     } else {
       videoEl.pause();
-      setIsPlaying(false);
+      viewCountedRef.current = false;
     }
   }, [isActive]);
 
-  const handlePlayPause = useCallback(() => {
-    const videoEl = videoRef.current;
-    if (!videoEl) return;
-    if (isPlaying) {
-      videoEl.pause();
-      setIsPlaying(false);
+  const handleLike = () => {
+    if (!identity) return;
+    toggleLike.mutate(video.id);
+  };
+
+  const handleReaction = (reactionType: ReactionType) => {
+    if (!identity) return;
+    if (userReaction === reactionType) {
+      removeReaction.mutate(video.id);
     } else {
-      videoEl.play().then(() => setIsPlaying(true)).catch(() => {});
+      addReaction.mutate({ videoId: video.id, reaction: reactionType });
     }
-  }, [isPlaying]);
+    setShowReactions(false);
+  };
 
-  const handleLike = async () => {
-    if (!isAuthenticated) {
-      toast.error('Login to like videos!');
-      return;
-    }
-    const wasLiked = liked;
-    setLiked(!wasLiked);
-    setLikeCount((c) => (wasLiked ? c - 1 : c + 1));
-    try {
-      await toggleLike.mutateAsync(video.id);
-    } catch {
-      setLiked(wasLiked);
-      setLikeCount((c) => (wasLiked ? c + 1 : c - 1));
-      toast.error('Failed to like video');
+  const handleBookmark = () => {
+    if (!identity) return;
+    const videoIdNum = parseInt(video.id, 10);
+    if (isNaN(videoIdNum)) return;
+    if (isSaved) {
+      unsaveVideo.mutate(videoIdNum);
+    } else {
+      saveVideo.mutate(videoIdNum);
     }
   };
 
-  const handleShare = () => {
-    const url = `${window.location.origin}/filter/video/${video.id}`;
-    navigator.clipboard.writeText(url).then(() => {
-      toast.success('Link copied to clipboard! 🔗');
-    }).catch(() => {
-      toast.error('Failed to copy link');
-    });
+  const handleDelete = () => {
+    if (!identity || !isOwner) return;
+    deleteVideo.mutate(video.id);
   };
 
-  const handleDelete = async () => {
-    try {
-      await deleteVideo.mutateAsync(video.id);
-      toast.success('Reel deleted 🗑️');
-    } catch {
-      toast.error('Failed to delete reel');
-    }
-  };
-
-  const videoSrc = video.videoUrl.getDirectURL();
-  const thumbnailSrc = video.thumbnail.getDirectURL();
+  const videoUrl = video.videoUrl.getDirectURL();
+  const thumbnailUrl = video.thumbnail.getDirectURL();
 
   return (
     <div className="relative w-full h-full bg-black overflow-hidden">
-      {/* Video Element — muted attribute intentionally omitted from JSX;
-          muted state is controlled entirely via imperative useEffect + isMutedRef
-          because React does not reactively update the muted DOM attribute after mount */}
       <video
         ref={videoRef}
-        src={videoSrc}
-        poster={thumbnailSrc}
-        className="absolute inset-0 w-full h-full object-cover"
+        src={videoUrl}
+        poster={thumbnailUrl}
         loop
         playsInline
-        preload="metadata"
-        onClick={handlePlayPause}
+        muted={isMuted}
+        className="absolute inset-0 w-full h-full object-cover"
       />
 
-      {/* Fallback thumbnail if no video */}
-      {!videoSrc && (
-        <img
-          src="/assets/generated/placeholder-thumb.dim_640x360.png"
-          alt={video.title}
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-      )}
+      {/* Gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 pointer-events-none" />
 
-      {/* Overlay gradient */}
-      <div className="absolute inset-0 video-overlay-gradient pointer-events-none" />
+      {/* Mute toggle */}
+      <button
+        onClick={onMuteToggle}
+        className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-black/50 backdrop-blur flex items-center justify-center text-white"
+      >
+        {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+      </button>
 
-      {/* Play/Pause indicator */}
-      {!isPlaying && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="w-16 h-16 rounded-full bg-black/50 flex items-center justify-center backdrop-blur-sm">
-            <Play className="w-8 h-8 text-white ml-1" />
+      {/* Video info */}
+      <div className="absolute bottom-0 left-0 right-16 p-4 z-10">
+        <div className="flex items-center gap-2 mb-1">
+          {uploaderProfile?.avatarUrl ? (
+            <img src={uploaderProfile.avatarUrl} alt={uploaderProfile.username} className="w-8 h-8 rounded-full object-cover border border-neon-orange/50" />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-neon-orange/20 border border-neon-orange/50 flex items-center justify-center text-xs text-neon-orange font-bold">
+              {uploaderProfile?.username?.[0]?.toUpperCase() ?? '?'}
+            </div>
+          )}
+          <div className="flex items-center gap-1">
+            <span className="text-white font-semibold text-sm">{uploaderProfile?.username ?? '...'}</span>
+            {uploaderProfile?.verified && (
+              <BadgeCheck className="w-4 h-4 text-neon-orange" />
+            )}
           </div>
         </div>
-      )}
-
-      {/* Top-right controls: mute + delete */}
-      <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
-        {/* Mute/Unmute toggle */}
-        <button
-          onClick={(e) => { e.stopPropagation(); onToggleMute(); }}
-          className="w-9 h-9 rounded-full bg-black/50 flex items-center justify-center backdrop-blur-sm hover:bg-black/70 transition-colors"
-          aria-label={isMuted ? 'Unmute' : 'Mute'}
-        >
-          {isMuted ? (
-            <VolumeX className="w-4 h-4 text-white" />
-          ) : (
-            <Volume2 className="w-4 h-4 text-neon" />
-          )}
-        </button>
-
-        {/* Delete button — only for owner */}
-        {isOwner && (
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <button
-                onClick={(e) => e.stopPropagation()}
-                className="w-9 h-9 rounded-full bg-black/50 flex items-center justify-center backdrop-blur-sm hover:bg-red-500/30 transition-colors"
-                aria-label="Delete reel"
-              >
-                <Trash2 className="w-4 h-4 text-white hover:text-red-400" />
-              </button>
-            </AlertDialogTrigger>
-            <AlertDialogContent className="bg-card border-border">
-              <AlertDialogHeader>
-                <AlertDialogTitle className="font-display text-foreground">DELETE REEL?</AlertDialogTitle>
-                <AlertDialogDescription className="text-muted-foreground">
-                  This will permanently delete your reel and all its comments. This action cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel className="font-display text-xs tracking-wider">CANCEL</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleDelete}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90 font-display text-xs tracking-wider"
-                >
-                  DELETE
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+        <h3 className="text-white font-bold text-base mb-1 line-clamp-2">{video.title}</h3>
+        {video.hashtags.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {video.hashtags.slice(0, 3).map(tag => (
+              <span key={tag} className="text-neon-orange text-xs">#{tag}</span>
+            ))}
+          </div>
+        )}
+        {reactionCounts.length > 0 && (
+          <div className="flex gap-2 mt-1">
+            {reactionCounts.map(r => (
+              <span key={r.type} className="text-xs text-white/80">{r.emoji} {r.count}</span>
+            ))}
+          </div>
         )}
       </div>
 
-      {/* Bottom overlay: info + actions */}
-      <div className="absolute bottom-0 left-0 right-0 z-10 flex items-end gap-3 p-4 pb-6">
-        {/* Left: video info */}
-        <div className="flex-1 min-w-0 space-y-2">
-          <Link
-            to="/profile/$userId"
-            params={{ userId: video.uploader.toString() }}
-            className="flex items-center gap-2 group"
+      {/* Action buttons */}
+      <div className="absolute right-2 bottom-20 flex flex-col items-center gap-4 z-10">
+        {/* Reaction button */}
+        <div className="relative">
+          <button
+            onClick={() => setShowReactions(!showReactions)}
+            className={`flex flex-col items-center gap-1 ${isLiked || userReaction ? 'text-neon-orange' : 'text-white'}`}
           >
-            <div className="w-8 h-8 rounded-full bg-neon/20 border border-neon/50 flex items-center justify-center overflow-hidden flex-shrink-0">
-              <img
-                src="/assets/generated/default-avatar.dim_128x128.png"
-                alt="avatar"
-                className="w-full h-full object-cover"
-              />
+            <div className="w-10 h-10 rounded-full bg-black/50 backdrop-blur flex items-center justify-center text-lg">
+              {userReaction ? REACTIONS.find(r => r.type === userReaction)?.emoji ?? '❤️' : '❤️'}
             </div>
-            <span className="text-white font-display text-sm font-bold group-hover:text-neon transition-colors truncate">
-              @{video.uploader.toString().slice(0, 8)}...
-            </span>
-          </Link>
-
-          <h3 className="text-white font-display text-xl font-bold leading-tight line-clamp-2">
-            {video.title}
-          </h3>
-
-          {video.description && (
-            <p className="text-white/80 text-sm line-clamp-2">{video.description}</p>
+            <span className="text-xs font-bold">{video.likes.length + video.reactions.length}</span>
+          </button>
+          {showReactions && (
+            <div className="absolute bottom-12 right-0 bg-card/90 backdrop-blur border border-border rounded-2xl p-2 flex gap-1 shadow-neon">
+              {REACTIONS.map(r => (
+                <button
+                  key={r.type}
+                  onClick={() => handleReaction(r.type)}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center text-xl transition-transform hover:scale-125 ${
+                    userReaction === r.type ? 'bg-neon-orange/20 ring-1 ring-neon-orange' : 'hover:bg-white/10'
+                  }`}
+                  title={r.label}
+                >
+                  {r.emoji}
+                </button>
+              ))}
+            </div>
           )}
+        </div>
 
-          <div className="flex flex-wrap gap-1">
-            {video.hashtags.slice(0, 4).map((tag) => (
-              <Link
-                key={tag}
-                to="/filter/$type/$value"
-                params={{ type: 'hashtag', value: tag }}
-                className="text-neon text-xs font-semibold hover:text-neon/80 transition-colors"
-              >
-                #{tag}
-              </Link>
-            ))}
+        {/* Comments */}
+        <button
+          onClick={() => setShowComments(true)}
+          className="flex flex-col items-center gap-1 text-white"
+        >
+          <div className="w-10 h-10 rounded-full bg-black/50 backdrop-blur flex items-center justify-center">
+            <MessageCircle className="w-5 h-5" />
           </div>
+          <span className="text-xs font-bold">{video.comments.length}</span>
+        </button>
 
-          <Link
-            to="/filter/$type/$value"
-            params={{ type: 'category', value: video.category }}
-            className="inline-block px-2 py-0.5 rounded bg-neon/20 border border-neon/40 text-neon text-xs font-display font-bold"
-          >
-            {video.category.toUpperCase()}
-          </Link>
-        </div>
-
-        {/* Right: action buttons */}
-        <div className="flex flex-col items-center gap-4 flex-shrink-0">
-          {/* Like */}
+        {/* Bookmark */}
+        {identity && (
           <button
-            onClick={handleLike}
-            className="flex flex-col items-center gap-1 group"
+            onClick={handleBookmark}
+            className={`flex flex-col items-center gap-1 ${isSaved ? 'text-neon-orange' : 'text-white'}`}
           >
-            <div className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${
-              liked ? 'bg-red-500/20 border border-red-500/50' : 'bg-black/50 border border-white/20'
-            }`}>
-              <Heart
-                className={`w-5 h-5 transition-all ${liked ? 'text-red-500 fill-red-500 scale-110' : 'text-white'}`}
-              />
+            <div className="w-10 h-10 rounded-full bg-black/50 backdrop-blur flex items-center justify-center">
+              <Bookmark className={`w-5 h-5 ${isSaved ? 'fill-neon-orange' : ''}`} />
             </div>
-            <span className="text-white text-xs font-bold">{formatCount(likeCount)}</span>
           </button>
+        )}
 
-          {/* Comment */}
+        {/* Challenge */}
+        {identity && (
           <button
-            onClick={() => setShowComments(true)}
-            className="flex flex-col items-center gap-1 group"
+            onClick={() => setShowChallengeModal(true)}
+            className="flex flex-col items-center gap-1 text-white"
           >
-            <div className="w-11 h-11 rounded-full bg-black/50 border border-white/20 flex items-center justify-center hover:border-neon/50 transition-all">
-              <MessageCircle className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 rounded-full bg-black/50 backdrop-blur flex items-center justify-center">
+              <Flag className="w-5 h-5" />
             </div>
-            <span className="text-white text-xs font-bold">{formatCount(video.comments.length)}</span>
           </button>
+        )}
 
-          {/* Share */}
+        {/* Share */}
+        <button className="flex flex-col items-center gap-1 text-white">
+          <div className="w-10 h-10 rounded-full bg-black/50 backdrop-blur flex items-center justify-center">
+            <Share2 className="w-5 h-5" />
+          </div>
+        </button>
+
+        {/* Delete (owner only) */}
+        {isOwner && (
           <button
-            onClick={handleShare}
-            className="flex flex-col items-center gap-1 group"
+            onClick={handleDelete}
+            disabled={deleteVideo.isPending}
+            className="flex flex-col items-center gap-1 text-red-400"
           >
-            <div className="w-11 h-11 rounded-full bg-black/50 border border-white/20 flex items-center justify-center hover:border-neon/50 transition-all">
-              <Share2 className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 rounded-full bg-black/50 backdrop-blur flex items-center justify-center">
+              <Trash2 className="w-5 h-5" />
             </div>
-            <span className="text-white text-xs font-bold">Share</span>
           </button>
-        </div>
+        )}
       </div>
 
-      {/* Comments Panel */}
+      {/* Comments panel */}
       {showComments && (
-        <CommentsPanel
-          videoId={video.id}
-          onClose={() => setShowComments(false)}
+        <CommentsPanel videoId={video.id} onClose={() => setShowComments(false)} />
+      )}
+
+      {/* Challenge modal */}
+      {showChallengeModal && (
+        <ChallengeModal
+          video={video}
+          onClose={() => setShowChallengeModal(false)}
         />
       )}
     </div>
   );
-}
-
-function formatCount(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-  return String(n);
 }

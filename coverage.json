@@ -1,45 +1,64 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-24T14:34:31.696Z",
+  "generatedAt": "2026-02-24T16:36:21.967Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 1,
-    "implemented": 1,
+    "total": 3,
+    "implemented": 3,
     "items": [
       {
-        "id": "REQ-43",
-        "summary": "Re-deploy the full application including all previously implemented features: the hardcoded admin Principal in the backend, the `deleteUser` update function, the `isAdmin` query function, the `useIsAdmin` and `useDeleteUser` React Query hooks in useQueries.ts, the AdminPanel page at frontend/src/pages/AdminPanel.tsx, and the /admin route registered in App.tsx. Ensure the build compiles cleanly and deploys successfully to the Internet Computer network.",
+        "id": "REQ-1",
+        "summary": "Create a dedicated landing page (route '/') that serves as the public entry point to RevReel. The page should prominently feature a 'Join RevReel' call-to-action button that triggers Internet Identity login. Upon successful authentication, the user is redirected to the main app feed ('/feed'). If the user is already authenticated, automatically redirect them to '/feed' without showing the landing page.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/pages/AdminPanel.tsx",
+          "frontend/src/pages/LandingPage.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/pages/LandingPage.tsx"
+        ]
+      },
+      {
+        "id": "REQ-2",
+        "summary": "Update the TanStack Router route configuration in App.tsx to register the new landing page as the root route '/' and move or adjust the existing default route so the feed is accessible at '/feed'. Ensure the Layout shell is only applied to authenticated app routes, not the landing page.",
+        "status": "implemented",
+        "plannedFiles": [
           "frontend/src/App.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/pages/AdminPanel.tsx",
           "frontend/src/App.tsx"
+        ]
+      },
+      {
+        "id": "REQ-3",
+        "summary": "Design the landing page with a visually striking hero section that includes the RevReel logo/wordmark, a bold tagline describing the car culture video platform, and the 'Join RevReel' authentication button. Use the existing dark theme with neon accent colors, glassmorphism, and car-culture aesthetic consistent with the rest of the app (Barlow font, OKLCH color tokens from index.css).",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/pages/LandingPage.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/pages/LandingPage.tsx"
         ]
       }
     ]
   },
   "changedFiles": [
-    "backend/main.mo",
     "build-request.json",
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
+    "frontend/public/assets/generated/landing-hero.dim_1920x1080.png",
     "frontend/src/App.tsx",
-    "frontend/src/backend.d.ts",
-    "frontend/src/backend.ts",
-    "frontend/src/declarations/backend.did.d.ts",
-    "frontend/src/declarations/backend.did.js",
-    "frontend/src/hooks/useQueries.ts",
-    "frontend/src/pages/AdminPanel.tsx",
+    "frontend/src/pages/BuildLogDetails.tsx",
+    "frontend/src/pages/CarMeetDetails.tsx",
+    "frontend/src/pages/Conversation.tsx",
+    "frontend/src/pages/FilteredFeed.tsx",
+    "frontend/src/pages/LandingPage.tsx",
+    "frontend/src/pages/ListingDetails.tsx",
+    "frontend/src/pages/MechanicsPostDetails.tsx",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

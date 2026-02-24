@@ -1,7 +1,15 @@
-import { createRouter, RouterProvider, createRootRoute, createRoute, Outlet } from '@tanstack/react-router';
+import {
+  RouterProvider,
+  createRouter,
+  createRoute,
+  createRootRoute,
+  Outlet,
+} from '@tanstack/react-router';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@/components/ui/sonner';
 import Layout from './components/Layout';
+import LandingPage from './pages/LandingPage';
 import Feed from './pages/Feed';
 import Profile from './pages/Profile';
 import Upload from './pages/Upload';
@@ -15,118 +23,167 @@ import MechanicsPostDetails from './pages/MechanicsPostDetails';
 import Inbox from './pages/Inbox';
 import Conversation from './pages/Conversation';
 import AdminPanel from './pages/AdminPanel';
-import AuthGuard from './components/AuthGuard';
+import Notifications from './pages/Notifications';
+import BuildLogs from './pages/BuildLogs';
+import BuildLogDetails from './pages/BuildLogDetails';
+import Classifieds from './pages/Classifieds';
+import ListingDetails from './pages/ListingDetails';
 
+const queryClient = new QueryClient();
+
+// Root route — no shell, renders children directly
 const rootRoute = createRootRoute({
+  component: () => <Outlet />,
+});
+
+// Landing page at '/' — no Layout shell
+const landingRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/',
+  component: LandingPage,
+});
+
+// Layout wrapper route for all app routes
+const appLayoutRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  id: 'app-layout',
   component: () => (
-    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} forcedTheme="dark">
-      <Layout>
-        <Outlet />
-      </Layout>
-      <Toaster theme="dark" />
-    </ThemeProvider>
+    <Layout>
+      <Outlet />
+    </Layout>
   ),
 });
 
 const feedRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/',
+  getParentRoute: () => appLayoutRoute,
+  path: '/feed',
   component: Feed,
 });
 
 const profileRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => appLayoutRoute,
   path: '/profile/$userId',
   component: Profile,
 });
 
-const myProfileRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/profile',
-  component: () => <AuthGuard><Profile /></AuthGuard>,
-});
-
 const uploadRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => appLayoutRoute,
   path: '/upload',
-  component: () => <AuthGuard><Upload /></AuthGuard>,
+  component: Upload,
 });
 
 const discoverRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => appLayoutRoute,
   path: '/discover',
   component: Discover,
 });
 
 const filteredFeedRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => appLayoutRoute,
   path: '/filter/$type/$value',
   component: FilteredFeed,
 });
 
 const leaderboardRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => appLayoutRoute,
   path: '/leaderboard',
   component: Leaderboard,
 });
 
 const carMeetsRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => appLayoutRoute,
   path: '/meets',
   component: CarMeets,
 });
 
 const carMeetDetailsRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => appLayoutRoute,
   path: '/meets/$meetId',
   component: CarMeetDetails,
 });
 
 const mechanicsHelpRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => appLayoutRoute,
   path: '/mechanics',
   component: MechanicsHelp,
 });
 
 const mechanicsPostDetailsRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => appLayoutRoute,
   path: '/mechanics/$postId',
   component: MechanicsPostDetails,
 });
 
 const inboxRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => appLayoutRoute,
   path: '/inbox',
   component: Inbox,
 });
 
 const conversationRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => appLayoutRoute,
   path: '/messages/$userId',
   component: Conversation,
 });
 
 const adminRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => appLayoutRoute,
   path: '/admin',
   component: AdminPanel,
 });
 
+const notificationsRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: '/notifications',
+  component: Notifications,
+});
+
+const buildLogsRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: '/builds',
+  component: BuildLogs,
+});
+
+const buildLogDetailsRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: '/builds/$buildId',
+  component: BuildLogDetails,
+});
+
+const classifiedsRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: '/classifieds',
+  component: Classifieds,
+});
+
+const listingDetailsRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: '/classifieds/$listingId',
+  component: ListingDetails,
+});
+
 const routeTree = rootRoute.addChildren([
-  feedRoute,
-  profileRoute,
-  myProfileRoute,
-  uploadRoute,
-  discoverRoute,
-  filteredFeedRoute,
-  leaderboardRoute,
-  carMeetsRoute,
-  carMeetDetailsRoute,
-  mechanicsHelpRoute,
-  mechanicsPostDetailsRoute,
-  inboxRoute,
-  conversationRoute,
-  adminRoute,
+  landingRoute,
+  appLayoutRoute.addChildren([
+    feedRoute,
+    profileRoute,
+    uploadRoute,
+    discoverRoute,
+    filteredFeedRoute,
+    leaderboardRoute,
+    carMeetsRoute,
+    carMeetDetailsRoute,
+    mechanicsHelpRoute,
+    mechanicsPostDetailsRoute,
+    inboxRoute,
+    conversationRoute,
+    adminRoute,
+    notificationsRoute,
+    buildLogsRoute,
+    buildLogDetailsRoute,
+    classifiedsRoute,
+    listingDetailsRoute,
+  ]),
 ]);
 
 const router = createRouter({ routeTree });
@@ -138,5 +195,12 @@ declare module '@tanstack/react-router' {
 }
 
 export default function App() {
-  return <RouterProvider router={router} />;
+  return (
+    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+        <Toaster theme="dark" />
+      </QueryClientProvider>
+    </ThemeProvider>
+  );
 }

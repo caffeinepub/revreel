@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Shield, Trash2, AlertTriangle, Loader2, UserX } from 'lucide-react';
+import { Shield, Trash2, AlertTriangle, Loader2, UserX, Copy, Check } from 'lucide-react';
 import { useIsAdmin, useDeleteUser } from '../hooks/useQueries';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import AuthGuard from '../components/AuthGuard';
@@ -19,6 +19,44 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
+function PrincipalDisplay({ principal }: { principal: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(principal).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <div className="w-full max-w-lg mx-auto mb-6 p-4 rounded-lg bg-card/60 border border-border/50 backdrop-blur-sm">
+      <p className="text-xs text-muted-foreground mb-1 font-medium uppercase tracking-wider">
+        Your Principal ID
+      </p>
+      <div className="flex items-center gap-2">
+        <span className="font-mono text-sm text-foreground/90 break-all flex-1 select-all">
+          {principal}
+        </span>
+        <button
+          onClick={handleCopy}
+          title="Copy Principal ID"
+          className="shrink-0 p-1.5 rounded-md hover:bg-neon-orange/10 text-muted-foreground hover:text-neon-orange transition-colors"
+        >
+          {copied ? (
+            <Check className="w-4 h-4 text-green-400" />
+          ) : (
+            <Copy className="w-4 h-4" />
+          )}
+        </button>
+      </div>
+      <p className="text-xs text-muted-foreground/60 mt-1">
+        Share this with your developer to grant admin access.
+      </p>
+    </div>
+  );
+}
+
 function AdminPanelContent() {
   const { identity } = useInternetIdentity();
   const { data: isAdmin, isLoading: adminLoading } = useIsAdmin();
@@ -29,6 +67,7 @@ function AdminPanelContent() {
   const [deleteSuccess, setDeleteSuccess] = useState<string | null>(null);
 
   const isAuthenticated = !!identity;
+  const principalId = identity?.getPrincipal().toString() ?? null;
 
   const handleDeleteUser = async () => {
     if (!userIdInput.trim()) return;
@@ -72,6 +111,14 @@ function AdminPanelContent() {
         <p className="text-muted-foreground text-center max-w-sm">
           You do not have admin privileges to access this panel.
         </p>
+        {principalId && (
+          <div className="mt-2 w-full">
+            <PrincipalDisplay principal={principalId} />
+            <p className="text-xs text-muted-foreground/60 text-center max-w-sm mx-auto">
+              The Principal above is your current identity. The backend admin must match this exactly.
+            </p>
+          </div>
+        )}
       </div>
     );
   }
@@ -79,7 +126,7 @@ function AdminPanelContent() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 pb-24">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-8">
+      <div className="flex items-center gap-3 mb-6">
         <div className="p-2 rounded-lg bg-neon-orange/10 border border-neon-orange/30">
           <Shield className="w-6 h-6 text-neon-orange" />
         </div>
@@ -90,6 +137,9 @@ function AdminPanelContent() {
           <p className="text-sm text-muted-foreground">Manage users and platform settings</p>
         </div>
       </div>
+
+      {/* Diagnostic: current principal */}
+      {principalId && <PrincipalDisplay principal={principalId} />}
 
       {/* Delete User Card */}
       <Card className="bg-card/60 border-border/50 backdrop-blur-sm">

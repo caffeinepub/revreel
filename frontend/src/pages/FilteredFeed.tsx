@@ -7,18 +7,17 @@ import { ArrowLeft, Hash, Layers } from 'lucide-react';
 const MUTE_STORAGE_KEY = 'revreel_feed_muted';
 
 export default function FilteredFeed() {
-  const params = useParams({ from: '/filter/$type/$value' });
-  const { type, value } = params;
+  const { type, value } = useParams({ from: '/app-layout/filter/$type/$value' });
+
   const [activeIndex, setActiveIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Shared mute state synced with sessionStorage — default false (unmuted)
   const [isMuted, setIsMuted] = useState<boolean>(() => {
     const stored = sessionStorage.getItem(MUTE_STORAGE_KEY);
     return stored === null ? false : stored === 'true';
   });
 
-  const handleToggleMute = useCallback(() => {
+  const handleMuteToggle = useCallback(() => {
     setIsMuted((prev) => {
       const next = !prev;
       sessionStorage.setItem(MUTE_STORAGE_KEY, String(next));
@@ -46,7 +45,7 @@ export default function FilteredFeed() {
     return () => container.removeEventListener('scroll', handleScroll);
   }, [handleScroll]);
 
-  const label = type === 'hashtag' ? `#${value}` : value.toUpperCase();
+  const label = type === 'hashtag' ? `#${value}` : String(value).toUpperCase();
   const Icon = type === 'hashtag' ? Hash : Layers;
 
   return (
@@ -80,7 +79,7 @@ export default function FilteredFeed() {
             <p className="text-white/60 text-sm">No videos for {label} yet.</p>
             <Link
               to="/upload"
-              className="inline-block px-6 py-3 bg-neon text-primary-foreground font-display rounded-lg neon-glow"
+              className="inline-block px-6 py-3 bg-neon text-primary-foreground font-display rounded-lg"
             >
               BE THE FIRST 🔥
             </Link>
@@ -102,7 +101,7 @@ export default function FilteredFeed() {
                 video={video}
                 isActive={index === activeIndex}
                 isMuted={isMuted}
-                onToggleMute={handleToggleMute}
+                onMuteToggle={handleMuteToggle}
               />
             </div>
           ))}

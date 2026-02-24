@@ -1,44 +1,49 @@
-import React, { useState } from 'react';
-import { Link, useRouter } from '@tanstack/react-router';
-import { Home, Compass, Plus, Trophy, User, Flame, CalendarDays, Wrench, MessageCircle } from 'lucide-react';
+import { ReactNode } from 'react';
+import { Link, useLocation } from '@tanstack/react-router';
+import { Home, Compass, Upload, User, Trophy, Car, Wrench, MessageCircle, Bell, HardHat, ShoppingBag } from 'lucide-react';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
-import { useGetCallerUserProfile, useGetInbox } from '../hooks/useQueries';
+import { useGetCallerUserProfile, useGetInbox, useGetUnreadNotificationCount } from '../hooks/useQueries';
 import ProfileSetupModal from './ProfileSetupModal';
 
 interface LayoutProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
-const navItems = [
-  { path: '/', icon: Home, label: 'FEED' },
-  { path: '/discover', icon: Compass, label: 'DISCOVER' },
-  { path: '/upload', icon: Plus, label: 'UPLOAD', isAction: true },
-  { path: '/meets', icon: CalendarDays, label: 'MEETS' },
-  { path: '/mechanics', icon: Wrench, label: 'WRENCH' },
-  { path: '/inbox', icon: MessageCircle, label: 'DMS' },
-  { path: '/leaderboard', icon: Trophy, label: 'RANKS' },
-  { path: '/profile', icon: User, label: 'ME' },
-];
-
 export default function Layout({ children }: LayoutProps) {
-  const router = useRouter();
-  const currentPath = router.state.location.pathname;
+  const location = useLocation();
   const { identity } = useInternetIdentity();
-  const isAuthenticated = !!identity;
-
   const { data: userProfile, isLoading: profileLoading, isFetched } = useGetCallerUserProfile();
+  const { data: inbox } = useGetInbox();
+  const { data: unreadNotifCount } = useGetUnreadNotificationCount();
+
+  const isAuthenticated = !!identity;
+  const userId = identity?.getPrincipal().toString();
+
   const showProfileSetup = isAuthenticated && !profileLoading && isFetched && userProfile === null;
 
-  // Fetch inbox for unread badge — only when authenticated
-  const { data: inbox } = useGetInbox();
-  const totalUnread = isAuthenticated
-    ? (inbox ?? []).reduce((sum, c) => sum + Number(c.unreadCount), 0)
-    : 0;
+  const unreadDMs = inbox?.reduce((acc, conv) => acc + Number(conv.unreadCount), 0) ?? 0;
+  const unreadNotifs = unreadNotifCount ?? 0;
+
+  const profilePath = userId ? `/profile/${userId}` : '/profile/me';
+
+  const navItems: Array<{ path: string; icon: React.ElementType; label: string; badge?: number }> = [
+    { path: '/', icon: Home, label: 'Home' },
+    { path: '/discover', icon: Compass, label: 'Discover' },
+    { path: '/leaderboard', icon: Trophy, label: 'Top' },
+    { path: '/meets', icon: Car, label: 'Meets' },
+    { path: '/mechanics', icon: Wrench, label: 'Garage' },
+    { path: '/builds', icon: HardHat, label: 'Builds' },
+    { path: '/classifieds', icon: ShoppingBag, label: 'Market' },
+    { path: '/upload', icon: Upload, label: 'Upload' },
+    { path: '/inbox', icon: MessageCircle, label: 'DMs', badge: unreadDMs },
+    { path: '/notifications', icon: Bell, label: 'Alerts', badge: unreadNotifs },
+    { path: profilePath, icon: User, label: 'Profile' },
+  ];
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-white/5">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
         <div className="flex items-center justify-between px-4 py-3 max-w-lg mx-auto">
           <Link to="/" className="flex items-center gap-2">
             <img
@@ -47,19 +52,16 @@ export default function Layout({ children }: LayoutProps) {
               className="w-8 h-8 object-contain"
               onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
             />
-            <span className="font-display text-xl tracking-widest text-neon neon-text">REVREEL</span>
+            <span className="font-display text-xl font-bold text-neon tracking-wider">REVREEL</span>
           </Link>
-
           <div className="flex items-center gap-3">
-            {isAuthenticated ? (
+            {isAuthenticated && userProfile && (
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-neon animate-pulse" />
                 <span className="text-xs text-muted-foreground font-display">
-                  {userProfile?.username ?? 'RACER'}
+                  {userProfile.username}
                 </span>
               </div>
-            ) : (
-              <Flame className="w-5 h-5 text-neon" />
             )}
           </div>
         </div>
@@ -70,40 +72,28 @@ export default function Layout({ children }: LayoutProps) {
         {children}
       </main>
 
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-md border-t border-white/5">
-        <div className="flex items-center justify-around px-1 py-2 max-w-lg mx-auto">
-          {navItems.map(({ path, icon: Icon, label, isAction }) => {
+      {/* Bottom navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-md border-t border-border">
+        <div className="flex items-center justify-around px-1 py-2 max-w-lg mx-auto overflow-x-auto">
+          {navItems.map(({ path, icon: Icon, label, badge }) => {
             const isActive =
               path === '/'
-                ? currentPath === '/'
-                : currentPath.startsWith(path);
-            const isMessages = path === '/inbox';
+                ? location.pathname === '/'
+                : location.pathname.startsWith(path);
 
             return (
               <Link
                 key={path}
-                to={path}
-                className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg transition-all relative ${
-                  isAction
-                    ? 'bg-neon/10 border border-neon/30 px-3 py-1.5 neon-border'
-                    : ''
-                } ${
-                  isActive
-                    ? 'text-neon'
-                    : 'text-muted-foreground hover:text-foreground'
+                to={path as any}
+                className={`flex flex-col items-center gap-0.5 px-1.5 py-1 rounded-lg transition-all relative min-w-[36px] ${
+                  isActive ? 'text-neon' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 <div className="relative">
-                  <Icon
-                    className={`${isAction ? 'w-5 h-5' : 'w-5 h-5'} ${
-                      isActive ? 'text-neon' : ''
-                    }`}
-                  />
-                  {/* Unread badge for Messages */}
-                  {isMessages && totalUnread > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] rounded-full bg-neon text-background text-[9px] font-bold flex items-center justify-center px-0.5 leading-none">
-                      {totalUnread > 99 ? '99+' : totalUnread}
+                  <Icon className="w-5 h-5" />
+                  {badge !== undefined && badge > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 bg-neon text-background text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">
+                      {badge > 9 ? '9+' : badge}
                     </span>
                   )}
                 </div>

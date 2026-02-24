@@ -41,8 +41,26 @@ function isUpcoming(timestamp: bigint): boolean {
   return Number(timestamp) / 1_000_000 > Date.now();
 }
 
+function DetailsSkeleton() {
+  return (
+    <div className="min-h-screen bg-background pb-24">
+      <div className="sticky top-0 z-20 bg-background/90 backdrop-blur-sm border-b border-border/40 px-4 py-3 flex items-center gap-3">
+        <Skeleton className="w-9 h-9 rounded-full" />
+        <Skeleton className="h-5 w-48 flex-1" />
+      </div>
+      <div className="px-4 pt-5 space-y-4">
+        <Skeleton className="h-8 w-3/4" />
+        <Skeleton className="h-5 w-24" />
+        <Skeleton className="h-20 w-full rounded-xl" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-2/3" />
+      </div>
+    </div>
+  );
+}
+
 export default function CarMeetDetails() {
-  const { meetId } = useParams({ from: '/meets/$meetId' });
+  const { meetId } = useParams({ from: '/app-layout/meets/$meetId' });
   const navigate = useNavigate();
   const { identity } = useInternetIdentity();
   const isAuthenticated = !!identity;
@@ -215,14 +233,12 @@ export default function CarMeetDetails() {
                           {attendee.username.slice(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-display text-foreground group-hover:text-neon transition-colors truncate">
-                          {attendee.username}
-                          {isCurrentUser && (
-                            <span className="ml-2 text-[10px] text-neon/60 font-normal">(you)</span>
-                          )}
-                        </p>
-                      </div>
+                      <span className="text-sm text-foreground group-hover:text-neon transition-colors font-display tracking-wide">
+                        {attendee.username}
+                        {isCurrentUser && (
+                          <span className="ml-2 text-[10px] text-neon/60">(you)</span>
+                        )}
+                      </span>
                     </Link>
                   );
                 })}
@@ -232,59 +248,28 @@ export default function CarMeetDetails() {
         </div>
       </div>
 
-      {/* Sticky bottom attend/leave button */}
-      {upcoming && isAuthenticated && (
-        <div className="fixed bottom-20 left-0 right-0 px-4 z-30">
+      {/* Sticky attend button */}
+      <div className="fixed bottom-20 left-0 right-0 px-4 z-30">
+        <div className="max-w-lg mx-auto">
           <Button
             onClick={handleAttend}
             disabled={actionLoading}
-            className={`w-full font-display tracking-wider text-sm h-12 transition-all ${
+            className={`w-full h-12 font-display text-base tracking-widest rounded-xl transition-all ${
               isAttending
-                ? 'bg-secondary text-secondary-foreground hover:bg-destructive hover:text-destructive-foreground border border-border'
-                : 'bg-neon text-primary-foreground hover:bg-neon/90 neon-glow'
+                ? 'bg-secondary text-foreground hover:bg-secondary/80 border border-border'
+                : 'bg-neon text-primary-foreground hover:bg-neon/90 shadow-neon'
             }`}
           >
             {actionLoading ? (
-              <Loader2 className="w-4 h-4 animate-spin mr-2" />
-            ) : null}
-            {isAttending ? 'LEAVE MEET' : 'ATTEND MEET'}
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : isAttending ? (
+              'LEAVE MEET'
+            ) : upcoming ? (
+              "ATTEND THIS MEET 🚗"
+            ) : (
+              "I WAS THERE 🏁"
+            )}
           </Button>
-        </div>
-      )}
-
-      {upcoming && !isAuthenticated && (
-        <div className="fixed bottom-20 left-0 right-0 px-4 z-30">
-          <Button
-            onClick={() => toast.info('Login to attend car meets!')}
-            className="w-full font-display tracking-wider text-sm h-12 bg-secondary text-secondary-foreground border border-border"
-          >
-            LOGIN TO ATTEND
-          </Button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function DetailsSkeleton() {
-  return (
-    <div className="min-h-screen bg-background">
-      <div className="px-4 py-3 border-b border-border/40 flex items-center gap-3">
-        <Skeleton className="w-9 h-9 rounded-full" />
-        <Skeleton className="h-5 w-48" />
-      </div>
-      <div className="px-4 pt-5 space-y-6">
-        <Skeleton className="h-6 w-24 rounded-full" />
-        <div className="space-y-3">
-          <Skeleton className="h-8 w-3/4" />
-          <Skeleton className="h-10 w-40" />
-        </div>
-        <Skeleton className="h-32 w-full rounded-xl" />
-        <Skeleton className="h-20 w-full" />
-        <div className="space-y-2">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-12 w-full rounded-lg" />
-          ))}
         </div>
       </div>
     </div>

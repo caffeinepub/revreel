@@ -1,42 +1,85 @@
 {
   "kind": "build_request",
-  "title": "Retry deployment of admin panel feature",
-  "priority": "normal",
+  "title": "Create landing page with direct join/authentication access",
+  "projectName": "RevReel",
+  "priority": "high",
   "requirements": [
     {
-      "id": "REQ-43",
-      "text": "Re-deploy the full application including all previously implemented features: the hardcoded admin Principal in the backend, the `deleteUser` update function, the `isAdmin` query function, the `useIsAdmin` and `useDeleteUser` React Query hooks in useQueries.ts, the AdminPanel page at frontend/src/pages/AdminPanel.tsx, and the /admin route registered in App.tsx. Ensure the build compiles cleanly and deploys successfully to the Internet Computer network.",
-      "target": "both",
+      "id": "REQ-1",
+      "text": "Create a dedicated landing page (route '/') that serves as the public entry point to RevReel. The page should prominently feature a 'Join RevReel' call-to-action button that triggers Internet Identity login. Upon successful authentication, the user is redirected to the main app feed ('/feed'). If the user is already authenticated, automatically redirect them to '/feed' without showing the landing page.",
+      "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-1",
-          "msg-2"
+          "msg-latest"
         ],
         "quotes": [
-          "Retry the deployment",
-          "retry building the admin delete-users feature"
+          "Make a landing page that you can just join from there to access the app"
         ]
       },
       "acceptanceCriteria": [
-        "The application deploys successfully without compilation or deployment errors",
-        "The backend actor compiles with the isAdmin query and deleteUser update functions intact",
-        "The frontend builds without TypeScript or bundler errors",
-        "Navigating to /admin in the deployed app renders the AdminPanel page",
-        "The isAdmin check correctly gates access in the AdminPanel"
+        "A landing page is rendered at the root route '/' for unauthenticated users",
+        "The page displays a prominent 'Join RevReel' button that initiates Internet Identity login",
+        "After successful login, the user is automatically redirected to '/feed'",
+        "Authenticated users visiting '/' are immediately redirected to '/feed'",
+        "The landing page is fully accessible without authentication (no AuthGuard wrapping it)",
+        "The landing page visually reflects the RevReel brand (dark theme, neon accents, car culture aesthetic consistent with the rest of the app)"
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "text": "Update the TanStack Router route configuration in App.tsx to register the new landing page as the root route '/' and move or adjust the existing default route so the feed is accessible at '/feed'. Ensure the Layout shell is only applied to authenticated app routes, not the landing page.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-latest"
+        ],
+        "quotes": [
+          "Make a landing page that you can just join from there to access the app"
+        ]
+      },
+      "acceptanceCriteria": [
+        "The root route '/' renders the new LandingPage component without the Layout shell",
+        "All existing app routes (feed, profile, upload, discover, meets, mechanics, inbox, admin, notifications, builds, classifieds) remain accessible and functional",
+        "Navigation between landing page and app routes works correctly"
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "text": "Design the landing page with a visually striking hero section that includes the RevReel logo/wordmark, a bold tagline describing the car culture video platform, and the 'Join RevReel' authentication button. Use the existing dark theme with neon accent colors, glassmorphism, and car-culture aesthetic consistent with the rest of the app (Barlow font, OKLCH color tokens from index.css).",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-latest"
+        ],
+        "quotes": [
+          "Make a landing page that you can just join from there to access the app"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Landing page displays the RevReel brand name/logo prominently",
+        "A tagline or brief description of the platform is shown",
+        "The 'Join RevReel' button is visually prominent and clearly actionable",
+        "Page uses the dark theme, neon effects, and Barlow font consistent with the rest of the app",
+        "Page is responsive and looks good on mobile and desktop"
       ]
     }
   ],
   "constraints": [
-    "Do not introduce new features or change existing logic — this is a clean retry of the last build",
-    "Do not alter the hardcoded admin Principal already defined in the backend"
+    "Do not modify files in frontend/src/hooks/ (immutable paths)",
+    "Do not modify frontend/src/main.tsx or frontend/src/components/ui/",
+    "Use Internet Identity (via useInternetIdentity hook) for authentication — no other auth provider",
+    "Preserve all existing routes and their functionality"
   ],
   "nonGoals": [
-    "Adding any new features beyond what was already implemented",
-    "Changing the admin panel UI or backend admin logic",
-    "Modifying any other existing pages or components"
+    "Adding onboarding steps or multi-step sign-up flows after authentication",
+    "Collecting user data (email, username) on the landing page before authentication",
+    "Adding marketing or pricing sections to the landing page",
+    "Changing backend logic or data models"
   ],
   "imageRequirements": {
-    "required": [],
+    "required": [
+      "Dark cinematic car culture hero background with motion blur street racing lights and asphalt texture (landing-hero.dim_1920x1080.png)"
+    ],
     "edits": []
   }
 }

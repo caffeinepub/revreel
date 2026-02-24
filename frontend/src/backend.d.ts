@@ -21,22 +21,37 @@ export interface Video {
     hashtags: Array<Hashtag>;
     description: string;
     likes: Array<UserId>;
+    viewCount: bigint;
     timestamp: Time;
     category: Category;
     uploader: UserId;
     comments: Array<Comment>;
     videoUrl: ExternalBlob;
+    reactions: Array<[UserId, ReactionType]>;
 }
-export type MeetCategory = string;
 export type Location = string;
+export interface UserStats {
+    totalViews: bigint;
+    joinedAt: bigint;
+    totalLikes: bigint;
+    totalFollowers: bigint;
+    totalFollowing: bigint;
+    totalVideos: bigint;
+    totalBuildLogs: bigint;
+    totalComments: bigint;
+}
 export type Time = bigint;
-export interface DirectMessage {
-    id: MessageId;
-    text: string;
-    isRead: boolean;
-    toUser: UserId;
-    timestamp: Time;
-    fromUser: UserId;
+export interface BuildLog {
+    id: bigint;
+    stages: Array<BuildStage>;
+    title: string;
+    carModel: string;
+    authorId: UserId;
+    createdAt: bigint;
+    description: string;
+    updatedAt: bigint;
+    carMake: string;
+    carYear: string;
 }
 export interface MechanicsComment {
     id: CommentId;
@@ -45,16 +60,6 @@ export interface MechanicsComment {
     timestamp: Time;
     postId: bigint;
 }
-export type CommentId = bigint;
-export interface Comment {
-    id: CommentId;
-    authorId: UserId;
-    text: string;
-    timestamp: Time;
-    videoId: VideoId;
-}
-export type Category = string;
-export type CarMeetId = string;
 export interface CarMeet {
     id: CarMeetId;
     organizer: UserId;
@@ -66,6 +71,63 @@ export interface CarMeet {
     category: MeetCategory;
     location: Location;
 }
+export interface RacingChallenge {
+    id: bigint;
+    status: string;
+    createdAt: bigint;
+    originalVideoId: bigint;
+    challengedId: UserId;
+    challengerId: UserId;
+    videoId: bigint;
+}
+export type Hashtag = string;
+export type VideoId = string;
+export interface ConversationSummary {
+    lastMessage: DirectMessage;
+    otherUser: UserId;
+    unreadCount: bigint;
+}
+export type Category = string;
+export interface DirectMessage {
+    id: MessageId;
+    text: string;
+    isRead: boolean;
+    toUser: UserId;
+    timestamp: Time;
+    fromUser: UserId;
+}
+export type CarMeetId = string;
+export type MeetCategory = string;
+export type CommentId = bigint;
+export interface Comment {
+    id: CommentId;
+    authorId: UserId;
+    text: string;
+    timestamp: Time;
+    videoId: VideoId;
+}
+export interface Listing {
+    id: bigint;
+    model: string;
+    title: string;
+    make: string;
+    createdAt: bigint;
+    year: string;
+    description: string;
+    isActive: boolean;
+    imageUrl: string;
+    category: string;
+    sellerId: UserId;
+    price: string;
+    condition: string;
+}
+export interface BuildStage {
+    id: bigint;
+    title: string;
+    createdAt: bigint;
+    description: string;
+    imageUrl: string;
+}
 export interface MechanicsPost {
     id: bigint;
     title: string;
@@ -76,9 +138,24 @@ export interface MechanicsPost {
     comments: Array<MechanicsComment>;
 }
 export type UserId = Principal;
+export type Result = {
+    __kind__: "ok";
+    ok: string;
+} | {
+    __kind__: "err";
+    err: string;
+};
 export type MessageId = bigint;
-export type Hashtag = string;
-export type VideoId = string;
+export interface Notification {
+    id: bigint;
+    notificationType: string;
+    createdAt: bigint;
+    referenceId: string;
+    isRead: boolean;
+    message: string;
+    recipientId: UserId;
+    senderId: UserId;
+}
 export interface CarMeetDetails {
     id: CarMeetId;
     organizer?: UserProfile;
@@ -90,17 +167,32 @@ export interface CarMeetDetails {
     category: MeetCategory;
     location: Location;
 }
-export interface ConversationSummary {
-    lastMessage: DirectMessage;
-    otherUser: UserId;
-    unreadCount: bigint;
-}
 export interface UserProfile {
     id: UserId;
     bio: string;
+    verified: boolean;
     username: string;
+    badges: Array<Badge>;
+    joinedAt: bigint;
     avatarUrl: string;
+    savedVideos: Array<bigint>;
     avatar: ExternalBlob;
+}
+export enum Badge {
+    buildMaster = "buildMaster",
+    verified = "verified",
+    racingLegend = "racingLegend",
+    dragRacer = "dragRacer",
+    communityHelper = "communityHelper",
+    driftKing = "driftKing",
+    mechanicPro = "mechanicPro"
+}
+export enum ReactionType {
+    fire = "fire",
+    hype = "hype",
+    like = "like",
+    wild = "wild",
+    respect = "respect"
 }
 export enum UserRole {
     admin = "admin",
@@ -108,171 +200,79 @@ export enum UserRole {
     guest = "guest"
 }
 export interface backendInterface {
-    /**
-     * / Add a comment to a video. Requires #user role.
-     */
+    addBuildStage(buildLogId: bigint, stageTitle: string, stageDescription: string, imageUrl: string): Promise<Result>;
     addComment(videoId: VideoId, text: string): Promise<void>;
-    /**
-     * / Add a comment to a mechanics post. Requires #user role.
-     */
     addMechanicsComment(postId: bigint, text: string): Promise<MechanicsComment>;
+    addReaction(videoId: VideoId, reaction: ReactionType): Promise<Result>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
-    /**
-     * / Create a new car meet/event. Requires #user role.
-     */
+    awardBadge(targetPrincipal: Principal, badge: Badge): Promise<Result>;
+    closeChallenge(id: bigint): Promise<Result>;
+    createBuildLog(title: string, carMake: string, carModel: string, carYear: string, description: string): Promise<Result>;
     createCarMeet(title: string, location: Location, date: Time, description: string, category: MeetCategory): Promise<CarMeet>;
-    /**
-     * / Create a new mechanics post. Requires #user role.
-     */
+    createListing(title: string, description: string, make: string, model: string, year: string, price: string, condition: string, imageUrl: string, category: string): Promise<Result>;
     createMechanicsPost(title: string, description: string, category: string): Promise<MechanicsPost>;
-    /**
-     * / Create a new user account. Open to all callers (guests register here).
-     */
     createUser(username: string, bio: string, avatar: ExternalBlob, avatarUrl: string): Promise<UserProfile>;
-    /**
-     * / Delete a mechanics post. Only the author or an admin can delete.
-     * / Requires #user role.
-     */
+    deactivateListing(id: bigint): Promise<Result>;
+    deleteBuildLog(id: bigint): Promise<Result>;
     deleteMechanicsPost(postId: bigint): Promise<void>;
-    /**
-     * / Delete a message. Requires #user role.
-     * / Only the sender of the message may delete it.
-     */
     deleteMessage(otherUser: UserId, messageId: MessageId): Promise<void>;
-    /**
-     * / Delete a user account. Admin-only.
-     */
     deleteUser(userId: UserId): Promise<void>;
-    /**
-     * / Delete a video and all associated comments and likes.
-     * / Requires #user role. Only the uploader or an admin can delete.
-     */
     deleteVideo(videoId: VideoId): Promise<void>;
-    /**
-     * / Follow another user. Requires #user role.
-     */
     followUser(followee: UserId): Promise<void>;
-    /**
-     * / Get all car meets (sorted by date). Public.
-     */
+    getAllActiveListings(): Promise<Array<Listing>>;
+    getAllBuildLogs(): Promise<Array<BuildLog>>;
     getAllCarMeets(): Promise<Array<CarMeet>>;
-    /**
-     * / Get all mechanics posts. Public — no auth check needed.
-     */
     getAllMechanicsPosts(): Promise<Array<MechanicsPost>>;
-    /**
-     * / Get all videos. Public — no auth check needed.
-     */
+    getAllUsers(): Promise<Array<UserProfile>>;
     getAllVideos(): Promise<Array<Video>>;
-    /**
-     * / Get the caller's own profile. Requires #user role.
-     */
+    getBuildLogById(id: bigint): Promise<BuildLog | null>;
+    getBuildLogsByUser(principal: Principal): Promise<Array<BuildLog>>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
-    /**
-     * / Get a car meet by ID. Public.
-     */
     getCarMeetById(meetId: CarMeetId): Promise<CarMeet | null>;
-    /**
-     * / Get detailed information on a car meet, including attendees' usernames and organizer. Public.
-     */
     getCarMeetDetails(meetId: CarMeetId): Promise<CarMeetDetails | null>;
-    /**
-     * / Get car meets by category. Public.
-     */
     getCarMeetsByCategory(category: MeetCategory): Promise<Array<CarMeet>>;
-    /**
-     * / Get car meets by organizer. Public.
-     */
     getCarMeetsByOrganizer(organizer: UserId): Promise<Array<CarMeet>>;
-    /**
-     * / Get comments for a video. Public — no auth check needed.
-     */
+    getChallengesForUser(principal: Principal): Promise<Array<RacingChallenge>>;
+    getChallengesForVideo(videoId: bigint): Promise<Array<RacingChallenge>>;
     getComments(videoId: VideoId): Promise<Array<Comment>>;
-    /**
-     * / Get all messages between the caller and another user, sorted by timestamp ascending.
-     * / Requires #user role — only authenticated users can read their own conversations.
-     */
     getConversation(otherUser: UserId): Promise<Array<DirectMessage>>;
-    /**
-     * / Get the inbox for the caller: most recent message per conversation partner,
-     * / sorted by latest timestamp descending.
-     * / Requires #user role — only authenticated users can read their own inbox.
-     */
     getInbox(): Promise<Array<ConversationSummary>>;
-    /**
-     * / Get a mechanics post by ID. Public — no auth check needed.
-     */
+    getListingById(id: bigint): Promise<Listing | null>;
+    getListingsBySeller(principal: Principal): Promise<Array<Listing>>;
     getMechanicsPostById(postId: bigint): Promise<MechanicsPost | null>;
-    /**
-     * / Get the caller's own profile. Requires #user role.
-     */
+    getNotifications(): Promise<Array<Notification>>;
     getOwnProfile(): Promise<UserProfile>;
-    /**
-     * / Get any user's profile by principal. Public — no auth check needed.
-     */
     getProfile(userId: UserId): Promise<UserProfile>;
-    /**
-     * / Get trending videos (top 10 by likes). Public — no auth check needed.
-     */
+    getReactionCounts(videoId: VideoId): Promise<Array<[ReactionType, bigint]>>;
+    getSavedVideos(): Promise<Array<Video>>;
     getTrendingVideos(): Promise<Array<Video>>;
-    /**
-     * / Get any user's profile by principal. Public — no auth check needed.
-     */
+    getUnreadNotificationCount(): Promise<bigint>;
+    getUserBadges(principal: Principal): Promise<Array<Badge>>;
     getUserProfile(userId: UserId): Promise<UserProfile | null>;
-    /**
-     * / Get a single video by ID. Public — no auth check needed.
-     */
+    getUserStats(principal: Principal): Promise<UserStats>;
     getVideo(videoId: VideoId): Promise<Video>;
-    /**
-     * / Get videos filtered by category. Public — no auth check needed.
-     */
+    getVideoById(videoId: VideoId): Promise<Video | null>;
     getVideosByCategory(category: Category): Promise<Array<Video>>;
-    /**
-     * / Get videos filtered by hashtag. Public — no auth check needed.
-     */
     getVideosByHashtag(hashtag: Hashtag): Promise<Array<Video>>;
-    /**
-     * / Check if the caller is an admin. Public — no auth check needed (returns bool).
-     */
+    incrementViewCount(videoId: VideoId): Promise<void>;
     isAdmin(): Promise<boolean>;
     isCallerAdmin(): Promise<boolean>;
-    /**
-     * / Join a car meet. Requires #user role.
-     */
     joinCarMeet(meetId: CarMeetId): Promise<CarMeet>;
-    /**
-     * / Leave a car meet. Requires #user role.
-     */
     leaveCarMeet(meetId: CarMeetId): Promise<CarMeet>;
-    /**
-     * / Mark a specific message as read. Requires #user role.
-     * / Only the recipient of the message may mark it as read.
-     */
+    markAllNotificationsRead(): Promise<Result>;
     markAsRead(otherUser: UserId, messageId: MessageId): Promise<void>;
-    /**
-     * / Save (create or update) the caller's profile. Requires #user role.
-     */
+    markNotificationRead(notifId: bigint): Promise<Result>;
+    postChallenge(originalVideoId: bigint, responseVideoId: bigint, challengedPrincipal: Principal): Promise<Result>;
+    removeReaction(videoId: VideoId): Promise<Result>;
     saveCallerUserProfile(username: string, bio: string, avatar: ExternalBlob, avatarUrl: string): Promise<void>;
-    /**
-     * / Send a direct message to another user. Requires #user role.
-     */
+    saveVideo(videoId: bigint): Promise<Result>;
     sendMessage(toUser: UserId, text: string): Promise<MessageId>;
-    /**
-     * / Toggle like on a video. Requires #user role.
-     */
+    setVerified(targetPrincipal: Principal, verified: boolean): Promise<Result>;
     toggleLike(videoId: VideoId): Promise<Video>;
-    /**
-     * / Unfollow another user. Requires #user role.
-     */
     unfollowUser(followee: UserId): Promise<void>;
+    unsaveVideo(videoId: bigint): Promise<Result>;
     updateAvatar(avatarUrl: string): Promise<UserProfile>;
-    /**
-     * / Update the caller's profile. Requires #user role.
-     */
     updateProfile(username: string, bio: string, avatar: ExternalBlob, avatarUrl: string): Promise<UserProfile>;
-    /**
-     * / Upload a new video. Requires #user role.
-     */
     uploadVideo(title: string, description: string, hashtags: Array<Hashtag>, category: Category, thumbnail: ExternalBlob, videoUrl: ExternalBlob): Promise<Video>;
 }

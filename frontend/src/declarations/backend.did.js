@@ -19,6 +19,7 @@ export const _CaffeineStorageRefillResult = IDL.Record({
   'success' : IDL.Opt(IDL.Bool),
   'topped_up_amount' : IDL.Opt(IDL.Nat),
 });
+export const Result = IDL.Variant({ 'ok' : IDL.Text, 'err' : IDL.Text });
 export const VideoId = IDL.Text;
 export const CommentId = IDL.Nat;
 export const UserId = IDL.Principal;
@@ -30,10 +31,26 @@ export const MechanicsComment = IDL.Record({
   'timestamp' : Time,
   'postId' : IDL.Nat,
 });
+export const ReactionType = IDL.Variant({
+  'fire' : IDL.Null,
+  'hype' : IDL.Null,
+  'like' : IDL.Null,
+  'wild' : IDL.Null,
+  'respect' : IDL.Null,
+});
 export const UserRole = IDL.Variant({
   'admin' : IDL.Null,
   'user' : IDL.Null,
   'guest' : IDL.Null,
+});
+export const Badge = IDL.Variant({
+  'buildMaster' : IDL.Null,
+  'verified' : IDL.Null,
+  'racingLegend' : IDL.Null,
+  'dragRacer' : IDL.Null,
+  'communityHelper' : IDL.Null,
+  'driftKing' : IDL.Null,
+  'mechanicPro' : IDL.Null,
 });
 export const Location = IDL.Text;
 export const MeetCategory = IDL.Text;
@@ -62,11 +79,49 @@ export const ExternalBlob = IDL.Vec(IDL.Nat8);
 export const UserProfile = IDL.Record({
   'id' : UserId,
   'bio' : IDL.Text,
+  'verified' : IDL.Bool,
   'username' : IDL.Text,
+  'badges' : IDL.Vec(Badge),
+  'joinedAt' : IDL.Int,
   'avatarUrl' : IDL.Text,
+  'savedVideos' : IDL.Vec(IDL.Nat),
   'avatar' : ExternalBlob,
 });
 export const MessageId = IDL.Nat;
+export const Listing = IDL.Record({
+  'id' : IDL.Nat,
+  'model' : IDL.Text,
+  'title' : IDL.Text,
+  'make' : IDL.Text,
+  'createdAt' : IDL.Int,
+  'year' : IDL.Text,
+  'description' : IDL.Text,
+  'isActive' : IDL.Bool,
+  'imageUrl' : IDL.Text,
+  'category' : IDL.Text,
+  'sellerId' : UserId,
+  'price' : IDL.Text,
+  'condition' : IDL.Text,
+});
+export const BuildStage = IDL.Record({
+  'id' : IDL.Nat,
+  'title' : IDL.Text,
+  'createdAt' : IDL.Int,
+  'description' : IDL.Text,
+  'imageUrl' : IDL.Text,
+});
+export const BuildLog = IDL.Record({
+  'id' : IDL.Nat,
+  'stages' : IDL.Vec(BuildStage),
+  'title' : IDL.Text,
+  'carModel' : IDL.Text,
+  'authorId' : UserId,
+  'createdAt' : IDL.Int,
+  'description' : IDL.Text,
+  'updatedAt' : IDL.Int,
+  'carMake' : IDL.Text,
+  'carYear' : IDL.Text,
+});
 export const Hashtag = IDL.Text;
 export const Category = IDL.Text;
 export const Comment = IDL.Record({
@@ -83,11 +138,13 @@ export const Video = IDL.Record({
   'hashtags' : IDL.Vec(Hashtag),
   'description' : IDL.Text,
   'likes' : IDL.Vec(UserId),
+  'viewCount' : IDL.Nat,
   'timestamp' : Time,
   'category' : Category,
   'uploader' : UserId,
   'comments' : IDL.Vec(Comment),
   'videoUrl' : ExternalBlob,
+  'reactions' : IDL.Vec(IDL.Tuple(UserId, ReactionType)),
 });
 export const CarMeetDetails = IDL.Record({
   'id' : CarMeetId,
@@ -99,6 +156,15 @@ export const CarMeetDetails = IDL.Record({
   'attendees' : IDL.Vec(UserProfile),
   'category' : MeetCategory,
   'location' : Location,
+});
+export const RacingChallenge = IDL.Record({
+  'id' : IDL.Nat,
+  'status' : IDL.Text,
+  'createdAt' : IDL.Int,
+  'originalVideoId' : IDL.Nat,
+  'challengedId' : UserId,
+  'challengerId' : UserId,
+  'videoId' : IDL.Nat,
 });
 export const DirectMessage = IDL.Record({
   'id' : MessageId,
@@ -112,6 +178,26 @@ export const ConversationSummary = IDL.Record({
   'lastMessage' : DirectMessage,
   'otherUser' : UserId,
   'unreadCount' : IDL.Nat,
+});
+export const Notification = IDL.Record({
+  'id' : IDL.Nat,
+  'notificationType' : IDL.Text,
+  'createdAt' : IDL.Int,
+  'referenceId' : IDL.Text,
+  'isRead' : IDL.Bool,
+  'message' : IDL.Text,
+  'recipientId' : UserId,
+  'senderId' : UserId,
+});
+export const UserStats = IDL.Record({
+  'totalViews' : IDL.Nat,
+  'joinedAt' : IDL.Int,
+  'totalLikes' : IDL.Nat,
+  'totalFollowers' : IDL.Nat,
+  'totalFollowing' : IDL.Nat,
+  'totalVideos' : IDL.Nat,
+  'totalBuildLogs' : IDL.Nat,
+  'totalComments' : IDL.Nat,
 });
 
 export const idlService = IDL.Service({
@@ -142,12 +228,40 @@ export const idlService = IDL.Service({
     ),
   '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
   '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
+  'addBuildStage' : IDL.Func(
+      [IDL.Nat, IDL.Text, IDL.Text, IDL.Text],
+      [Result],
+      [],
+    ),
   'addComment' : IDL.Func([VideoId, IDL.Text], [], []),
   'addMechanicsComment' : IDL.Func([IDL.Nat, IDL.Text], [MechanicsComment], []),
+  'addReaction' : IDL.Func([VideoId, ReactionType], [Result], []),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+  'awardBadge' : IDL.Func([IDL.Principal, Badge], [Result], []),
+  'closeChallenge' : IDL.Func([IDL.Nat], [Result], []),
+  'createBuildLog' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Text],
+      [Result],
+      [],
+    ),
   'createCarMeet' : IDL.Func(
       [IDL.Text, Location, Time, IDL.Text, MeetCategory],
       [CarMeet],
+      [],
+    ),
+  'createListing' : IDL.Func(
+      [
+        IDL.Text,
+        IDL.Text,
+        IDL.Text,
+        IDL.Text,
+        IDL.Text,
+        IDL.Text,
+        IDL.Text,
+        IDL.Text,
+        IDL.Text,
+      ],
+      [Result],
       [],
     ),
   'createMechanicsPost' : IDL.Func(
@@ -160,14 +274,25 @@ export const idlService = IDL.Service({
       [UserProfile],
       [],
     ),
+  'deactivateListing' : IDL.Func([IDL.Nat], [Result], []),
+  'deleteBuildLog' : IDL.Func([IDL.Nat], [Result], []),
   'deleteMechanicsPost' : IDL.Func([IDL.Nat], [], []),
   'deleteMessage' : IDL.Func([UserId, MessageId], [], []),
   'deleteUser' : IDL.Func([UserId], [], []),
   'deleteVideo' : IDL.Func([VideoId], [], []),
   'followUser' : IDL.Func([UserId], [], []),
+  'getAllActiveListings' : IDL.Func([], [IDL.Vec(Listing)], ['query']),
+  'getAllBuildLogs' : IDL.Func([], [IDL.Vec(BuildLog)], ['query']),
   'getAllCarMeets' : IDL.Func([], [IDL.Vec(CarMeet)], ['query']),
   'getAllMechanicsPosts' : IDL.Func([], [IDL.Vec(MechanicsPost)], ['query']),
+  'getAllUsers' : IDL.Func([], [IDL.Vec(UserProfile)], ['query']),
   'getAllVideos' : IDL.Func([], [IDL.Vec(Video)], ['query']),
+  'getBuildLogById' : IDL.Func([IDL.Nat], [IDL.Opt(BuildLog)], ['query']),
+  'getBuildLogsByUser' : IDL.Func(
+      [IDL.Principal],
+      [IDL.Vec(BuildLog)],
+      ['query'],
+    ),
   'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
   'getCarMeetById' : IDL.Func([CarMeetId], [IDL.Opt(CarMeet)], ['query']),
@@ -182,34 +307,69 @@ export const idlService = IDL.Service({
       ['query'],
     ),
   'getCarMeetsByOrganizer' : IDL.Func([UserId], [IDL.Vec(CarMeet)], ['query']),
+  'getChallengesForUser' : IDL.Func(
+      [IDL.Principal],
+      [IDL.Vec(RacingChallenge)],
+      ['query'],
+    ),
+  'getChallengesForVideo' : IDL.Func(
+      [IDL.Nat],
+      [IDL.Vec(RacingChallenge)],
+      ['query'],
+    ),
   'getComments' : IDL.Func([VideoId], [IDL.Vec(Comment)], ['query']),
   'getConversation' : IDL.Func([UserId], [IDL.Vec(DirectMessage)], ['query']),
   'getInbox' : IDL.Func([], [IDL.Vec(ConversationSummary)], ['query']),
+  'getListingById' : IDL.Func([IDL.Nat], [IDL.Opt(Listing)], ['query']),
+  'getListingsBySeller' : IDL.Func(
+      [IDL.Principal],
+      [IDL.Vec(Listing)],
+      ['query'],
+    ),
   'getMechanicsPostById' : IDL.Func(
       [IDL.Nat],
       [IDL.Opt(MechanicsPost)],
       ['query'],
     ),
+  'getNotifications' : IDL.Func([], [IDL.Vec(Notification)], ['query']),
   'getOwnProfile' : IDL.Func([], [UserProfile], ['query']),
   'getProfile' : IDL.Func([UserId], [UserProfile], ['query']),
+  'getReactionCounts' : IDL.Func(
+      [VideoId],
+      [IDL.Vec(IDL.Tuple(ReactionType, IDL.Nat))],
+      ['query'],
+    ),
+  'getSavedVideos' : IDL.Func([], [IDL.Vec(Video)], ['query']),
   'getTrendingVideos' : IDL.Func([], [IDL.Vec(Video)], ['query']),
+  'getUnreadNotificationCount' : IDL.Func([], [IDL.Nat], ['query']),
+  'getUserBadges' : IDL.Func([IDL.Principal], [IDL.Vec(Badge)], ['query']),
   'getUserProfile' : IDL.Func([UserId], [IDL.Opt(UserProfile)], ['query']),
+  'getUserStats' : IDL.Func([IDL.Principal], [UserStats], []),
   'getVideo' : IDL.Func([VideoId], [Video], ['query']),
+  'getVideoById' : IDL.Func([VideoId], [IDL.Opt(Video)], ['query']),
   'getVideosByCategory' : IDL.Func([Category], [IDL.Vec(Video)], ['query']),
   'getVideosByHashtag' : IDL.Func([Hashtag], [IDL.Vec(Video)], ['query']),
+  'incrementViewCount' : IDL.Func([VideoId], [], []),
   'isAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'joinCarMeet' : IDL.Func([CarMeetId], [CarMeet], []),
   'leaveCarMeet' : IDL.Func([CarMeetId], [CarMeet], []),
+  'markAllNotificationsRead' : IDL.Func([], [Result], []),
   'markAsRead' : IDL.Func([UserId, MessageId], [], []),
+  'markNotificationRead' : IDL.Func([IDL.Nat], [Result], []),
+  'postChallenge' : IDL.Func([IDL.Nat, IDL.Nat, IDL.Principal], [Result], []),
+  'removeReaction' : IDL.Func([VideoId], [Result], []),
   'saveCallerUserProfile' : IDL.Func(
       [IDL.Text, IDL.Text, ExternalBlob, IDL.Text],
       [],
       [],
     ),
+  'saveVideo' : IDL.Func([IDL.Nat], [Result], []),
   'sendMessage' : IDL.Func([UserId, IDL.Text], [MessageId], []),
+  'setVerified' : IDL.Func([IDL.Principal, IDL.Bool], [Result], []),
   'toggleLike' : IDL.Func([VideoId], [Video], []),
   'unfollowUser' : IDL.Func([UserId], [], []),
+  'unsaveVideo' : IDL.Func([IDL.Nat], [Result], []),
   'updateAvatar' : IDL.Func([IDL.Text], [UserProfile], []),
   'updateProfile' : IDL.Func(
       [IDL.Text, IDL.Text, ExternalBlob, IDL.Text],
@@ -244,6 +404,7 @@ export const idlFactory = ({ IDL }) => {
     'success' : IDL.Opt(IDL.Bool),
     'topped_up_amount' : IDL.Opt(IDL.Nat),
   });
+  const Result = IDL.Variant({ 'ok' : IDL.Text, 'err' : IDL.Text });
   const VideoId = IDL.Text;
   const CommentId = IDL.Nat;
   const UserId = IDL.Principal;
@@ -255,10 +416,26 @@ export const idlFactory = ({ IDL }) => {
     'timestamp' : Time,
     'postId' : IDL.Nat,
   });
+  const ReactionType = IDL.Variant({
+    'fire' : IDL.Null,
+    'hype' : IDL.Null,
+    'like' : IDL.Null,
+    'wild' : IDL.Null,
+    'respect' : IDL.Null,
+  });
   const UserRole = IDL.Variant({
     'admin' : IDL.Null,
     'user' : IDL.Null,
     'guest' : IDL.Null,
+  });
+  const Badge = IDL.Variant({
+    'buildMaster' : IDL.Null,
+    'verified' : IDL.Null,
+    'racingLegend' : IDL.Null,
+    'dragRacer' : IDL.Null,
+    'communityHelper' : IDL.Null,
+    'driftKing' : IDL.Null,
+    'mechanicPro' : IDL.Null,
   });
   const Location = IDL.Text;
   const MeetCategory = IDL.Text;
@@ -287,11 +464,49 @@ export const idlFactory = ({ IDL }) => {
   const UserProfile = IDL.Record({
     'id' : UserId,
     'bio' : IDL.Text,
+    'verified' : IDL.Bool,
     'username' : IDL.Text,
+    'badges' : IDL.Vec(Badge),
+    'joinedAt' : IDL.Int,
     'avatarUrl' : IDL.Text,
+    'savedVideos' : IDL.Vec(IDL.Nat),
     'avatar' : ExternalBlob,
   });
   const MessageId = IDL.Nat;
+  const Listing = IDL.Record({
+    'id' : IDL.Nat,
+    'model' : IDL.Text,
+    'title' : IDL.Text,
+    'make' : IDL.Text,
+    'createdAt' : IDL.Int,
+    'year' : IDL.Text,
+    'description' : IDL.Text,
+    'isActive' : IDL.Bool,
+    'imageUrl' : IDL.Text,
+    'category' : IDL.Text,
+    'sellerId' : UserId,
+    'price' : IDL.Text,
+    'condition' : IDL.Text,
+  });
+  const BuildStage = IDL.Record({
+    'id' : IDL.Nat,
+    'title' : IDL.Text,
+    'createdAt' : IDL.Int,
+    'description' : IDL.Text,
+    'imageUrl' : IDL.Text,
+  });
+  const BuildLog = IDL.Record({
+    'id' : IDL.Nat,
+    'stages' : IDL.Vec(BuildStage),
+    'title' : IDL.Text,
+    'carModel' : IDL.Text,
+    'authorId' : UserId,
+    'createdAt' : IDL.Int,
+    'description' : IDL.Text,
+    'updatedAt' : IDL.Int,
+    'carMake' : IDL.Text,
+    'carYear' : IDL.Text,
+  });
   const Hashtag = IDL.Text;
   const Category = IDL.Text;
   const Comment = IDL.Record({
@@ -308,11 +523,13 @@ export const idlFactory = ({ IDL }) => {
     'hashtags' : IDL.Vec(Hashtag),
     'description' : IDL.Text,
     'likes' : IDL.Vec(UserId),
+    'viewCount' : IDL.Nat,
     'timestamp' : Time,
     'category' : Category,
     'uploader' : UserId,
     'comments' : IDL.Vec(Comment),
     'videoUrl' : ExternalBlob,
+    'reactions' : IDL.Vec(IDL.Tuple(UserId, ReactionType)),
   });
   const CarMeetDetails = IDL.Record({
     'id' : CarMeetId,
@@ -324,6 +541,15 @@ export const idlFactory = ({ IDL }) => {
     'attendees' : IDL.Vec(UserProfile),
     'category' : MeetCategory,
     'location' : Location,
+  });
+  const RacingChallenge = IDL.Record({
+    'id' : IDL.Nat,
+    'status' : IDL.Text,
+    'createdAt' : IDL.Int,
+    'originalVideoId' : IDL.Nat,
+    'challengedId' : UserId,
+    'challengerId' : UserId,
+    'videoId' : IDL.Nat,
   });
   const DirectMessage = IDL.Record({
     'id' : MessageId,
@@ -337,6 +563,26 @@ export const idlFactory = ({ IDL }) => {
     'lastMessage' : DirectMessage,
     'otherUser' : UserId,
     'unreadCount' : IDL.Nat,
+  });
+  const Notification = IDL.Record({
+    'id' : IDL.Nat,
+    'notificationType' : IDL.Text,
+    'createdAt' : IDL.Int,
+    'referenceId' : IDL.Text,
+    'isRead' : IDL.Bool,
+    'message' : IDL.Text,
+    'recipientId' : UserId,
+    'senderId' : UserId,
+  });
+  const UserStats = IDL.Record({
+    'totalViews' : IDL.Nat,
+    'joinedAt' : IDL.Int,
+    'totalLikes' : IDL.Nat,
+    'totalFollowers' : IDL.Nat,
+    'totalFollowing' : IDL.Nat,
+    'totalVideos' : IDL.Nat,
+    'totalBuildLogs' : IDL.Nat,
+    'totalComments' : IDL.Nat,
   });
   
   return IDL.Service({
@@ -367,16 +613,44 @@ export const idlFactory = ({ IDL }) => {
       ),
     '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
     '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
+    'addBuildStage' : IDL.Func(
+        [IDL.Nat, IDL.Text, IDL.Text, IDL.Text],
+        [Result],
+        [],
+      ),
     'addComment' : IDL.Func([VideoId, IDL.Text], [], []),
     'addMechanicsComment' : IDL.Func(
         [IDL.Nat, IDL.Text],
         [MechanicsComment],
         [],
       ),
+    'addReaction' : IDL.Func([VideoId, ReactionType], [Result], []),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+    'awardBadge' : IDL.Func([IDL.Principal, Badge], [Result], []),
+    'closeChallenge' : IDL.Func([IDL.Nat], [Result], []),
+    'createBuildLog' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Text],
+        [Result],
+        [],
+      ),
     'createCarMeet' : IDL.Func(
         [IDL.Text, Location, Time, IDL.Text, MeetCategory],
         [CarMeet],
+        [],
+      ),
+    'createListing' : IDL.Func(
+        [
+          IDL.Text,
+          IDL.Text,
+          IDL.Text,
+          IDL.Text,
+          IDL.Text,
+          IDL.Text,
+          IDL.Text,
+          IDL.Text,
+          IDL.Text,
+        ],
+        [Result],
         [],
       ),
     'createMechanicsPost' : IDL.Func(
@@ -389,14 +663,25 @@ export const idlFactory = ({ IDL }) => {
         [UserProfile],
         [],
       ),
+    'deactivateListing' : IDL.Func([IDL.Nat], [Result], []),
+    'deleteBuildLog' : IDL.Func([IDL.Nat], [Result], []),
     'deleteMechanicsPost' : IDL.Func([IDL.Nat], [], []),
     'deleteMessage' : IDL.Func([UserId, MessageId], [], []),
     'deleteUser' : IDL.Func([UserId], [], []),
     'deleteVideo' : IDL.Func([VideoId], [], []),
     'followUser' : IDL.Func([UserId], [], []),
+    'getAllActiveListings' : IDL.Func([], [IDL.Vec(Listing)], ['query']),
+    'getAllBuildLogs' : IDL.Func([], [IDL.Vec(BuildLog)], ['query']),
     'getAllCarMeets' : IDL.Func([], [IDL.Vec(CarMeet)], ['query']),
     'getAllMechanicsPosts' : IDL.Func([], [IDL.Vec(MechanicsPost)], ['query']),
+    'getAllUsers' : IDL.Func([], [IDL.Vec(UserProfile)], ['query']),
     'getAllVideos' : IDL.Func([], [IDL.Vec(Video)], ['query']),
+    'getBuildLogById' : IDL.Func([IDL.Nat], [IDL.Opt(BuildLog)], ['query']),
+    'getBuildLogsByUser' : IDL.Func(
+        [IDL.Principal],
+        [IDL.Vec(BuildLog)],
+        ['query'],
+      ),
     'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
     'getCarMeetById' : IDL.Func([CarMeetId], [IDL.Opt(CarMeet)], ['query']),
@@ -415,34 +700,69 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Vec(CarMeet)],
         ['query'],
       ),
+    'getChallengesForUser' : IDL.Func(
+        [IDL.Principal],
+        [IDL.Vec(RacingChallenge)],
+        ['query'],
+      ),
+    'getChallengesForVideo' : IDL.Func(
+        [IDL.Nat],
+        [IDL.Vec(RacingChallenge)],
+        ['query'],
+      ),
     'getComments' : IDL.Func([VideoId], [IDL.Vec(Comment)], ['query']),
     'getConversation' : IDL.Func([UserId], [IDL.Vec(DirectMessage)], ['query']),
     'getInbox' : IDL.Func([], [IDL.Vec(ConversationSummary)], ['query']),
+    'getListingById' : IDL.Func([IDL.Nat], [IDL.Opt(Listing)], ['query']),
+    'getListingsBySeller' : IDL.Func(
+        [IDL.Principal],
+        [IDL.Vec(Listing)],
+        ['query'],
+      ),
     'getMechanicsPostById' : IDL.Func(
         [IDL.Nat],
         [IDL.Opt(MechanicsPost)],
         ['query'],
       ),
+    'getNotifications' : IDL.Func([], [IDL.Vec(Notification)], ['query']),
     'getOwnProfile' : IDL.Func([], [UserProfile], ['query']),
     'getProfile' : IDL.Func([UserId], [UserProfile], ['query']),
+    'getReactionCounts' : IDL.Func(
+        [VideoId],
+        [IDL.Vec(IDL.Tuple(ReactionType, IDL.Nat))],
+        ['query'],
+      ),
+    'getSavedVideos' : IDL.Func([], [IDL.Vec(Video)], ['query']),
     'getTrendingVideos' : IDL.Func([], [IDL.Vec(Video)], ['query']),
+    'getUnreadNotificationCount' : IDL.Func([], [IDL.Nat], ['query']),
+    'getUserBadges' : IDL.Func([IDL.Principal], [IDL.Vec(Badge)], ['query']),
     'getUserProfile' : IDL.Func([UserId], [IDL.Opt(UserProfile)], ['query']),
+    'getUserStats' : IDL.Func([IDL.Principal], [UserStats], []),
     'getVideo' : IDL.Func([VideoId], [Video], ['query']),
+    'getVideoById' : IDL.Func([VideoId], [IDL.Opt(Video)], ['query']),
     'getVideosByCategory' : IDL.Func([Category], [IDL.Vec(Video)], ['query']),
     'getVideosByHashtag' : IDL.Func([Hashtag], [IDL.Vec(Video)], ['query']),
+    'incrementViewCount' : IDL.Func([VideoId], [], []),
     'isAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'joinCarMeet' : IDL.Func([CarMeetId], [CarMeet], []),
     'leaveCarMeet' : IDL.Func([CarMeetId], [CarMeet], []),
+    'markAllNotificationsRead' : IDL.Func([], [Result], []),
     'markAsRead' : IDL.Func([UserId, MessageId], [], []),
+    'markNotificationRead' : IDL.Func([IDL.Nat], [Result], []),
+    'postChallenge' : IDL.Func([IDL.Nat, IDL.Nat, IDL.Principal], [Result], []),
+    'removeReaction' : IDL.Func([VideoId], [Result], []),
     'saveCallerUserProfile' : IDL.Func(
         [IDL.Text, IDL.Text, ExternalBlob, IDL.Text],
         [],
         [],
       ),
+    'saveVideo' : IDL.Func([IDL.Nat], [Result], []),
     'sendMessage' : IDL.Func([UserId, IDL.Text], [MessageId], []),
+    'setVerified' : IDL.Func([IDL.Principal, IDL.Bool], [Result], []),
     'toggleLike' : IDL.Func([VideoId], [Video], []),
     'unfollowUser' : IDL.Func([UserId], [], []),
+    'unsaveVideo' : IDL.Func([IDL.Nat], [Result], []),
     'updateAvatar' : IDL.Func([IDL.Text], [UserProfile], []),
     'updateProfile' : IDL.Func(
         [IDL.Text, IDL.Text, ExternalBlob, IDL.Text],

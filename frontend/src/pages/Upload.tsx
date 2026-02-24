@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { Upload as UploadIcon, Video, Image, X, Plus, Loader2, CheckCircle } from 'lucide-react';
+import { Upload as UploadIcon, Video, Image, X, Plus, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -117,8 +117,8 @@ export default function Upload() {
         description,
         hashtags,
         category,
-        thumbnail: thumbnailBlob,
-        videoUrl: videoBlob,
+        thumbnailBlob,
+        videoBlob,
       });
 
       toast.success('Reel uploaded! 🔥');
@@ -317,7 +317,7 @@ export default function Upload() {
         <Button
           type="submit"
           disabled={!isValid || isUploading}
-          className="w-full bg-neon text-primary-foreground font-display text-lg py-6 hover:bg-neon/90 neon-glow disabled:opacity-50 disabled:neon-glow-none"
+          className="w-full bg-neon text-primary-foreground font-display text-lg py-6 hover:bg-neon/90 neon-glow disabled:opacity-50"
         >
           {isUploading ? (
             <>

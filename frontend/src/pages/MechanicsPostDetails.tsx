@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate, Link } from '@tanstack/react-router';
-import { ArrowLeft, Wrench, MessageSquare, Clock, Trash2, Loader2, Send, LogIn } from 'lucide-react';
+import { ArrowLeft, Wrench, Clock, Trash2, Loader2, Send } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import {
@@ -35,17 +34,6 @@ function timeAgo(timestamp: bigint): string {
   if (minutes < 60) return `${minutes}m ago`;
   if (hours < 24) return `${hours}h ago`;
   return `${days}d ago`;
-}
-
-function formatDate(timestamp: bigint): string {
-  const ms = Number(timestamp) / 1_000_000;
-  return new Date(ms).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
 }
 
 function CommentItem({ comment }: { comment: MechanicsComment }) {
@@ -90,35 +78,24 @@ function DetailsSkeleton() {
         <Skeleton className="h-4 w-full" />
         <Skeleton className="h-4 w-full" />
         <Skeleton className="h-4 w-2/3" />
-        <div className="pt-4 space-y-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="flex gap-3">
-              <Skeleton className="w-8 h-8 rounded-full shrink-0" />
-              <div className="flex-1 space-y-2">
-                <Skeleton className="h-3 w-24" />
-                <Skeleton className="h-4 w-full" />
-              </div>
-            </div>
-          ))}
-        </div>
       </div>
     </div>
   );
 }
 
 export default function MechanicsPostDetails() {
-  const { postId } = useParams({ from: '/mechanics/$postId' });
+  const { postId } = useParams({ from: '/app-layout/mechanics/$postId' });
   const navigate = useNavigate();
   const { identity } = useInternetIdentity();
   const isAuthenticated = !!identity;
   const currentPrincipal = identity?.getPrincipal().toString();
 
-  const postIdBigInt = BigInt(postId);
-  const { data: post, isLoading } = useGetMechanicsPostById(postIdBigInt);
+  const postIdNum = parseInt(postId, 10);
+  const { data: post, isLoading } = useGetMechanicsPostById(isNaN(postIdNum) ? undefined : postIdNum);
   const addComment = useAddMechanicsComment();
   const deletePost = useDeleteMechanicsPost();
 
-  const { data: authorProfile } = useGetUserProfile(post?.author.toString() ?? null);
+  const { data: authorProfile } = useGetUserProfile(post?.author.toString() ?? undefined);
 
   const [commentText, setCommentText] = useState('');
   const [optimisticComments, setOptimisticComments] = useState<MechanicsComment[]>([]);
@@ -135,10 +112,9 @@ export default function MechanicsPostDetails() {
     const text = commentText.trim();
     setCommentText('');
 
-    // Optimistic update
     const optimistic: MechanicsComment = {
       id: BigInt(Date.now()),
-      postId: postIdBigInt,
+      postId: BigInt(postIdNum),
       authorId: identity!.getPrincipal(),
       text,
       timestamp: BigInt(Date.now()) * BigInt(1_000_000),
@@ -146,8 +122,7 @@ export default function MechanicsPostDetails() {
     setOptimisticComments((prev) => [...prev, optimistic]);
 
     try {
-      await addComment.mutateAsync({ postId: postIdBigInt, text });
-      // Clear optimistic after real data arrives
+      await addComment.mutateAsync({ postId: postIdNum, text });
       setOptimisticComments([]);
     } catch {
       toast.error('Failed to post comment. Please try again.');
@@ -159,7 +134,7 @@ export default function MechanicsPostDetails() {
   const handleDelete = async () => {
     if (!isAuthor) return;
     try {
-      await deletePost.mutateAsync(postIdBigInt);
+      await deletePost.mutateAsync(postIdNum);
       toast.success('Post deleted.');
       navigate({ to: '/mechanics' });
     } catch {
@@ -190,104 +165,92 @@ export default function MechanicsPostDetails() {
       <div className="sticky top-0 z-20 bg-background/90 backdrop-blur-sm border-b border-border/40 px-4 py-3 flex items-center gap-3">
         <button
           onClick={() => navigate({ to: '/mechanics' })}
-          className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors shrink-0"
-          aria-label="Back to mechanics"
+          className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors"
         >
           <ArrowLeft className="w-4 h-4 text-foreground" />
         </button>
-        <h1 className="font-display text-base tracking-wider text-foreground truncate flex-1">
-          {post.title}
-        </h1>
-        <span className={`shrink-0 text-[10px] font-display tracking-wider px-2 py-0.5 rounded border ${categoryColor}`}>
-          {post.category.toUpperCase()}
-        </span>
+        <span className="font-display text-sm text-foreground truncate flex-1">MECHANICS HELP</span>
         {isAuthor && (
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={handleDelete}
             disabled={deletePost.isPending}
-            className="shrink-0 w-9 h-9 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center hover:bg-red-500/20 transition-colors disabled:opacity-50"
-            aria-label="Delete post"
+            className="text-destructive hover:text-destructive hover:bg-destructive/10"
           >
             {deletePost.isPending ? (
-              <Loader2 className="w-4 h-4 text-red-400 animate-spin" />
+              <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
-              <Trash2 className="w-4 h-4 text-red-400" />
+              <Trash2 className="w-4 h-4" />
             )}
-          </button>
+          </Button>
         )}
       </div>
 
-      <div className="px-4 pt-5 space-y-6">
-        {/* Post card */}
-        <div className="rounded-xl border border-border/60 bg-card/60 backdrop-blur-sm overflow-hidden">
-          <div className="h-0.5 bg-gradient-to-r from-neon via-neon/60 to-transparent" />
-          <div className="p-4 space-y-4">
-            {/* Title */}
-            <h2 className="font-display text-2xl tracking-wide text-foreground leading-tight">
-              {post.title}
-            </h2>
+      {/* Post content */}
+      <div className="px-4 pt-5 pb-6">
+        <div className="flex items-start gap-3 mb-4">
+          <span className={`px-2 py-0.5 rounded-full text-xs font-display border ${categoryColor}`}>
+            {post.category}
+          </span>
+        </div>
 
-            {/* Meta */}
-            <div className="flex items-center gap-3 flex-wrap">
-              <Link
-                to="/profile/$userId"
-                params={{ userId: post.author.toString() }}
-                className="flex items-center gap-2 group"
-              >
-                <div className="w-7 h-7 rounded-full bg-neon/20 border border-neon/30 flex items-center justify-center">
-                  <span className="text-[10px] font-display text-neon">
-                    {(authorProfile?.username ?? '?').slice(0, 1).toUpperCase()}
-                  </span>
-                </div>
-                <span className="text-sm font-display text-neon group-hover:text-neon/80 transition-colors">
-                  {authorProfile?.username ?? 'Loading...'}
-                </span>
-              </Link>
-              <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                <Clock className="w-3.5 h-3.5" />
-                {formatDate(post.createdAt)}
+        <h1 className="font-display text-2xl text-foreground mb-3 leading-tight">{post.title}</h1>
+
+        <div className="flex items-center gap-3 mb-4">
+          <Link
+            to="/profile/$userId"
+            params={{ userId: post.author.toString() }}
+            className="flex items-center gap-2 group"
+          >
+            <div className="w-8 h-8 rounded-full bg-neon/10 border border-neon/20 flex items-center justify-center">
+              <span className="text-[10px] font-display text-neon">
+                {(authorProfile?.username ?? '?').slice(0, 1).toUpperCase()}
               </span>
             </div>
-
-            {/* Description */}
-            <p className="text-foreground/90 text-sm leading-relaxed whitespace-pre-wrap">
-              {post.description}
-            </p>
-          </div>
+            <div>
+              <p className="text-xs font-display text-neon group-hover:text-neon/80 transition-colors">
+                {authorProfile?.username ?? 'Loading...'}
+              </p>
+              <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                {timeAgo(post.createdAt)}
+              </p>
+            </div>
+          </Link>
         </div>
 
-        {/* Comments section */}
-        <div className="space-y-3">
-          <h3 className="font-display text-sm tracking-wider text-muted-foreground flex items-center gap-2">
-            <MessageSquare className="w-4 h-4 text-neon/60" />
-            REPLIES ({allComments.length})
-          </h3>
-
-          {allComments.length === 0 ? (
-            <div className="py-8 text-center">
-              <p className="text-sm text-muted-foreground">No replies yet. Be the first to help!</p>
-            </div>
-          ) : (
-            <div className="rounded-xl border border-border/40 bg-card/40 px-4 divide-y divide-border/20">
-              {allComments.map((comment) => (
-                <CommentItem key={comment.id.toString()} comment={comment} />
-              ))}
-            </div>
-          )}
-        </div>
+        <p className="text-foreground/90 text-sm leading-relaxed whitespace-pre-wrap">{post.description}</p>
       </div>
 
-      {/* Comment input — fixed at bottom */}
-      <div className="fixed bottom-16 left-0 right-0 z-30 bg-background/95 backdrop-blur-md border-t border-border/40 px-4 py-3">
-        {isAuthenticated ? (
-          <form onSubmit={handleSubmitComment} className="flex gap-2 items-end">
+      {/* Comments */}
+      <div className="px-4 pb-6">
+        <h3 className="font-display text-sm tracking-wider text-muted-foreground mb-3">
+          REPLIES ({allComments.length})
+        </h3>
+        {allComments.length === 0 ? (
+          <p className="text-muted-foreground text-sm text-center py-6">
+            No replies yet. Be the first to help!
+          </p>
+        ) : (
+          <div>
+            {allComments.map((comment) => (
+              <CommentItem key={comment.id.toString()} comment={comment} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Comment input */}
+      {isAuthenticated ? (
+        <div className="fixed bottom-16 left-0 right-0 px-4 pb-3 bg-background/95 backdrop-blur-sm border-t border-border/40 z-30">
+          <form onSubmit={handleSubmitComment} className="flex gap-2 pt-3">
             <Textarea
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
-              placeholder="Share your advice or ask a follow-up..."
-              className="flex-1 bg-background/60 border-border/60 focus:border-neon/60 text-foreground placeholder:text-muted-foreground/50 resize-none text-sm min-h-[40px] max-h-[100px]"
+              placeholder="Share your advice..."
+              className="flex-1 bg-card/60 border-border/60 resize-none text-sm min-h-[40px] max-h-[100px]"
               rows={1}
-              maxLength={500}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
@@ -298,8 +261,8 @@ export default function MechanicsPostDetails() {
             <Button
               type="submit"
               disabled={!commentText.trim() || addComment.isPending}
-              className="shrink-0 bg-neon text-primary-foreground hover:bg-neon/90 neon-glow disabled:opacity-50 h-10 w-10 p-0"
               size="icon"
+              className="bg-neon text-primary-foreground hover:bg-neon/90 shrink-0 shadow-neon-sm"
             >
               {addComment.isPending ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -308,13 +271,14 @@ export default function MechanicsPostDetails() {
               )}
             </Button>
           </form>
-        ) : (
-          <div className="flex items-center justify-center gap-2 py-1">
-            <LogIn className="w-4 h-4 text-neon" />
-            <span className="text-sm text-neon font-display tracking-wide">LOGIN TO REPLY</span>
-          </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div className="fixed bottom-16 left-0 right-0 px-4 pb-3 bg-background/95 backdrop-blur-sm border-t border-border/40 z-30">
+          <p className="text-center text-sm text-muted-foreground pt-3">
+            <Link to="/feed" className="text-neon hover:underline">Login</Link> to reply
+          </p>
+        </div>
+      )}
     </div>
   );
 }

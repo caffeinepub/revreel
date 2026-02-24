@@ -10,6 +10,32 @@ import type { ActorMethod } from '@icp-sdk/core/agent';
 import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
+export type Badge = { 'buildMaster' : null } |
+  { 'verified' : null } |
+  { 'racingLegend' : null } |
+  { 'dragRacer' : null } |
+  { 'communityHelper' : null } |
+  { 'driftKing' : null } |
+  { 'mechanicPro' : null };
+export interface BuildLog {
+  'id' : bigint,
+  'stages' : Array<BuildStage>,
+  'title' : string,
+  'carModel' : string,
+  'authorId' : UserId,
+  'createdAt' : bigint,
+  'description' : string,
+  'updatedAt' : bigint,
+  'carMake' : string,
+  'carYear' : string,
+}
+export interface BuildStage {
+  'id' : bigint,
+  'title' : string,
+  'createdAt' : bigint,
+  'description' : string,
+  'imageUrl' : string,
+}
 export interface CarMeet {
   'id' : CarMeetId,
   'organizer' : UserId,
@@ -57,6 +83,21 @@ export interface DirectMessage {
 }
 export type ExternalBlob = Uint8Array;
 export type Hashtag = string;
+export interface Listing {
+  'id' : bigint,
+  'model' : string,
+  'title' : string,
+  'make' : string,
+  'createdAt' : bigint,
+  'year' : string,
+  'description' : string,
+  'isActive' : boolean,
+  'imageUrl' : string,
+  'category' : string,
+  'sellerId' : UserId,
+  'price' : string,
+  'condition' : string,
+}
 export type Location = string;
 export interface MechanicsComment {
   'id' : CommentId,
@@ -76,18 +117,58 @@ export interface MechanicsPost {
 }
 export type MeetCategory = string;
 export type MessageId = bigint;
+export interface Notification {
+  'id' : bigint,
+  'notificationType' : string,
+  'createdAt' : bigint,
+  'referenceId' : string,
+  'isRead' : boolean,
+  'message' : string,
+  'recipientId' : UserId,
+  'senderId' : UserId,
+}
+export interface RacingChallenge {
+  'id' : bigint,
+  'status' : string,
+  'createdAt' : bigint,
+  'originalVideoId' : bigint,
+  'challengedId' : UserId,
+  'challengerId' : UserId,
+  'videoId' : bigint,
+}
+export type ReactionType = { 'fire' : null } |
+  { 'hype' : null } |
+  { 'like' : null } |
+  { 'wild' : null } |
+  { 'respect' : null };
+export type Result = { 'ok' : string } |
+  { 'err' : string };
 export type Time = bigint;
 export type UserId = Principal;
 export interface UserProfile {
   'id' : UserId,
   'bio' : string,
+  'verified' : boolean,
   'username' : string,
+  'badges' : Array<Badge>,
+  'joinedAt' : bigint,
   'avatarUrl' : string,
+  'savedVideos' : Array<bigint>,
   'avatar' : ExternalBlob,
 }
 export type UserRole = { 'admin' : null } |
   { 'user' : null } |
   { 'guest' : null };
+export interface UserStats {
+  'totalViews' : bigint,
+  'joinedAt' : bigint,
+  'totalLikes' : bigint,
+  'totalFollowers' : bigint,
+  'totalFollowing' : bigint,
+  'totalVideos' : bigint,
+  'totalBuildLogs' : bigint,
+  'totalComments' : bigint,
+}
 export interface Video {
   'id' : VideoId,
   'title' : string,
@@ -95,11 +176,13 @@ export interface Video {
   'hashtags' : Array<Hashtag>,
   'description' : string,
   'likes' : Array<UserId>,
+  'viewCount' : bigint,
   'timestamp' : Time,
   'category' : Category,
   'uploader' : UserId,
   'comments' : Array<Comment>,
   'videoUrl' : ExternalBlob,
+  'reactions' : Array<[UserId, ReactionType]>,
 }
 export type VideoId = string;
 export interface _CaffeineStorageCreateCertificateResult {
@@ -130,184 +213,98 @@ export interface _SERVICE {
   >,
   '_caffeineStorageUpdateGatewayPrincipals' : ActorMethod<[], undefined>,
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
-  /**
-   * / Add a comment to a video. Requires #user role.
-   */
+  'addBuildStage' : ActorMethod<[bigint, string, string, string], Result>,
   'addComment' : ActorMethod<[VideoId, string], undefined>,
-  /**
-   * / Add a comment to a mechanics post. Requires #user role.
-   */
   'addMechanicsComment' : ActorMethod<[bigint, string], MechanicsComment>,
+  'addReaction' : ActorMethod<[VideoId, ReactionType], Result>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
-  /**
-   * / Create a new car meet/event. Requires #user role.
-   */
+  'awardBadge' : ActorMethod<[Principal, Badge], Result>,
+  'closeChallenge' : ActorMethod<[bigint], Result>,
+  'createBuildLog' : ActorMethod<
+    [string, string, string, string, string],
+    Result
+  >,
   'createCarMeet' : ActorMethod<
     [string, Location, Time, string, MeetCategory],
     CarMeet
   >,
-  /**
-   * / Create a new mechanics post. Requires #user role.
-   */
+  'createListing' : ActorMethod<
+    [string, string, string, string, string, string, string, string, string],
+    Result
+  >,
   'createMechanicsPost' : ActorMethod<[string, string, string], MechanicsPost>,
-  /**
-   * / Create a new user account. Open to all callers (guests register here).
-   */
   'createUser' : ActorMethod<
     [string, string, ExternalBlob, string],
     UserProfile
   >,
-  /**
-   * / Delete a mechanics post. Only the author or an admin can delete.
-   * / Requires #user role.
-   */
+  'deactivateListing' : ActorMethod<[bigint], Result>,
+  'deleteBuildLog' : ActorMethod<[bigint], Result>,
   'deleteMechanicsPost' : ActorMethod<[bigint], undefined>,
-  /**
-   * / Delete a message. Requires #user role.
-   * / Only the sender of the message may delete it.
-   */
   'deleteMessage' : ActorMethod<[UserId, MessageId], undefined>,
-  /**
-   * / Delete a user account. Admin-only.
-   */
   'deleteUser' : ActorMethod<[UserId], undefined>,
-  /**
-   * / Delete a video and all associated comments and likes.
-   * / Requires #user role. Only the uploader or an admin can delete.
-   */
   'deleteVideo' : ActorMethod<[VideoId], undefined>,
-  /**
-   * / Follow another user. Requires #user role.
-   */
   'followUser' : ActorMethod<[UserId], undefined>,
-  /**
-   * / Get all car meets (sorted by date). Public.
-   */
+  'getAllActiveListings' : ActorMethod<[], Array<Listing>>,
+  'getAllBuildLogs' : ActorMethod<[], Array<BuildLog>>,
   'getAllCarMeets' : ActorMethod<[], Array<CarMeet>>,
-  /**
-   * / Get all mechanics posts. Public — no auth check needed.
-   */
   'getAllMechanicsPosts' : ActorMethod<[], Array<MechanicsPost>>,
-  /**
-   * / Get all videos. Public — no auth check needed.
-   */
+  'getAllUsers' : ActorMethod<[], Array<UserProfile>>,
   'getAllVideos' : ActorMethod<[], Array<Video>>,
-  /**
-   * / Get the caller's own profile. Requires #user role.
-   */
+  'getBuildLogById' : ActorMethod<[bigint], [] | [BuildLog]>,
+  'getBuildLogsByUser' : ActorMethod<[Principal], Array<BuildLog>>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
-  /**
-   * / Get a car meet by ID. Public.
-   */
   'getCarMeetById' : ActorMethod<[CarMeetId], [] | [CarMeet]>,
-  /**
-   * / Get detailed information on a car meet, including attendees' usernames and organizer. Public.
-   */
   'getCarMeetDetails' : ActorMethod<[CarMeetId], [] | [CarMeetDetails]>,
-  /**
-   * / Get car meets by category. Public.
-   */
   'getCarMeetsByCategory' : ActorMethod<[MeetCategory], Array<CarMeet>>,
-  /**
-   * / Get car meets by organizer. Public.
-   */
   'getCarMeetsByOrganizer' : ActorMethod<[UserId], Array<CarMeet>>,
-  /**
-   * / Get comments for a video. Public — no auth check needed.
-   */
+  'getChallengesForUser' : ActorMethod<[Principal], Array<RacingChallenge>>,
+  'getChallengesForVideo' : ActorMethod<[bigint], Array<RacingChallenge>>,
   'getComments' : ActorMethod<[VideoId], Array<Comment>>,
-  /**
-   * / Get all messages between the caller and another user, sorted by timestamp ascending.
-   * / Requires #user role — only authenticated users can read their own conversations.
-   */
   'getConversation' : ActorMethod<[UserId], Array<DirectMessage>>,
-  /**
-   * / Get the inbox for the caller: most recent message per conversation partner,
-   * / sorted by latest timestamp descending.
-   * / Requires #user role — only authenticated users can read their own inbox.
-   */
   'getInbox' : ActorMethod<[], Array<ConversationSummary>>,
-  /**
-   * / Get a mechanics post by ID. Public — no auth check needed.
-   */
+  'getListingById' : ActorMethod<[bigint], [] | [Listing]>,
+  'getListingsBySeller' : ActorMethod<[Principal], Array<Listing>>,
   'getMechanicsPostById' : ActorMethod<[bigint], [] | [MechanicsPost]>,
-  /**
-   * / Get the caller's own profile. Requires #user role.
-   */
+  'getNotifications' : ActorMethod<[], Array<Notification>>,
   'getOwnProfile' : ActorMethod<[], UserProfile>,
-  /**
-   * / Get any user's profile by principal. Public — no auth check needed.
-   */
   'getProfile' : ActorMethod<[UserId], UserProfile>,
-  /**
-   * / Get trending videos (top 10 by likes). Public — no auth check needed.
-   */
+  'getReactionCounts' : ActorMethod<[VideoId], Array<[ReactionType, bigint]>>,
+  'getSavedVideos' : ActorMethod<[], Array<Video>>,
   'getTrendingVideos' : ActorMethod<[], Array<Video>>,
-  /**
-   * / Get any user's profile by principal. Public — no auth check needed.
-   */
+  'getUnreadNotificationCount' : ActorMethod<[], bigint>,
+  'getUserBadges' : ActorMethod<[Principal], Array<Badge>>,
   'getUserProfile' : ActorMethod<[UserId], [] | [UserProfile]>,
-  /**
-   * / Get a single video by ID. Public — no auth check needed.
-   */
+  'getUserStats' : ActorMethod<[Principal], UserStats>,
   'getVideo' : ActorMethod<[VideoId], Video>,
-  /**
-   * / Get videos filtered by category. Public — no auth check needed.
-   */
+  'getVideoById' : ActorMethod<[VideoId], [] | [Video]>,
   'getVideosByCategory' : ActorMethod<[Category], Array<Video>>,
-  /**
-   * / Get videos filtered by hashtag. Public — no auth check needed.
-   */
   'getVideosByHashtag' : ActorMethod<[Hashtag], Array<Video>>,
-  /**
-   * / Check if the caller is an admin. Public — no auth check needed (returns bool).
-   */
+  'incrementViewCount' : ActorMethod<[VideoId], undefined>,
   'isAdmin' : ActorMethod<[], boolean>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
-  /**
-   * / Join a car meet. Requires #user role.
-   */
   'joinCarMeet' : ActorMethod<[CarMeetId], CarMeet>,
-  /**
-   * / Leave a car meet. Requires #user role.
-   */
   'leaveCarMeet' : ActorMethod<[CarMeetId], CarMeet>,
-  /**
-   * / Mark a specific message as read. Requires #user role.
-   * / Only the recipient of the message may mark it as read.
-   */
+  'markAllNotificationsRead' : ActorMethod<[], Result>,
   'markAsRead' : ActorMethod<[UserId, MessageId], undefined>,
-  /**
-   * / Save (create or update) the caller's profile. Requires #user role.
-   */
+  'markNotificationRead' : ActorMethod<[bigint], Result>,
+  'postChallenge' : ActorMethod<[bigint, bigint, Principal], Result>,
+  'removeReaction' : ActorMethod<[VideoId], Result>,
   'saveCallerUserProfile' : ActorMethod<
     [string, string, ExternalBlob, string],
     undefined
   >,
-  /**
-   * / Send a direct message to another user. Requires #user role.
-   */
+  'saveVideo' : ActorMethod<[bigint], Result>,
   'sendMessage' : ActorMethod<[UserId, string], MessageId>,
-  /**
-   * / Toggle like on a video. Requires #user role.
-   */
+  'setVerified' : ActorMethod<[Principal, boolean], Result>,
   'toggleLike' : ActorMethod<[VideoId], Video>,
-  /**
-   * / Unfollow another user. Requires #user role.
-   */
   'unfollowUser' : ActorMethod<[UserId], undefined>,
+  'unsaveVideo' : ActorMethod<[bigint], Result>,
   'updateAvatar' : ActorMethod<[string], UserProfile>,
-  /**
-   * / Update the caller's profile. Requires #user role.
-   */
   'updateProfile' : ActorMethod<
     [string, string, ExternalBlob, string],
     UserProfile
   >,
-  /**
-   * / Upload a new video. Requires #user role.
-   */
   'uploadVideo' : ActorMethod<
     [string, string, Array<Hashtag>, Category, ExternalBlob, ExternalBlob],
     Video

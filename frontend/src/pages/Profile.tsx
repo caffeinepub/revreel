@@ -1,13 +1,13 @@
 import React, { useState, useRef } from 'react';
 import { useParams, Link } from '@tanstack/react-router';
-import { useGetUserProfile, useGetAllVideos, useGetCallerUserProfile, useDeleteVideo, useUpdateAvatar } from '../hooks/useQueries';
+import { useGetUserProfile, useGetAllVideos, useGetCallerUserProfile, useDeleteVideo, useUpdateAvatar, useGetUserBadges, useGetUserStats, useGetSavedVideos } from '../hooks/useQueries';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Grid3X3, Car, Settings, AlertCircle, Trash2, Camera, Loader2, MessageCircle } from 'lucide-react';
+import { Grid3X3, Car, Settings, AlertCircle, Trash2, Camera, Loader2, MessageCircle, BadgeCheck, Award, Wrench, Zap, Heart, Hammer, Trophy, Eye, Users, UserPlus, Video, BarChart2, Bookmark } from 'lucide-react';
 import FollowButton from '../components/FollowButton';
 import EditProfileModal from '../components/EditProfileModal';
-import { type Video } from '../backend';
+import { type Video as VideoType, Badge } from '../backend';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -21,25 +21,37 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 
+const BADGE_CONFIG: Record<string, { icon: React.ElementType; label: string; color: string }> = {
+  driftKing: { icon: Award, label: 'Drift King', color: 'text-blue-400 border-blue-400/30 bg-blue-400/10' },
+  mechanicPro: { icon: Wrench, label: 'Mechanic Pro', color: 'text-green-400 border-green-400/30 bg-green-400/10' },
+  dragRacer: { icon: Zap, label: 'Drag Racer', color: 'text-yellow-400 border-yellow-400/30 bg-yellow-400/10' },
+  communityHelper: { icon: Heart, label: 'Community Helper', color: 'text-pink-400 border-pink-400/30 bg-pink-400/10' },
+  verified: { icon: BadgeCheck, label: 'Verified', color: 'text-neon border-neon/30 bg-neon/10' },
+  buildMaster: { icon: Hammer, label: 'Build Master', color: 'text-orange-400 border-orange-400/30 bg-orange-400/10' },
+  racingLegend: { icon: Trophy, label: 'Racing Legend', color: 'text-purple-400 border-purple-400/30 bg-purple-400/10' },
+};
+
 export default function Profile() {
   const params = useParams({ strict: false }) as { userId?: string };
   const { identity } = useInternetIdentity();
   const currentUserId = identity?.getPrincipal().toString();
   const isAuthenticated = !!identity;
 
-  // If no userId param, show current user's profile
-  const targetUserId = params.userId ?? currentUserId ?? null;
+  const targetUserId = params.userId ?? currentUserId ?? undefined;
   const isOwnProfile = targetUserId === currentUserId;
 
   const { data: profile, isLoading: profileLoading } = useGetUserProfile(targetUserId);
   const { data: callerProfile } = useGetCallerUserProfile();
   const { data: allVideos } = useGetAllVideos();
+  const { data: badges } = useGetUserBadges(targetUserId);
+  const { data: stats } = useGetUserStats(isOwnProfile ? targetUserId : undefined);
+  const { data: savedVideos } = useGetSavedVideos();
   const [showEditModal, setShowEditModal] = useState(false);
 
   const updateAvatar = useUpdateAvatar();
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
-  const userVideos: Video[] = (allVideos ?? []).filter(
+  const userVideos: VideoType[] = (allVideos ?? []).filter(
     (v) => v.uploader.toString() === targetUserId
   );
 
@@ -52,8 +64,6 @@ export default function Profile() {
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    // Convert to data URL
     const reader = new FileReader();
     reader.onload = async (event) => {
       const dataUrl = event.target?.result as string;
@@ -66,8 +76,6 @@ export default function Profile() {
       }
     };
     reader.readAsDataURL(file);
-
-    // Reset input so same file can be re-selected
     e.target.value = '';
   };
 
@@ -85,7 +93,6 @@ export default function Profile() {
     );
   }
 
-  // Prefer avatarUrl (data URL from updateAvatar), fall back to blob URL, then default
   const avatarSrc =
     profile.avatarUrl && profile.avatarUrl.length > 0
       ? profile.avatarUrl
@@ -95,7 +102,6 @@ export default function Profile() {
     <div className="min-h-screen bg-background">
       {/* Profile Header */}
       <div className="relative">
-        {/* Background banner */}
         <div className="h-32 bg-gradient-to-br from-neon/20 via-background to-background relative overflow-hidden">
           <div className="absolute inset-0 opacity-20"
             style={{ backgroundImage: 'url(/assets/generated/feed-bg.dim_1080x1920.png)', backgroundSize: 'cover', backgroundPosition: 'center' }}
@@ -114,7 +120,6 @@ export default function Profile() {
               className="w-full h-full object-cover"
               onError={(e) => { (e.target as HTMLImageElement).src = '/assets/generated/default-avatar.dim_128x128.png'; }}
             />
-            {/* Camera overlay — only for own profile */}
             {isOwnProfile && (
               <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                 {updateAvatar.isPending ? (
@@ -125,7 +130,6 @@ export default function Profile() {
               </div>
             )}
           </div>
-          {/* Hidden file input */}
           {isOwnProfile && (
             <input
               ref={avatarInputRef}
@@ -143,7 +147,12 @@ export default function Profile() {
       <div className="pt-14 px-4 pb-4">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="font-display text-2xl text-foreground">{profile.username}</h1>
+            <div className="flex items-center gap-1.5">
+              <h1 className="font-display text-2xl text-foreground">{profile.username}</h1>
+              {profile.verified && (
+                <BadgeCheck className="w-5 h-5 text-neon flex-shrink-0" />
+              )}
+            </div>
             <p className="text-muted-foreground text-xs mt-0.5">
               {targetUserId?.slice(0, 12)}...
             </p>
@@ -160,10 +169,7 @@ export default function Profile() {
             ) : (
               <div className="flex gap-2">
                 {targetUserId && (
-                  <FollowButton
-                    userId={targetUserId}
-                    isFollowing={false}
-                  />
+                  <FollowButton userId={targetUserId} isFollowing={false} />
                 )}
                 {isAuthenticated && targetUserId && (
                   <Link
@@ -184,6 +190,27 @@ export default function Profile() {
           <p className="text-foreground/80 text-sm mt-3 leading-relaxed">{profile.bio}</p>
         )}
 
+        {/* Badges */}
+        {badges && badges.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-3">
+            {badges.map((badge) => {
+              const badgeKey = typeof badge === 'object' ? Object.keys(badge)[0] : String(badge);
+              const config = BADGE_CONFIG[badgeKey];
+              if (!config) return null;
+              const IconComp = config.icon;
+              return (
+                <span
+                  key={badgeKey}
+                  className={`flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs font-medium ${config.color}`}
+                >
+                  <IconComp className="w-3 h-3" />
+                  {config.label}
+                </span>
+              );
+            })}
+          </div>
+        )}
+
         {/* Stats */}
         <div className="flex gap-6 mt-4">
           <div className="text-center">
@@ -191,11 +218,15 @@ export default function Profile() {
             <div className="text-muted-foreground text-xs font-display">REELS</div>
           </div>
           <div className="text-center">
-            <div className="font-display text-xl text-foreground">—</div>
+            <div className="font-display text-xl text-foreground">
+              {stats ? Number(stats.totalFollowers) : '—'}
+            </div>
             <div className="text-muted-foreground text-xs font-display">FOLLOWERS</div>
           </div>
           <div className="text-center">
-            <div className="font-display text-xl text-foreground">—</div>
+            <div className="font-display text-xl text-foreground">
+              {stats ? Number(stats.totalFollowing) : '—'}
+            </div>
             <div className="text-muted-foreground text-xs font-display">FOLLOWING</div>
           </div>
           <div className="text-center">
@@ -205,13 +236,6 @@ export default function Profile() {
             <div className="text-muted-foreground text-xs font-display">LIKES</div>
           </div>
         </div>
-
-        {/* Avatar upload hint for own profile */}
-        {isOwnProfile && (
-          <p className="text-muted-foreground text-xs mt-2">
-            Tap your avatar to change your profile picture
-          </p>
-        )}
       </div>
 
       {/* Tabs */}
@@ -224,6 +248,24 @@ export default function Profile() {
             <Grid3X3 className="w-4 h-4 mr-1.5" />
             REELS
           </TabsTrigger>
+          {isOwnProfile && (
+            <TabsTrigger
+              value="saved"
+              className="flex-1 rounded-none py-3 font-display text-sm data-[state=active]:text-neon data-[state=active]:border-b-2 data-[state=active]:border-neon"
+            >
+              <Bookmark className="w-4 h-4 mr-1.5" />
+              SAVED
+            </TabsTrigger>
+          )}
+          {isOwnProfile && (
+            <TabsTrigger
+              value="stats"
+              className="flex-1 rounded-none py-3 font-display text-sm data-[state=active]:text-neon data-[state=active]:border-b-2 data-[state=active]:border-neon"
+            >
+              <BarChart2 className="w-4 h-4 mr-1.5" />
+              STATS
+            </TabsTrigger>
+          )}
           <TabsTrigger
             value="garage"
             className="flex-1 rounded-none py-3 font-display text-sm data-[state=active]:text-neon data-[state=active]:border-b-2 data-[state=active]:border-neon"
@@ -248,6 +290,57 @@ export default function Profile() {
           )}
         </TabsContent>
 
+        {isOwnProfile && (
+          <TabsContent value="saved" className="mt-0">
+            {!savedVideos || savedVideos.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground">
+                <Bookmark className="w-10 h-10 opacity-40" />
+                <p className="font-display text-sm">NO SAVED REELS</p>
+                <p className="text-xs text-center">Bookmark videos to find them here</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-0.5">
+                {savedVideos.map((video) => (
+                  <VideoThumbnail key={video.id} video={video} isOwner={false} />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        )}
+
+        {isOwnProfile && (
+          <TabsContent value="stats" className="mt-0 p-4">
+            {!stats ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground">
+                <BarChart2 className="w-10 h-10 opacity-40" />
+                <p className="font-display text-sm">LOADING STATS...</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { label: 'Total Videos', value: Number(stats.totalVideos), icon: Video },
+                  { label: 'Total Views', value: Number(stats.totalViews), icon: Eye },
+                  { label: 'Total Likes', value: Number(stats.totalLikes), icon: Heart },
+                  { label: 'Comments', value: Number(stats.totalComments), icon: MessageCircle },
+                  { label: 'Followers', value: Number(stats.totalFollowers), icon: Users },
+                  { label: 'Following', value: Number(stats.totalFollowing), icon: UserPlus },
+                  { label: 'Build Logs', value: Number(stats.totalBuildLogs), icon: Wrench },
+                ].map(({ label, value, icon: Icon }) => (
+                  <div key={label} className="bg-card/60 backdrop-blur border border-border rounded-xl p-4 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-neon/10 flex items-center justify-center flex-shrink-0">
+                      <Icon className="w-5 h-5 text-neon" />
+                    </div>
+                    <div>
+                      <div className="font-display text-xl text-foreground">{value.toLocaleString()}</div>
+                      <div className="text-muted-foreground text-xs">{label}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        )}
+
         <TabsContent value="garage" className="mt-0 p-4">
           <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground">
             <Car className="w-10 h-10 opacity-40" />
@@ -267,7 +360,7 @@ export default function Profile() {
   );
 }
 
-function VideoThumbnail({ video, isOwner }: { video: Video; isOwner: boolean }) {
+function VideoThumbnail({ video, isOwner }: { video: VideoType; isOwner: boolean }) {
   const thumbnailUrl = video.thumbnail.getDirectURL() || '/assets/generated/placeholder-thumb.dim_640x360.png';
   const deleteVideo = useDeleteVideo();
 
@@ -295,7 +388,6 @@ function VideoThumbnail({ video, isOwner }: { video: Video; isOwner: boolean }) 
         </div>
       </Link>
 
-      {/* Delete button overlay for owner */}
       {isOwner && (
         <AlertDialog>
           <AlertDialogTrigger asChild>

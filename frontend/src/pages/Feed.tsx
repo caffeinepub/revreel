@@ -17,15 +17,12 @@ export default function Feed() {
   const { identity } = useInternetIdentity();
   const isAuthenticated = !!identity;
 
-  // Global mute state — default false (unmuted) so audio plays when user taps unmute.
-  // Persisted in sessionStorage. If autoplay with audio is blocked by the browser,
-  // VideoCard will automatically fall back to muted play.
   const [isMuted, setIsMuted] = useState<boolean>(() => {
     const stored = sessionStorage.getItem(MUTE_STORAGE_KEY);
     return stored === null ? false : stored === 'true';
   });
 
-  const handleToggleMute = useCallback(() => {
+  const handleMuteToggle = useCallback(() => {
     setIsMuted((prev) => {
       const next = !prev;
       sessionStorage.setItem(MUTE_STORAGE_KEY, String(next));
@@ -105,7 +102,7 @@ export default function Feed() {
                 video={video}
                 isActive={index === activeIndex}
                 isMuted={isMuted}
-                onToggleMute={handleToggleMute}
+                onMuteToggle={handleMuteToggle}
               />
             </div>
           ))}
