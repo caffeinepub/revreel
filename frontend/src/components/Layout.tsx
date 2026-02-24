@@ -1,104 +1,205 @@
-import { ReactNode } from 'react';
-import { Link, useLocation } from '@tanstack/react-router';
-import { Home, Compass, Upload, User, Trophy, Car, Wrench, MessageCircle, Bell, HardHat, ShoppingBag } from 'lucide-react';
+import React from 'react';
+import { Link, useNavigate, useRouterState } from '@tanstack/react-router';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
-import { useGetCallerUserProfile, useGetInbox, useGetUnreadNotificationCount } from '../hooks/useQueries';
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  Home,
+  Search,
+  Upload,
+  User,
+  Bell,
+  MessageCircle,
+  Trophy,
+  Car,
+  Wrench,
+  BookOpen,
+  ShoppingBag,
+  LogOut,
+  LogIn,
+  Loader2,
+} from 'lucide-react';
+import {
+  useGetCallerUserProfile,
+  useGetUnreadNotificationCount,
+  useGetUnreadMessageCount,
+} from '../hooks/useQueries';
 import ProfileSetupModal from './ProfileSetupModal';
 
 interface LayoutProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
+const navItems = [
+  { icon: Home, label: 'Feed', path: '/feed' },
+  { icon: Search, label: 'Discover', path: '/discover' },
+  { icon: Trophy, label: 'Top', path: '/leaderboard' },
+  { icon: Car, label: 'Meets', path: '/meets' },
+  { icon: Wrench, label: 'Garage', path: '/mechanics' },
+  { icon: BookOpen, label: 'Builds', path: '/builds' },
+  { icon: ShoppingBag, label: 'Market', path: '/classifieds' },
+  { icon: MessageCircle, label: 'DMs', path: '/inbox' },
+  { icon: Bell, label: 'Alerts', path: '/notifications' },
+  { icon: Upload, label: 'Upload', path: '/upload' },
+  { icon: User, label: 'Profile', path: '/profile' },
+];
+
 export default function Layout({ children }: LayoutProps) {
-  const location = useLocation();
-  const { identity } = useInternetIdentity();
-  const { data: userProfile, isLoading: profileLoading, isFetched } = useGetCallerUserProfile();
-  const { data: inbox } = useGetInbox();
-  const { data: unreadNotifCount } = useGetUnreadNotificationCount();
+  const { identity, login, clear, loginStatus, isInitializing } = useInternetIdentity();
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const routerState = useRouterState();
+  const currentPath = routerState.location.pathname;
 
   const isAuthenticated = !!identity;
-  const userId = identity?.getPrincipal().toString();
+  const isLoggingIn = loginStatus === 'logging-in';
 
-  const showProfileSetup = isAuthenticated && !profileLoading && isFetched && userProfile === null;
+  const {
+    data: userProfile,
+    isLoading: profileLoading,
+    isFetched: profileFetched,
+  } = useGetCallerUserProfile();
 
-  const unreadDMs = inbox?.reduce((acc, conv) => acc + Number(conv.unreadCount), 0) ?? 0;
-  const unreadNotifs = unreadNotifCount !== undefined ? Number(unreadNotifCount) : 0;
+  const { data: unreadNotifCount } = useGetUnreadNotificationCount();
+  const { data: unreadMsgCount } = useGetUnreadMessageCount();
 
-  const profilePath = userId ? `/profile/${userId}` : '/profile/me';
+  // Only show profile setup modal when:
+  // 1. User is authenticated
+  // 2. Not still initializing identity
+  // 3. Profile query has completed (not loading)
+  // 4. Profile is genuinely null (no profile exists)
+  const showProfileSetup =
+    isAuthenticated &&
+    !isInitializing &&
+    !profileLoading &&
+    profileFetched &&
+    userProfile === null;
 
-  const navItems: Array<{ path: string; icon: React.ElementType; label: string; badge?: number }> = [
-    { path: '/', icon: Home, label: 'Home' },
-    { path: '/discover', icon: Compass, label: 'Discover' },
-    { path: '/leaderboard', icon: Trophy, label: 'Top' },
-    { path: '/meets', icon: Car, label: 'Meets' },
-    { path: '/mechanics', icon: Wrench, label: 'Garage' },
-    { path: '/builds', icon: HardHat, label: 'Builds' },
-    { path: '/classifieds', icon: ShoppingBag, label: 'Market' },
-    { path: '/upload', icon: Upload, label: 'Upload' },
-    { path: '/inbox', icon: MessageCircle, label: 'DMs', badge: unreadDMs },
-    { path: '/notifications', icon: Bell, label: 'Alerts', badge: unreadNotifs },
-    { path: profilePath, icon: User, label: 'Profile' },
-  ];
+  const handleAuth = async () => {
+    if (isAuthenticated) {
+      await clear();
+      queryClient.clear();
+      navigate({ to: '/' });
+    } else {
+      try {
+        await login();
+      } catch (error: any) {
+        if (error?.message === 'User is already authenticated') {
+          await clear();
+          setTimeout(() => login(), 300);
+        }
+      }
+    }
+  };
+
+  const profilePath = identity
+    ? `/profile/${identity.getPrincipal().toString()}`
+    : '/profile';
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
-        <div className="flex items-center justify-between px-4 py-3 max-w-lg mx-auto">
-          <Link to="/" className="flex items-center gap-2">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-md border-b border-border/50 h-14 flex items-center px-4">
+        <div className="flex items-center justify-between w-full max-w-screen-xl mx-auto">
+          <Link to="/feed" className="flex items-center gap-2">
             <img
               src="/assets/generated/revreel-logo.dim_256x256.png"
               alt="RevReel"
-              className="w-8 h-8 object-contain"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              className="h-8 w-8 object-contain"
             />
-            <span className="font-display text-xl font-bold text-neon tracking-wider">REVREEL</span>
+            <span className="font-display text-lg font-bold text-primary tracking-wider uppercase">
+              RevReel
+            </span>
           </Link>
+
           <div className="flex items-center gap-3">
             {isAuthenticated && userProfile && (
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-neon animate-pulse" />
-                <span className="text-xs text-muted-foreground font-display">
+              <Link
+                to={profilePath as any}
+                className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+              >
+                {userProfile.avatarUrl ? (
+                  <img
+                    src={userProfile.avatarUrl}
+                    alt={userProfile.username}
+                    className="h-7 w-7 rounded-full object-cover border border-primary/40"
+                  />
+                ) : (
+                  <div className="h-7 w-7 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center">
+                    <User className="h-4 w-4 text-primary" />
+                  </div>
+                )}
+                <span className="text-sm font-medium text-foreground/80 hidden sm:block">
                   {userProfile.username}
                 </span>
-              </div>
+              </Link>
             )}
+
+            <button
+              onClick={handleAuth}
+              disabled={isLoggingIn || isInitializing}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all
+                bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30
+                disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoggingIn || isInitializing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : isAuthenticated ? (
+                <>
+                  <LogOut className="h-4 w-4" />
+                  <span className="hidden sm:inline">Logout</span>
+                </>
+              ) : (
+                <>
+                  <LogIn className="h-4 w-4" />
+                  <span className="hidden sm:inline">Login</span>
+                </>
+              )}
+            </button>
           </div>
         </div>
       </header>
 
       {/* Main content */}
-      <main className="flex-1 pt-14 pb-20 max-w-lg mx-auto w-full">
-        {children}
-      </main>
+      <main className="flex-1 pt-14 pb-16">{children}</main>
 
       {/* Bottom navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-md border-t border-border">
-        <div className="flex items-center justify-around px-1 py-2 max-w-lg mx-auto overflow-x-auto">
-          {navItems.map(({ path, icon: Icon, label, badge }) => {
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-t border-border/50">
+        <div className="flex items-center justify-around px-1 py-1 max-w-screen-xl mx-auto overflow-x-auto scrollbar-hide">
+          {navItems.map((item) => {
+            const Icon = item.icon;
             const isActive =
-              path === '/'
-                ? location.pathname === '/'
-                : location.pathname.startsWith(path);
+              currentPath === item.path ||
+              (item.path !== '/feed' && currentPath.startsWith(item.path));
+
+            // For profile nav item, link to user's own profile
+            const linkPath = item.path === '/profile' ? profilePath : item.path;
+
+            const hasNotifBadge =
+              item.path === '/notifications' &&
+              unreadNotifCount !== undefined &&
+              Number(unreadNotifCount) > 0;
+            const hasMsgBadge =
+              item.path === '/inbox' && unreadMsgCount !== undefined && unreadMsgCount > 0;
 
             return (
               <Link
-                key={path}
-                to={path as any}
-                className={`flex flex-col items-center gap-0.5 px-1.5 py-1 rounded-lg transition-all relative min-w-[36px] ${
-                  isActive ? 'text-neon' : 'text-muted-foreground hover:text-foreground'
-                }`}
+                key={item.path}
+                to={linkPath as any}
+                className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-lg transition-all min-w-[44px] relative
+                  ${isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
               >
                 <div className="relative">
-                  <Icon className="w-5 h-5" />
-                  {badge !== undefined && badge > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 bg-neon text-background text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">
-                      {badge > 9 ? '9+' : badge}
+                  <Icon
+                    className={`h-5 w-5 ${isActive ? 'drop-shadow-[0_0_6px_var(--color-primary)]' : ''}`}
+                  />
+                  {(hasNotifBadge || hasMsgBadge) && (
+                    <span className="absolute -top-1 -right-1 h-4 w-4 bg-destructive rounded-full flex items-center justify-center text-[9px] font-bold text-white">
+                      {hasNotifBadge ? Number(unreadNotifCount) : unreadMsgCount}
                     </span>
                   )}
                 </div>
-                <span className={`text-[9px] font-display tracking-wider ${isActive ? 'text-neon' : ''}`}>
-                  {label}
+                <span className={`text-[9px] font-medium leading-none ${isActive ? 'text-primary' : ''}`}>
+                  {item.label}
                 </span>
               </Link>
             );
@@ -106,7 +207,7 @@ export default function Layout({ children }: LayoutProps) {
         </div>
       </nav>
 
-      {/* Profile Setup Modal */}
+      {/* Profile Setup Modal — only rendered when user genuinely has no profile */}
       {showProfileSetup && <ProfileSetupModal />}
     </div>
   );

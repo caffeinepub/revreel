@@ -1,39 +1,215 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useActor } from './useActor';
+import { useInternetIdentity } from './useInternetIdentity';
 import { Principal } from '@dfinity/principal';
-import { Badge, ReactionType, Video, UserProfile, BuildLog, Listing, RacingChallenge, Notification, UserStats, ExternalBlob } from '../backend';
+import {
+  type Video,
+  type Comment,
+  type UserId,
+  ExternalBlob,
+  ReactionType,
+  Variant_video_photo,
+} from '../backend';
 
-// ===== USER PROFILE =====
+// ── Local type definitions for types not in generated backend.d.ts ──────────
+
+export type UserProfile = {
+  id: UserId;
+  username: string;
+  bio: string;
+  avatar: ExternalBlob;
+  avatarUrl: string;
+  verified: boolean;
+  badges: Badge[];
+  savedVideos: number[];
+  joinedAt: number;
+};
+
+export type Badge =
+  | 'driftKing'
+  | 'mechanicPro'
+  | 'dragRacer'
+  | 'communityHelper'
+  | 'verified'
+  | 'buildMaster'
+  | 'racingLegend';
+
+export type CarMeet = {
+  id: string;
+  title: string;
+  location: string;
+  date: bigint;
+  description: string;
+  organizer: UserId;
+  attendees: UserId[];
+  category: string;
+  createdAt: bigint;
+};
+
+export type CarMeetDetails = {
+  id: string;
+  title: string;
+  location: string;
+  date: bigint;
+  description: string;
+  organizer: UserProfile | null;
+  attendees: UserProfile[];
+  category: string;
+  createdAt: bigint;
+};
+
+export type MechanicsComment = {
+  id: bigint;
+  postId: number;
+  authorId: UserId;
+  text: string;
+  timestamp: bigint;
+};
+
+export type MechanicsPost = {
+  id: number;
+  title: string;
+  description: string;
+  author: UserId;
+  category: string;
+  createdAt: bigint;
+  comments: MechanicsComment[];
+};
+
+export type DirectMessage = {
+  id: bigint;
+  fromUser: UserId;
+  toUser: UserId;
+  text: string;
+  timestamp: bigint;
+  isRead: boolean;
+};
+
+export type ConversationSummary = {
+  otherUser: UserId;
+  lastMessage: DirectMessage;
+  unreadCount: number;
+};
+
+export type Notification = {
+  id: number;
+  recipientId: UserId;
+  senderId: UserId;
+  notificationType: string;
+  referenceId: string;
+  message: string;
+  isRead: boolean;
+  createdAt: number;
+};
+
+export type BuildStage = {
+  id: number;
+  title: string;
+  description: string;
+  imageUrl: string;
+  createdAt: number;
+};
+
+export type BuildLog = {
+  id: number;
+  title: string;
+  authorId: UserId;
+  carMake: string;
+  carModel: string;
+  carYear: string;
+  description: string;
+  stages: BuildStage[];
+  createdAt: number;
+  updatedAt: number;
+};
+
+export type Listing = {
+  id: number;
+  title: string;
+  description: string;
+  sellerId: UserId;
+  make: string;
+  model: string;
+  year: string;
+  price: string;
+  condition: string;
+  imageUrl: string;
+  category: string;
+  createdAt: number;
+  isActive: boolean;
+};
+
+export type RacingChallenge = {
+  id: number;
+  challengerId: UserId;
+  challengedId: UserId;
+  videoId: number;
+  originalVideoId: number;
+  status: string;
+  createdAt: number;
+};
+
+export type UserStats = {
+  totalVideos: number;
+  totalViews: number;
+  totalLikes: number;
+  totalComments: number;
+  totalFollowers: number;
+  totalFollowing: number;
+  totalBuildLogs: number;
+  joinedAt: number;
+};
+
+// ── Re-export backend types ──────────────────────────────────────────────────
+export type { Video, Comment, ReactionType };
+export { Variant_video_photo };
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+// Cast actor to any for methods not in the minimal generated interface
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function a(actor: unknown): any {
+  return actor as any;
+}
+
+// ── User Profile ─────────────────────────────────────────────────────────────
 
 export function useGetCallerUserProfile() {
   const { actor, isFetching: actorFetching } = useActor();
+  const { identity, isInitializing } = useInternetIdentity();
+
+  const isAuthenticated = !!identity;
 
   const query = useQuery<UserProfile | null>({
-    queryKey: ['currentUserProfile'],
+    queryKey: ['currentUserProfile', identity?.getPrincipal().toString()],
     queryFn: async () => {
       if (!actor) throw new Error('Actor not available');
-      return actor.getCallerUserProfile();
+      try {
+        return await a(actor).getCallerUserProfile();
+      } catch (err: unknown) {
+        if (isAuthenticated) return null;
+        throw err;
+      }
     },
-    enabled: !!actor && !actorFetching,
+    enabled: !!actor && !actorFetching && isAuthenticated && !isInitializing,
     retry: false,
   });
 
   return {
     ...query,
-    isLoading: actorFetching || query.isLoading,
+    isLoading: actorFetching || isInitializing || query.isLoading,
     isFetched: !!actor && query.isFetched,
   };
 }
 
-export function useGetUserProfile(userId: string | undefined) {
+export function useGetUserProfile(userId: string) {
   const { actor, isFetching } = useActor();
 
   return useQuery<UserProfile | null>({
     queryKey: ['userProfile', userId],
     queryFn: async () => {
-      if (!actor || !userId) return null;
-      const principal = Principal.fromText(userId);
-      return actor.getUserProfile(principal);
+      if (!actor) return null;
+      return a(actor).getUserProfile(Principal.fromText(userId));
     },
     enabled: !!actor && !isFetching && !!userId,
   });
@@ -46,14 +222,9 @@ export function useGetAllUsers() {
     queryKey: ['allUsers'],
     queryFn: async () => {
       if (!actor) return [];
-      try {
-        return await actor.getAllUsers();
-      } catch {
-        return [];
-      }
+      return a(actor).getAllUsers();
     },
     enabled: !!actor && !isFetching,
-    retry: false,
   });
 }
 
@@ -71,10 +242,10 @@ export function useCreateUser() {
       username: string;
       bio: string;
       avatar: ExternalBlob;
-      avatarUrl: string;
+      avatarUrl?: string;
     }) => {
       if (!actor) throw new Error('Actor not available');
-      return actor.createUser(username, bio, avatar, avatarUrl);
+      return a(actor).createUser(username, bio, avatar, avatarUrl || '');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
@@ -96,14 +267,13 @@ export function useUpdateProfile() {
       username: string;
       bio: string;
       avatar: ExternalBlob;
-      avatarUrl: string;
+      avatarUrl?: string;
     }) => {
       if (!actor) throw new Error('Actor not available');
-      return actor.updateProfile(username, bio, avatar, avatarUrl);
+      return a(actor).updateProfile(username, bio, avatar, avatarUrl || '');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
-      queryClient.invalidateQueries({ queryKey: ['userProfile'] });
     },
   });
 }
@@ -113,18 +283,30 @@ export function useUpdateAvatar() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (avatarUrl: string) => {
+    mutationFn: async ({ avatarUrl }: { avatarUrl: string }) => {
       if (!actor) throw new Error('Actor not available');
-      return actor.updateAvatar(avatarUrl);
+      return a(actor).updateAvatar(avatarUrl);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
-      queryClient.invalidateQueries({ queryKey: ['userProfile'] });
     },
   });
 }
 
-// ===== VIDEOS =====
+export function useGetUserBadges(userId: string) {
+  const { actor, isFetching } = useActor();
+
+  return useQuery<Badge[]>({
+    queryKey: ['userBadges', userId],
+    queryFn: async () => {
+      if (!actor) return [];
+      return a(actor).getUserBadges(Principal.fromText(userId));
+    },
+    enabled: !!actor && !isFetching && !!userId,
+  });
+}
+
+// ── Videos ───────────────────────────────────────────────────────────────────
 
 export function useGetAllVideos() {
   const { actor, isFetching } = useActor();
@@ -133,7 +315,7 @@ export function useGetAllVideos() {
     queryKey: ['videos'],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.getAllVideos();
+      return a(actor).getAllVideos();
     },
     enabled: !!actor && !isFetching,
   });
@@ -146,7 +328,7 @@ export function useGetVideosByCategory(category: string) {
     queryKey: ['videos', 'category', category],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.getVideosByCategory(category);
+      return a(actor).getVideosByCategory(category);
     },
     enabled: !!actor && !isFetching && !!category,
   });
@@ -159,7 +341,7 @@ export function useGetVideosByHashtag(hashtag: string) {
     queryKey: ['videos', 'hashtag', hashtag],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.getVideosByHashtag(hashtag);
+      return a(actor).getVideosByHashtag(hashtag);
     },
     enabled: !!actor && !isFetching && !!hashtag,
   });
@@ -172,39 +354,23 @@ export function useGetTrendingVideos() {
     queryKey: ['videos', 'trending'],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.getTrendingVideos();
+      return a(actor).getTrendingVideos();
     },
     enabled: !!actor && !isFetching,
   });
 }
 
-export function useToggleLike() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
+export function useGetSavedVideos() {
+  const { actor, isFetching } = useActor();
+  const { identity } = useInternetIdentity();
 
-  return useMutation({
-    mutationFn: async (videoId: string) => {
-      if (!actor) throw new Error('Actor not available');
-      return actor.toggleLike(videoId);
+  return useQuery<Video[]>({
+    queryKey: ['savedVideos'],
+    queryFn: async () => {
+      if (!actor) return [];
+      return a(actor).getSavedVideos();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['videos'] });
-    },
-  });
-}
-
-export function useDeleteVideo() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (videoId: string) => {
-      if (!actor) throw new Error('Actor not available');
-      return actor.deleteVideo(videoId);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['videos'] });
-    },
+    enabled: !!actor && !isFetching && !!identity,
   });
 }
 
@@ -220,6 +386,7 @@ export function useUploadVideo() {
       category,
       thumbnailBlob,
       videoBlob,
+      mediaType,
     }: {
       title: string;
       description: string;
@@ -227,9 +394,10 @@ export function useUploadVideo() {
       category: string;
       thumbnailBlob: ExternalBlob;
       videoBlob: ExternalBlob;
+      mediaType: Variant_video_photo;
     }) => {
       if (!actor) throw new Error('Actor not available');
-      return actor.uploadVideo(title, description, hashtags, category, thumbnailBlob, videoBlob);
+      return actor.uploadVideo(title, description, hashtags, category, thumbnailBlob, videoBlob, mediaType);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['videos'] });
@@ -237,7 +405,67 @@ export function useUploadVideo() {
   });
 }
 
-// ===== REACTIONS =====
+export function useDeleteVideo() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ videoId }: { videoId: string }) => {
+      if (!actor) throw new Error('Actor not available');
+      return a(actor).deleteVideo(videoId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['videos'] });
+    },
+  });
+}
+
+export function useToggleLike() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ videoId }: { videoId: string }) => {
+      if (!actor) throw new Error('Actor not available');
+      return a(actor).toggleLike(videoId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['videos'] });
+    },
+  });
+}
+
+export function useSaveVideo() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ videoId }: { videoId: string }) => {
+      if (!actor) throw new Error('Actor not available');
+      return a(actor).saveVideo(videoId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['savedVideos'] });
+      queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
+    },
+  });
+}
+
+export function useUnsaveVideo() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ videoId }: { videoId: string }) => {
+      if (!actor) throw new Error('Actor not available');
+      return a(actor).unsaveVideo(videoId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['savedVideos'] });
+      queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
+    },
+  });
+}
 
 export function useAddReaction() {
   const { actor } = useActor();
@@ -246,11 +474,10 @@ export function useAddReaction() {
   return useMutation({
     mutationFn: async ({ videoId, reaction }: { videoId: string; reaction: ReactionType }) => {
       if (!actor) throw new Error('Actor not available');
-      return actor.addReaction(videoId, reaction);
+      return a(actor).addReaction(videoId, reaction);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['videos'] });
-      queryClient.invalidateQueries({ queryKey: ['reactionCounts'] });
     },
   });
 }
@@ -260,43 +487,39 @@ export function useRemoveReaction() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (videoId: string) => {
+    mutationFn: async ({ videoId }: { videoId: string }) => {
       if (!actor) throw new Error('Actor not available');
-      return actor.removeReaction(videoId);
+      return a(actor).removeReaction(videoId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['videos'] });
-      queryClient.invalidateQueries({ queryKey: ['reactionCounts'] });
     },
   });
 }
 
-export function useGetReactionCounts(videoId: string) {
-  const { actor, isFetching } = useActor();
+export function useIncrementViewCount() {
+  const { actor } = useActor();
 
-  return useQuery<Array<[ReactionType, bigint]>>({
-    queryKey: ['reactionCounts', videoId],
-    queryFn: async () => {
-      if (!actor) return [];
-      return actor.getReactionCounts(videoId);
+  return useMutation({
+    mutationFn: async ({ videoId }: { videoId: string }) => {
+      if (!actor) throw new Error('Actor not available');
+      return a(actor).incrementViewCount(videoId);
     },
-    enabled: !!actor && !isFetching && !!videoId,
   });
 }
 
-// ===== COMMENTS =====
+// ── Comments ─────────────────────────────────────────────────────────────────
 
-export function useGetComments(videoId: string | undefined) {
+export function useGetComments(videoId: string) {
   const { actor, isFetching } = useActor();
 
-  return useQuery({
+  return useQuery<Comment[]>({
     queryKey: ['comments', videoId],
     queryFn: async () => {
-      if (!actor || !videoId) return [];
-      return actor.getComments(videoId);
+      if (!actor) return [];
+      return a(actor).getComments(videoId);
     },
     enabled: !!actor && !isFetching && !!videoId,
-    staleTime: 0,
   });
 }
 
@@ -307,7 +530,7 @@ export function useAddComment() {
   return useMutation({
     mutationFn: async ({ videoId, text }: { videoId: string; text: string }) => {
       if (!actor) throw new Error('Actor not available');
-      return actor.addComment(videoId, text);
+      return a(actor).addComment(videoId, text);
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['comments', variables.videoId] });
@@ -315,17 +538,16 @@ export function useAddComment() {
   });
 }
 
-// ===== FOLLOW =====
+// ── Follow ───────────────────────────────────────────────────────────────────
 
 export function useFollowUser() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (userId: string) => {
+    mutationFn: async ({ userId }: { userId: string }) => {
       if (!actor) throw new Error('Actor not available');
-      const principal = Principal.fromText(userId);
-      return actor.followUser(principal);
+      return a(actor).followUser(Principal.fromText(userId));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['userProfile'] });
@@ -339,10 +561,9 @@ export function useUnfollowUser() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (userId: string) => {
+    mutationFn: async ({ userId }: { userId: string }) => {
       if (!actor) throw new Error('Actor not available');
-      const principal = Principal.fromText(userId);
-      return actor.unfollowUser(principal);
+      return a(actor).unfollowUser(Principal.fromText(userId));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['userProfile'] });
@@ -351,42 +572,42 @@ export function useUnfollowUser() {
   });
 }
 
-// ===== CAR MEETS =====
+export function useGetUserStats(userId: string) {
+  const { actor, isFetching } = useActor();
+
+  return useQuery<UserStats | null>({
+    queryKey: ['userStats', userId],
+    queryFn: async () => {
+      if (!actor) return null;
+      return a(actor).getUserStats(Principal.fromText(userId));
+    },
+    enabled: !!actor && !isFetching && !!userId,
+  });
+}
+
+// ── Car Meets ────────────────────────────────────────────────────────────────
 
 export function useGetAllCarMeets() {
   const { actor, isFetching } = useActor();
 
-  return useQuery({
+  return useQuery<CarMeet[]>({
     queryKey: ['carMeets'],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.getAllCarMeets();
+      return a(actor).getAllCarMeets();
     },
     enabled: !!actor && !isFetching,
-  });
-}
-
-export function useGetCarMeetById(meetId: string) {
-  const { actor, isFetching } = useActor();
-
-  return useQuery({
-    queryKey: ['carMeet', meetId],
-    queryFn: async () => {
-      if (!actor) return null;
-      return actor.getCarMeetById(meetId);
-    },
-    enabled: !!actor && !isFetching && !!meetId,
   });
 }
 
 export function useGetCarMeetDetails(meetId: string) {
   const { actor, isFetching } = useActor();
 
-  return useQuery({
+  return useQuery<CarMeetDetails | null>({
     queryKey: ['carMeetDetails', meetId],
     queryFn: async () => {
       if (!actor) return null;
-      return actor.getCarMeetDetails(meetId);
+      return a(actor).getCarMeetDetails(meetId);
     },
     enabled: !!actor && !isFetching && !!meetId,
   });
@@ -411,7 +632,7 @@ export function useCreateCarMeet() {
       category: string;
     }) => {
       if (!actor) throw new Error('Actor not available');
-      return actor.createCarMeet(title, location, date, description, category);
+      return a(actor).createCarMeet(title, location, date, description, category);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['carMeets'] });
@@ -424,13 +645,12 @@ export function useJoinCarMeet() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (meetId: string) => {
+    mutationFn: async ({ meetId }: { meetId: string }) => {
       if (!actor) throw new Error('Actor not available');
-      return actor.joinCarMeet(meetId);
+      return a(actor).joinCarMeet(meetId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['carMeets'] });
-      queryClient.invalidateQueries({ queryKey: ['carMeet'] });
       queryClient.invalidateQueries({ queryKey: ['carMeetDetails'] });
     },
   });
@@ -441,41 +661,40 @@ export function useLeaveCarMeet() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (meetId: string) => {
+    mutationFn: async ({ meetId }: { meetId: string }) => {
       if (!actor) throw new Error('Actor not available');
-      return actor.leaveCarMeet(meetId);
+      return a(actor).leaveCarMeet(meetId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['carMeets'] });
-      queryClient.invalidateQueries({ queryKey: ['carMeet'] });
       queryClient.invalidateQueries({ queryKey: ['carMeetDetails'] });
     },
   });
 }
 
-// ===== MECHANICS =====
+// ── Mechanics Help ───────────────────────────────────────────────────────────
 
 export function useGetAllMechanicsPosts() {
   const { actor, isFetching } = useActor();
 
-  return useQuery({
+  return useQuery<MechanicsPost[]>({
     queryKey: ['mechanicsPosts'],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.getAllMechanicsPosts();
+      return a(actor).getAllMechanicsPosts();
     },
     enabled: !!actor && !isFetching,
   });
 }
 
-export function useGetMechanicsPostById(postId: number | undefined) {
+export function useGetMechanicsPostById(postId: number) {
   const { actor, isFetching } = useActor();
 
-  return useQuery({
+  return useQuery<MechanicsPost | null>({
     queryKey: ['mechanicsPost', postId],
     queryFn: async () => {
-      if (!actor || postId === undefined) return null;
-      return actor.getMechanicsPostById(BigInt(postId));
+      if (!actor) return null;
+      return a(actor).getMechanicsPostById(postId);
     },
     enabled: !!actor && !isFetching && postId !== undefined,
   });
@@ -486,9 +705,17 @@ export function useCreateMechanicsPost() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ title, description, category }: { title: string; description: string; category: string }) => {
+    mutationFn: async ({
+      title,
+      description,
+      category,
+    }: {
+      title: string;
+      description: string;
+      category: string;
+    }) => {
       if (!actor) throw new Error('Actor not available');
-      return actor.createMechanicsPost(title, description, category);
+      return a(actor).createMechanicsPost(title, description, category);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['mechanicsPosts'] });
@@ -503,7 +730,7 @@ export function useAddMechanicsComment() {
   return useMutation({
     mutationFn: async ({ postId, text }: { postId: number; text: string }) => {
       if (!actor) throw new Error('Actor not available');
-      return actor.addMechanicsComment(BigInt(postId), text);
+      return a(actor).addMechanicsComment(postId, text);
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['mechanicsPost', variables.postId] });
@@ -517,9 +744,9 @@ export function useDeleteMechanicsPost() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (postId: number) => {
+    mutationFn: async ({ postId }: { postId: number }) => {
       if (!actor) throw new Error('Actor not available');
-      return actor.deleteMechanicsPost(BigInt(postId));
+      return a(actor).deleteMechanicsPost(postId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['mechanicsPosts'] });
@@ -527,34 +754,33 @@ export function useDeleteMechanicsPost() {
   });
 }
 
-// ===== MESSAGES =====
+// ── Messages ─────────────────────────────────────────────────────────────────
 
 export function useGetInbox() {
   const { actor, isFetching } = useActor();
+  const { identity } = useInternetIdentity();
 
-  return useQuery({
+  return useQuery<ConversationSummary[]>({
     queryKey: ['inbox'],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.getInbox();
+      return a(actor).getInbox();
     },
-    enabled: !!actor && !isFetching,
-    refetchInterval: 10000,
+    enabled: !!actor && !isFetching && !!identity,
   });
 }
 
 export function useGetConversation(otherUserId: string) {
   const { actor, isFetching } = useActor();
+  const { identity } = useInternetIdentity();
 
-  return useQuery({
+  return useQuery<DirectMessage[]>({
     queryKey: ['conversation', otherUserId],
     queryFn: async () => {
       if (!actor) return [];
-      const principal = Principal.fromText(otherUserId);
-      return actor.getConversation(principal);
+      return a(actor).getConversation(Principal.fromText(otherUserId));
     },
-    enabled: !!actor && !isFetching && !!otherUserId,
-    refetchInterval: 5000,
+    enabled: !!actor && !isFetching && !!identity && !!otherUserId,
   });
 }
 
@@ -563,14 +789,13 @@ export function useSendMessage() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ toUser, text }: { toUser: string; text: string }) => {
+    mutationFn: async ({ otherUser, text }: { otherUser: string; text: string }) => {
       if (!actor) throw new Error('Actor not available');
-      const principal = Principal.fromText(toUser);
-      return actor.sendMessage(principal, text);
+      return a(actor).sendMessage(Principal.fromText(otherUser), text);
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['conversation', variables.otherUser] });
       queryClient.invalidateQueries({ queryKey: ['inbox'] });
-      queryClient.invalidateQueries({ queryKey: ['conversation'] });
     },
   });
 }
@@ -582,12 +807,10 @@ export function useMarkAsRead() {
   return useMutation({
     mutationFn: async ({ otherUser, messageId }: { otherUser: string; messageId: bigint }) => {
       if (!actor) throw new Error('Actor not available');
-      const principal = Principal.fromText(otherUser);
-      return actor.markAsRead(principal, messageId);
+      return a(actor).markAsRead(Principal.fromText(otherUser), messageId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inbox'] });
-      queryClient.invalidateQueries({ queryKey: ['conversation'] });
     },
   });
 }
@@ -599,82 +822,58 @@ export function useDeleteMessage() {
   return useMutation({
     mutationFn: async ({ otherUser, messageId }: { otherUser: string; messageId: bigint }) => {
       if (!actor) throw new Error('Actor not available');
-      const principal = Principal.fromText(otherUser);
-      return actor.deleteMessage(principal, messageId);
+      return a(actor).deleteMessage(Principal.fromText(otherUser), messageId);
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['conversation', variables.otherUser] });
       queryClient.invalidateQueries({ queryKey: ['inbox'] });
-      queryClient.invalidateQueries({ queryKey: ['conversation'] });
     },
   });
 }
 
-// ===== ADMIN =====
-
-export function useIsAdmin() {
+export function useGetUnreadMessageCount() {
   const { actor, isFetching } = useActor();
+  const { identity } = useInternetIdentity();
 
-  return useQuery<boolean>({
-    queryKey: ['isAdmin'],
+  return useQuery<number>({
+    queryKey: ['unreadMessageCount'],
     queryFn: async () => {
-      if (!actor) return false;
-      return actor.isAdmin();
+      if (!actor) return 0;
+      const inbox: ConversationSummary[] = await a(actor).getInbox();
+      return inbox.reduce((sum, conv) => sum + conv.unreadCount, 0);
     },
-    enabled: !!actor && !isFetching,
+    enabled: !!actor && !isFetching && !!identity,
+    refetchInterval: 30000,
   });
 }
 
-export function useDeleteUser() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (userId: string) => {
-      if (!actor) throw new Error('Actor not available');
-      const principal = Principal.fromText(userId);
-      return actor.deleteUser(principal);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['allUsers'] });
-    },
-  });
-}
-
-// ===== NOTIFICATIONS =====
+// ── Notifications ────────────────────────────────────────────────────────────
 
 export function useGetNotifications() {
   const { actor, isFetching } = useActor();
+  const { identity } = useInternetIdentity();
 
   return useQuery<Notification[]>({
     queryKey: ['notifications'],
     queryFn: async () => {
       if (!actor) return [];
-      try {
-        return await actor.getNotifications();
-      } catch {
-        return [];
-      }
+      return a(actor).getNotifications();
     },
-    enabled: !!actor && !isFetching,
-    retry: false,
+    enabled: !!actor && !isFetching && !!identity,
   });
 }
 
 export function useGetUnreadNotificationCount() {
   const { actor, isFetching } = useActor();
+  const { identity } = useInternetIdentity();
 
-  return useQuery<bigint>({
+  return useQuery<number>({
     queryKey: ['unreadNotificationCount'],
     queryFn: async () => {
-      if (!actor) return BigInt(0);
-      try {
-        return await actor.getUnreadNotificationCount();
-      } catch {
-        return BigInt(0);
-      }
+      if (!actor) return 0;
+      return a(actor).getUnreadNotificationCount();
     },
-    enabled: !!actor && !isFetching,
-    retry: false,
+    enabled: !!actor && !isFetching && !!identity,
     refetchInterval: 30000,
   });
 }
@@ -684,9 +883,9 @@ export function useMarkNotificationRead() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (notifId: bigint) => {
+    mutationFn: async ({ notifId }: { notifId: number }) => {
       if (!actor) throw new Error('Actor not available');
-      return actor.markNotificationRead(notifId);
+      return a(actor).markNotificationRead(notifId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
@@ -702,7 +901,7 @@ export function useMarkAllNotificationsRead() {
   return useMutation({
     mutationFn: async () => {
       if (!actor) throw new Error('Actor not available');
-      return actor.markAllNotificationsRead();
+      return a(actor).markAllNotificationsRead();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
@@ -711,7 +910,7 @@ export function useMarkAllNotificationsRead() {
   });
 }
 
-// ===== BUILD LOGS =====
+// ── Build Logs ───────────────────────────────────────────────────────────────
 
 export function useGetAllBuildLogs() {
   const { actor, isFetching } = useActor();
@@ -720,34 +919,33 @@ export function useGetAllBuildLogs() {
     queryKey: ['buildLogs'],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.getAllBuildLogs();
+      return a(actor).getAllBuildLogs();
     },
     enabled: !!actor && !isFetching,
   });
 }
 
-export function useGetBuildLogById(id: number | undefined) {
+export function useGetBuildLogById(id: number) {
   const { actor, isFetching } = useActor();
 
-  return useQuery({
+  return useQuery<BuildLog | null>({
     queryKey: ['buildLog', id],
     queryFn: async () => {
-      if (!actor || id === undefined) return null;
-      return actor.getBuildLogById(BigInt(id));
+      if (!actor) return null;
+      return a(actor).getBuildLogById(id);
     },
     enabled: !!actor && !isFetching && id !== undefined,
   });
 }
 
-export function useGetBuildLogsByUser(userId: string | undefined) {
+export function useGetBuildLogsByUser(userId: string) {
   const { actor, isFetching } = useActor();
 
   return useQuery<BuildLog[]>({
     queryKey: ['buildLogs', 'user', userId],
     queryFn: async () => {
-      if (!actor || !userId) return [];
-      const principal = Principal.fromText(userId);
-      return actor.getBuildLogsByUser(principal);
+      if (!actor) return [];
+      return a(actor).getBuildLogsByUser(Principal.fromText(userId));
     },
     enabled: !!actor && !isFetching && !!userId,
   });
@@ -772,7 +970,7 @@ export function useCreateBuildLog() {
       description: string;
     }) => {
       if (!actor) throw new Error('Actor not available');
-      return actor.createBuildLog(title, carMake, carModel, carYear, description);
+      return a(actor).createBuildLog(title, carMake, carModel, carYear, description);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['buildLogs'] });
@@ -797,7 +995,7 @@ export function useAddBuildStage() {
       imageUrl: string;
     }) => {
       if (!actor) throw new Error('Actor not available');
-      return actor.addBuildStage(BigInt(buildLogId), stageTitle, stageDescription, imageUrl);
+      return a(actor).addBuildStage(buildLogId, stageTitle, stageDescription, imageUrl);
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['buildLog', variables.buildLogId] });
@@ -811,9 +1009,9 @@ export function useDeleteBuildLog() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async ({ id }: { id: number }) => {
       if (!actor) throw new Error('Actor not available');
-      return actor.deleteBuildLog(BigInt(id));
+      return a(actor).deleteBuildLog(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['buildLogs'] });
@@ -821,7 +1019,7 @@ export function useDeleteBuildLog() {
   });
 }
 
-// ===== LISTINGS =====
+// ── Classifieds ──────────────────────────────────────────────────────────────
 
 export function useGetAllActiveListings() {
   const { actor, isFetching } = useActor();
@@ -830,36 +1028,22 @@ export function useGetAllActiveListings() {
     queryKey: ['listings'],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.getAllActiveListings();
+      return a(actor).getAllActiveListings();
     },
     enabled: !!actor && !isFetching,
   });
 }
 
-export function useGetListingById(id: number | undefined) {
+export function useGetListingById(id: number) {
   const { actor, isFetching } = useActor();
 
-  return useQuery({
+  return useQuery<Listing | null>({
     queryKey: ['listing', id],
     queryFn: async () => {
-      if (!actor || id === undefined) return null;
-      return actor.getListingById(BigInt(id));
+      if (!actor) return null;
+      return a(actor).getListingById(id);
     },
     enabled: !!actor && !isFetching && id !== undefined,
-  });
-}
-
-export function useGetListingsBySeller(userId: string | undefined) {
-  const { actor, isFetching } = useActor();
-
-  return useQuery<Listing[]>({
-    queryKey: ['listings', 'seller', userId],
-    queryFn: async () => {
-      if (!actor || !userId) return [];
-      const principal = Principal.fromText(userId);
-      return actor.getListingsBySeller(principal);
-    },
-    enabled: !!actor && !isFetching && !!userId,
   });
 }
 
@@ -890,7 +1074,7 @@ export function useCreateListing() {
       category: string;
     }) => {
       if (!actor) throw new Error('Actor not available');
-      return actor.createListing(title, description, make, model, year, price, condition, imageUrl, category);
+      return a(actor).createListing(title, description, make, model, year, price, condition, imageUrl, category);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['listings'] });
@@ -903,9 +1087,9 @@ export function useDeactivateListing() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async ({ id }: { id: number }) => {
       if (!actor) throw new Error('Actor not available');
-      return actor.deactivateListing(BigInt(id));
+      return a(actor).deactivateListing(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['listings'] });
@@ -913,32 +1097,18 @@ export function useDeactivateListing() {
   });
 }
 
-// ===== RACING CHALLENGES =====
+// ── Racing Challenges ────────────────────────────────────────────────────────
 
-export function useGetChallengesForVideo(videoId: number | undefined) {
+export function useGetChallengesForVideo(videoId: string) {
   const { actor, isFetching } = useActor();
 
   return useQuery<RacingChallenge[]>({
-    queryKey: ['challenges', 'video', videoId],
+    queryKey: ['challenges', videoId],
     queryFn: async () => {
-      if (!actor || videoId === undefined) return [];
-      return actor.getChallengesForVideo(BigInt(videoId));
+      if (!actor) return [];
+      return a(actor).getChallengesForVideo(videoId);
     },
-    enabled: !!actor && !isFetching && videoId !== undefined,
-  });
-}
-
-export function useGetChallengesForUser(userId: string | undefined) {
-  const { actor, isFetching } = useActor();
-
-  return useQuery<RacingChallenge[]>({
-    queryKey: ['challenges', 'user', userId],
-    queryFn: async () => {
-      if (!actor || !userId) return [];
-      const principal = Principal.fromText(userId);
-      return actor.getChallengesForUser(principal);
-    },
-    enabled: !!actor && !isFetching && !!userId,
+    enabled: !!actor && !isFetching && !!videoId,
   });
 }
 
@@ -952,13 +1122,12 @@ export function usePostChallenge() {
       responseVideoId,
       challengedPrincipal,
     }: {
-      originalVideoId: number;
-      responseVideoId: number;
+      originalVideoId: string;
+      responseVideoId: string;
       challengedPrincipal: string;
     }) => {
       if (!actor) throw new Error('Actor not available');
-      const principal = Principal.fromText(challengedPrincipal);
-      return actor.postChallenge(BigInt(originalVideoId), BigInt(responseVideoId), principal);
+      return a(actor).postChallenge(originalVideoId, responseVideoId, Principal.fromText(challengedPrincipal));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['challenges'] });
@@ -966,99 +1135,48 @@ export function usePostChallenge() {
   });
 }
 
-// ===== SAVED VIDEOS =====
+// ── Admin ────────────────────────────────────────────────────────────────────
 
-export function useGetSavedVideos() {
+export function useIsAdmin() {
   const { actor, isFetching } = useActor();
+  const { identity } = useInternetIdentity();
 
-  return useQuery<Video[]>({
-    queryKey: ['savedVideos'],
+  return useQuery<boolean>({
+    queryKey: ['isAdmin'],
     queryFn: async () => {
-      if (!actor) return [];
-      try {
-        return await actor.getSavedVideos();
-      } catch {
-        return [];
-      }
+      if (!actor) return false;
+      return actor.isCallerAdmin();
     },
-    enabled: !!actor && !isFetching,
-    retry: false,
+    enabled: !!actor && !isFetching && !!identity,
   });
 }
 
-export function useSaveVideo() {
+export function useDeleteUser() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (videoId: number) => {
+    mutationFn: async ({ userId }: { userId: string }) => {
       if (!actor) throw new Error('Actor not available');
-      return actor.saveVideo(BigInt(videoId));
+      return a(actor).deleteUser(Principal.fromText(userId));
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['savedVideos'] });
-      queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
+      queryClient.invalidateQueries({ queryKey: ['allUsers'] });
     },
   });
 }
 
-export function useUnsaveVideo() {
+export function useSaveCallerUserProfile() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (videoId: number) => {
+    mutationFn: async (profile: UserProfile) => {
       if (!actor) throw new Error('Actor not available');
-      return actor.unsaveVideo(BigInt(videoId));
+      return a(actor).saveCallerUserProfile(profile);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['savedVideos'] });
       queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
-    },
-  });
-}
-
-// ===== USER STATS =====
-
-export function useGetUserStats(userId: string | undefined) {
-  const { actor, isFetching } = useActor();
-
-  return useQuery<UserStats>({
-    queryKey: ['userStats', userId],
-    queryFn: async () => {
-      if (!actor || !userId) throw new Error('Actor or userId not available');
-      const principal = Principal.fromText(userId);
-      return actor.getUserStats(principal);
-    },
-    enabled: !!actor && !isFetching && !!userId,
-  });
-}
-
-// ===== BADGES =====
-
-export function useGetUserBadges(userId: string | undefined) {
-  const { actor, isFetching } = useActor();
-
-  return useQuery<Badge[]>({
-    queryKey: ['userBadges', userId],
-    queryFn: async () => {
-      if (!actor || !userId) return [];
-      const principal = Principal.fromText(userId);
-      return actor.getUserBadges(principal);
-    },
-    enabled: !!actor && !isFetching && !!userId,
-  });
-}
-
-// ===== INCREMENT VIEW COUNT =====
-
-export function useIncrementViewCount() {
-  const { actor } = useActor();
-
-  return useMutation({
-    mutationFn: async (videoId: string) => {
-      if (!actor) throw new Error('Actor not available');
-      return actor.incrementViewCount(videoId);
     },
   });
 }

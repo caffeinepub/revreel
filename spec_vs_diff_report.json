@@ -1,14 +1,23 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-24T18:48:33.409Z",
-  "summary": "The diff correctly implements REQ-1 by replacing the broken external-URL/Google-search navigation with TanStack Router's useNavigate hook in the NotificationCard component. The handler navigates to '/profile/$userId' using the sender's principal ID, covers all notification types, and skips navigation only for anonymous/system senders. All acceptance criteria appear to be satisfied.",
-  "missing_requirements": [],
+  "generatedAt": "2026-02-24T19:47:00.429Z",
+  "summary": "The diff shows LandingPage.tsx was modified to include a tuner car hero image section with an img tag referencing what appears to be a tuner car image. However, the critical image asset file (tuner-car-hero.dim_1200x600.png) is not listed as an added file in the diff, and the image src referenced in LandingPage.tsx is truncated before the full src is visible. The project_state.json still marks the feature as pending.",
+  "missing_requirements": [
+    {
+      "id": "REQ-1",
+      "requirement": "Use the generated image asset from frontend/public/assets/generated (tuner-car-hero.dim_1200x600.png) and render it in LandingPage.tsx.",
+      "reason": "The diff shows 0 added files. The required image asset tuner-car-hero.dim_1200x600.png does not appear in the added files list. Without the actual image asset being added to frontend/public/assets/generated, the acceptance criteria requiring display of a tuner/import style car image cannot be fully verified.",
+      "evidence": [
+        "frontend/public/assets/generated/tuner-car-hero.dim_1200x600.png"
+      ]
+    }
+  ],
   "hallucinated_features": [],
-  "confidence": 0.97,
+  "confidence": 0.65,
   "changed_files": [
     "frontend-file-summaries.txt",
-    "frontend/src/pages/Notifications.tsx",
+    "frontend/src/pages/LandingPage.tsx",
     "project_state.json"
   ]
 }

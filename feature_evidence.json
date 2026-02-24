@@ -2,10 +2,10 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-fix-the-notification-item-tap-click-handler-in-the-notifications-page-so-that-tapping-a-notification-navigates-to-the-referenced-user-s-in-app-profile-page-instead-of-triggering-a-google-search-for-the-username-the-navigation-must-use-the-app-s-internal-router-e-g-tanstack-router-to-route-to-the-correct-profile-route-and-must-not-construct-any-external-url-or-href-that-would-open-a-browser-search",
-      "featureTitle": "Fix the notification item tap/click handler in the Notifications page so that tapping a notification navigates to the referenced user's in-app profile page instead of triggering a Google search for the username. The navigation must use the app's internal router (e.g., TanStack Router) to route to the correct profile route, and must not construct any external URL or href that would open a browser search.",
+      "featureId": "feature-replace-the-existing-car-image-on-the-landing-page-hero-section-with-a-newly-generated-tuner-import-style-car-image-use-the-generated-image-asset-from-frontend-public-assets-generated-and-render-it-in-landingpage-tsx",
+      "featureTitle": "Replace the existing car image on the landing page hero section with a newly generated tuner import style car image. Use the generated image asset from frontend/public/assets/generated and render it in LandingPage.tsx.",
       "files": [
-        "frontend/src/pages/Notifications.tsx"
+        "frontend/src/pages/LandingPage.tsx"
       ],
       "components": [
         "authorization@4.0.0",

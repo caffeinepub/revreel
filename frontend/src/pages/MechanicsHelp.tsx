@@ -1,84 +1,47 @@
 import React, { useState } from 'react';
-import { Plus, Wrench, MessageSquare, Clock, LogIn, Loader2 } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
-import { Skeleton } from '@/components/ui/skeleton';
-import { useGetAllMechanicsPosts, useGetUserProfile } from '../hooks/useQueries';
+import { Plus, Wrench, MessageSquare, Clock } from 'lucide-react';
+import { type MechanicsPost, useGetAllMechanicsPosts } from '../hooks/useQueries';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import PostIssueModal from '../components/PostIssueModal';
-import { type MechanicsPost } from '../backend';
-import { toast } from 'sonner';
 
-const CATEGORY_COLORS: Record<string, string> = {
-  Engine: 'bg-red-500/20 text-red-400 border-red-500/40',
-  Brakes: 'bg-orange-500/20 text-orange-400 border-orange-500/40',
-  Suspension: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40',
-  Electrical: 'bg-blue-500/20 text-blue-400 border-blue-500/40',
-  Bodywork: 'bg-purple-500/20 text-purple-400 border-purple-500/40',
-  Transmission: 'bg-neon/20 text-neon border-neon/40',
-  Other: 'bg-muted text-muted-foreground border-border/40',
-};
+const CATEGORIES = ['All', 'Engine', 'Brakes', 'Suspension', 'Electrical', 'Bodywork', 'Transmission', 'Other'];
 
 function timeAgo(timestamp: bigint): string {
   const ms = Number(timestamp) / 1_000_000;
   const diff = Date.now() - ms;
-  const minutes = Math.floor(diff / 60_000);
-  const hours = Math.floor(diff / 3_600_000);
-  const days = Math.floor(diff / 86_400_000);
-  if (minutes < 1) return 'just now';
-  if (minutes < 60) return `${minutes}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  return `${days}d ago`;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
 }
 
 function PostCard({ post }: { post: MechanicsPost }) {
-  const authorId = post.author.toString();
-  const { data: authorProfile } = useGetUserProfile(authorId);
-  const categoryColor = CATEGORY_COLORS[post.category] ?? CATEGORY_COLORS['Other'];
-
   return (
-    <Link
-      to="/mechanics/$postId"
-      params={{ postId: post.id.toString() }}
-      className="block rounded-xl border border-border/40 bg-card/60 backdrop-blur-sm overflow-hidden hover:border-neon/30 transition-all group"
-    >
-      <div className="h-0.5 bg-gradient-to-r from-neon/60 via-neon/20 to-transparent" />
-      <div className="p-4 space-y-3">
-        {/* Header row */}
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="font-display text-base tracking-wide text-foreground group-hover:text-neon transition-colors leading-tight flex-1">
-            {post.title}
-          </h3>
-          <span className={`shrink-0 text-[10px] font-display tracking-wider px-2 py-0.5 rounded border ${categoryColor}`}>
-            {post.category.toUpperCase()}
-          </span>
-        </div>
-
-        {/* Description preview */}
-        <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
-          {post.description}
-        </p>
-
-        {/* Footer row */}
-        <div className="flex items-center justify-between pt-1">
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 rounded-full bg-neon/20 border border-neon/30 flex items-center justify-center">
-              <span className="text-[9px] font-display text-neon">
-                {(authorProfile?.username ?? '?').slice(0, 1).toUpperCase()}
-              </span>
-            </div>
-            <span className="text-xs text-muted-foreground font-display">
-              {authorProfile?.username ?? 'Loading...'}
+    <Link to="/mechanics/$postId" params={{ postId: String(post.id) }} className="block">
+      <div className="bg-card border border-border rounded-2xl p-4 hover:border-neon-orange/40 transition-colors">
+        <div className="flex items-start gap-3 mb-2">
+          <div className="w-10 h-10 rounded-xl bg-neon-orange/10 flex items-center justify-center flex-shrink-0">
+            <Wrench size={18} className="text-neon-orange" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-bold text-foreground text-base leading-tight line-clamp-1">{post.title}</h3>
+            <span className="inline-block mt-0.5 px-2 py-0.5 rounded-full bg-neon-orange/20 text-neon-orange text-xs font-bold">
+              {post.category}
             </span>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-              <MessageSquare className="w-3.5 h-3.5" />
-              {post.comments.length}
-            </span>
-            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Clock className="w-3.5 h-3.5" />
-              {timeAgo(post.createdAt)}
-            </span>
+        </div>
+        <p className="text-muted-foreground text-sm line-clamp-2 mb-3">{post.description}</p>
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <div className="flex items-center gap-1">
+            <MessageSquare size={12} />
+            <span>{post.comments.length} replies</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <Clock size={12} />
+            <span>{timeAgo(post.createdAt)}</span>
           </div>
         </div>
       </div>
@@ -87,99 +50,73 @@ function PostCard({ post }: { post: MechanicsPost }) {
 }
 
 export default function MechanicsHelp() {
+  const [showModal, setShowModal] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const { data: posts = [], isLoading } = useGetAllMechanicsPosts();
   const { identity } = useInternetIdentity();
   const isAuthenticated = !!identity;
-  const [showPostModal, setShowPostModal] = useState(false);
 
-  const { data: posts, isLoading } = useGetAllMechanicsPosts();
+  const filtered = selectedCategory === 'All'
+    ? posts
+    : posts.filter(p => p.category === selectedCategory);
 
-  // Sort newest first
-  const sortedPosts = [...(posts ?? [])].sort((a, b) => {
-    return Number(b.createdAt) - Number(a.createdAt);
-  });
-
-  const handleFabClick = () => {
-    if (!isAuthenticated) {
-      toast.info('Login to post an issue!');
-      return;
-    }
-    setShowPostModal(true);
-  };
+  const sorted = [...filtered].sort((a, b) => Number(b.createdAt) - Number(a.createdAt));
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Page Header */}
-      <div className="relative px-4 pt-6 pb-4">
-        <div className="flex items-center gap-3 mb-1">
-          <Wrench className="w-6 h-6 text-neon" />
-          <h1 className="font-display text-3xl tracking-widest neon-text">MECHANICS HELP</h1>
+    <div className="min-h-screen bg-background pb-24 pt-20">
+      <div className="max-w-lg mx-auto px-4">
+        <div className="flex items-center justify-between mb-5">
+          <h1 className="text-3xl font-display font-bold text-foreground">Mechanics Help</h1>
+          {isAuthenticated && (
+            <button
+              onClick={() => setShowModal(true)}
+              className="flex items-center gap-2 px-5 py-3 rounded-xl bg-neon-orange text-black font-bold text-base hover:bg-neon-orange/90 transition-colors"
+            >
+              <Plus size={18} />
+              Ask
+            </button>
+          )}
         </div>
-        <p className="text-sm text-muted-foreground pl-9">Post your car issues and get help from the community</p>
-      </div>
 
-      {/* Content */}
-      <div className="px-4 pb-28 space-y-3">
+        {/* Category filter */}
+        <div className="flex gap-2 overflow-x-auto pb-2 mb-5 scrollbar-hide">
+          {CATEGORIES.map(cat => (
+            <button
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`flex-shrink-0 px-4 py-2.5 rounded-full text-sm font-bold transition-colors ${
+                selectedCategory === cat
+                  ? 'bg-neon-orange text-black'
+                  : 'bg-card border border-border text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+
         {isLoading ? (
-          Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="rounded-xl border border-border/40 p-4 space-y-3">
-              <div className="flex justify-between">
-                <Skeleton className="h-5 w-48" />
-                <Skeleton className="h-5 w-20" />
-              </div>
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-3/4" />
-              <div className="flex justify-between pt-1">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-4 w-20" />
-              </div>
-            </div>
-          ))
-        ) : sortedPosts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="w-16 h-16 rounded-full bg-neon/10 border border-neon/20 flex items-center justify-center mb-4">
-              <Wrench className="w-8 h-8 text-neon/60" />
-            </div>
-            <h3 className="font-display text-lg tracking-wider text-foreground mb-2">NO ISSUES YET</h3>
-            <p className="text-sm text-muted-foreground max-w-xs">
-              Be the first to post a mechanics issue and get help from fellow racers!
-            </p>
-            {isAuthenticated && (
-              <button
-                onClick={() => setShowPostModal(true)}
-                className="mt-6 font-display tracking-wider text-sm px-5 py-2.5 rounded-lg bg-neon text-primary-foreground hover:bg-neon/90 neon-glow transition-all flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                POST AN ISSUE
-              </button>
-            )}
-            {!isAuthenticated && (
-              <div className="mt-6 flex items-center gap-2 px-4 py-2.5 rounded-lg border border-neon/30 bg-neon/5">
-                <LogIn className="w-4 h-4 text-neon" />
-                <span className="text-xs text-neon font-display tracking-wide">LOGIN TO POST AN ISSUE</span>
-              </div>
-            )}
+          <div className="flex justify-center py-16">
+            <div className="w-8 h-8 border-2 border-neon-orange border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : sorted.length === 0 ? (
+          <div className="text-center py-16 text-muted-foreground">
+            <Wrench size={48} className="mx-auto mb-4 opacity-30" />
+            <p className="text-lg font-medium">No posts yet</p>
+            <p className="text-sm mt-1">Be the first to ask a question!</p>
           </div>
         ) : (
-          sortedPosts.map((post) => (
-            <PostCard key={post.id.toString()} post={post} />
-          ))
+          <div className="space-y-4">
+            {sorted.map(post => (
+              <PostCard key={post.id} post={post} />
+            ))}
+          </div>
         )}
       </div>
 
-      {/* Floating Action Button */}
-      <button
-        onClick={handleFabClick}
-        className="fixed bottom-20 right-4 z-40 w-14 h-14 rounded-full bg-neon text-primary-foreground shadow-lg neon-glow flex items-center justify-center transition-transform hover:scale-105 active:scale-95"
-        aria-label="Post an issue"
-      >
-        <Plus className="w-6 h-6" />
-      </button>
-
-      {/* Post Issue Modal */}
-      <PostIssueModal
-        open={showPostModal}
-        onClose={() => setShowPostModal(false)}
-      />
+      {showModal && (
+        <PostIssueModal open={showModal} onClose={() => setShowModal(false)} />
+      )}
     </div>
   );
 }

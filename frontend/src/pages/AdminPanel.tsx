@@ -74,7 +74,7 @@ function AdminPanelContent() {
     setDeleteError(null);
     setDeleteSuccess(null);
     try {
-      await deleteUser.mutateAsync(userIdInput.trim());
+      await deleteUser.mutateAsync({ userId: userIdInput.trim() });
       setDeleteSuccess(`User ${userIdInput.trim()} has been deleted successfully.`);
       setUserIdInput('');
     } catch (err: unknown) {
@@ -179,7 +179,7 @@ function AdminPanelContent() {
 
           {deleteSuccess && (
             <div className="flex items-start gap-2 p-3 rounded-md bg-green-500/10 border border-green-500/30 text-green-400 text-sm">
-              <Shield className="w-4 h-4 mt-0.5 shrink-0" />
+              <Check className="w-4 h-4 mt-0.5 shrink-0" />
               <span>{deleteSuccess}</span>
             </div>
           )}
@@ -189,7 +189,7 @@ function AdminPanelContent() {
               <Button
                 variant="destructive"
                 disabled={!userIdInput.trim() || deleteUser.isPending}
-                className="w-full"
+                className="w-full font-display tracking-wider"
               >
                 {deleteUser.isPending ? (
                   <>
@@ -206,35 +206,30 @@ function AdminPanelContent() {
             </AlertDialogTrigger>
             <AlertDialogContent className="bg-card border-border">
               <AlertDialogHeader>
-                <AlertDialogTitle className="text-foreground">
-                  Confirm User Deletion
+                <AlertDialogTitle className="font-display text-foreground">
+                  Confirm Delete
                 </AlertDialogTitle>
                 <AlertDialogDescription className="text-muted-foreground">
-                  Are you sure you want to permanently delete the user with Principal ID:
-                  <span className="block mt-2 font-mono text-xs text-foreground/80 break-all bg-background/50 p-2 rounded border border-border/50">
-                    {userIdInput.trim()}
-                  </span>
-                  This action <strong className="text-destructive">cannot be undone</strong>.
+                  Are you sure you want to delete user{' '}
+                  <span className="font-mono text-foreground">{userIdInput}</span>? This action
+                  cannot be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel className="border-border/60">Cancel</AlertDialogCancel>
+                <AlertDialogCancel className="font-display text-xs tracking-wider">
+                  CANCEL
+                </AlertDialogCancel>
                 <AlertDialogAction
                   onClick={handleDeleteUser}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90 font-display text-xs tracking-wider"
                 >
-                  Delete User
+                  DELETE
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
         </CardContent>
       </Card>
-
-      {/* Footer note */}
-      <p className="mt-6 text-xs text-muted-foreground/50 text-center">
-        Admin actions are logged and irreversible. Use with caution.
-      </p>
     </div>
   );
 }
@@ -242,7 +237,9 @@ function AdminPanelContent() {
 export default function AdminPanel() {
   return (
     <AuthGuard>
-      <AdminPanelContent />
+      <div className="min-h-screen bg-background pt-4 pb-24">
+        <AdminPanelContent />
+      </div>
     </AuthGuard>
   );
 }

@@ -1,11 +1,10 @@
 # Specification
 
 ## Summary
-**Goal:** Fix the notification tap handler so it navigates to the referenced user's in-app profile page instead of triggering an external Google search.
+**Goal:** Replace the landing page hero car image with a JDM tuner/import style car image.
 
 **Planned changes:**
-- Update the notification item tap/click handler in the Notifications page to use the app's internal TanStack Router for navigation
-- Remove any external URL or href construction that causes a browser/Google search
-- Ensure the correct username or principal is passed to the profile route for all user-referencing notification types
+- Generate a new tuner/import style car image asset
+- Update `LandingPage.tsx` to use the new car image in the hero section
 
-**User-visible outcome:** Tapping a notification now opens the correct user's profile page within the app, with no external browser navigation or Google search occurring.
+**User-visible outcome:** The landing page hero section displays a sleek JDM tuner/import style sport car instead of the previous car image.

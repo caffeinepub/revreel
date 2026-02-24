@@ -12,9 +12,12 @@ export default function BuildLogDetails() {
   const { buildId } = useParams({ from: '/app-layout/builds/$buildId' });
   const navigate = useNavigate();
   const { identity } = useInternetIdentity();
-  const id = parseInt(buildId, 10);
-  const { data: log, isLoading } = useGetBuildLogById(isNaN(id) ? undefined : id);
-  const { data: author } = useGetUserProfile(log?.authorId.toString());
+
+  const idNum = Number(buildId);
+
+  const { data: log, isLoading } = useGetBuildLogById(isNaN(idNum) ? 0 : idNum);
+  const authorId = log?.authorId?.toString() ?? '';
+  const { data: author } = useGetUserProfile(authorId);
   const addStage = useAddBuildStage();
   const deleteBuildLog = useDeleteBuildLog();
 
@@ -29,7 +32,7 @@ export default function BuildLogDetails() {
     if (!log) return;
     try {
       await addStage.mutateAsync({
-        buildLogId: Number(log.id),
+        buildLogId: log.id,
         stageTitle: stageForm.title,
         stageDescription: stageForm.description,
         imageUrl: stageForm.imageUrl,
@@ -44,8 +47,8 @@ export default function BuildLogDetails() {
   const handleDelete = async () => {
     if (!log || !confirm('Delete this build log?')) return;
     try {
-      await deleteBuildLog.mutateAsync(Number(log.id));
-      navigate({ to: '/builds' });
+      await deleteBuildLog.mutateAsync({ id: log.id });
+      navigate({ to: '/feed' });
     } catch (err) {
       console.error(err);
     }
@@ -65,8 +68,11 @@ export default function BuildLogDetails() {
       <div className="max-w-2xl mx-auto px-4 py-16 text-center">
         <Wrench className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-50" />
         <p className="text-muted-foreground">Build log not found</p>
-        <button onClick={() => navigate({ to: '/builds' })} className="mt-4 text-neon-orange hover:underline text-sm">
-          Back to Build Logs
+        <button
+          onClick={() => navigate({ to: '/feed' })}
+          className="mt-4 text-neon-orange hover:underline text-sm"
+        >
+          Back to Feed
         </button>
       </div>
     );
@@ -75,11 +81,11 @@ export default function BuildLogDetails() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-6">
       <button
-        onClick={() => navigate({ to: '/builds' })}
+        onClick={() => navigate({ to: '/feed' })}
         className="flex items-center gap-1 text-muted-foreground hover:text-foreground mb-4 text-sm transition-colors"
       >
         <ChevronLeft className="w-4 h-4" />
-        Back to Builds
+        Back
       </button>
 
       {/* Header */}
@@ -92,7 +98,11 @@ export default function BuildLogDetails() {
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <div className="flex items-center gap-2">
             {author?.avatarUrl && (
-              <img src={author.avatarUrl} alt={author.username} className="w-5 h-5 rounded-full object-cover" />
+              <img
+                src={author.avatarUrl}
+                alt={author.username}
+                className="w-5 h-5 rounded-full object-cover"
+              />
             )}
             <span>by {author?.username ?? '...'}</span>
           </div>
@@ -132,7 +142,7 @@ export default function BuildLogDetails() {
               <Label className="text-muted-foreground text-sm">Stage Title</Label>
               <Input
                 value={stageForm.title}
-                onChange={e => setStageForm(f => ({ ...f, title: e.target.value }))}
+                onChange={(e) => setStageForm((f) => ({ ...f, title: e.target.value }))}
                 placeholder="e.g. Engine Removal"
                 className="bg-background border-border mt-1"
                 required
@@ -142,7 +152,7 @@ export default function BuildLogDetails() {
               <Label className="text-muted-foreground text-sm">Description</Label>
               <Textarea
                 value={stageForm.description}
-                onChange={e => setStageForm(f => ({ ...f, description: e.target.value }))}
+                onChange={(e) => setStageForm((f) => ({ ...f, description: e.target.value }))}
                 placeholder="What did you do in this stage?"
                 className="bg-background border-border mt-1 resize-none"
                 rows={2}
@@ -152,13 +162,18 @@ export default function BuildLogDetails() {
               <Label className="text-muted-foreground text-sm">Image URL (optional)</Label>
               <Input
                 value={stageForm.imageUrl}
-                onChange={e => setStageForm(f => ({ ...f, imageUrl: e.target.value }))}
+                onChange={(e) => setStageForm((f) => ({ ...f, imageUrl: e.target.value }))}
                 placeholder="https://..."
                 className="bg-background border-border mt-1"
               />
             </div>
             <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={() => setShowAddStage(false)} className="flex-1 border-border text-sm">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowAddStage(false)}
+                className="flex-1 border-border text-sm"
+              >
                 Cancel
               </Button>
               <Button
@@ -203,7 +218,7 @@ export default function BuildLogDetails() {
                         src={stage.imageUrl}
                         alt={stage.title}
                         className="mt-3 rounded-lg w-full object-cover max-h-48"
-                        onError={e => (e.currentTarget.style.display = 'none')}
+                        onError={(e) => (e.currentTarget.style.display = 'none')}
                       />
                     )}
                   </div>

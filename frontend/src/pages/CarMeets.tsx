@@ -1,19 +1,113 @@
 import React, { useState } from 'react';
-import { Plus, Calendar, Loader2, Car } from 'lucide-react';
+import { Plus, Calendar, Car } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import CarMeetCard from '../components/CarMeetCard';
+import { Link } from '@tanstack/react-router';
 import PostMeetModal from '../components/PostMeetModal';
-import { useGetAllCarMeets, useJoinCarMeet, useLeaveCarMeet } from '../hooks/useQueries';
+import { useGetAllCarMeets, useJoinCarMeet, useLeaveCarMeet, type CarMeet } from '../hooks/useQueries';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import { toast } from 'sonner';
+import { MapPin, Users } from 'lucide-react';
 
 const CATEGORY_FILTERS = ['ALL', 'JDM', 'MUSCLE', 'DRIFT', 'DRAG', 'SUPERCAR', 'OFFROAD'];
 type DateFilter = 'upcoming' | 'past';
 
+function MeetCard({
+  meet,
+  currentUserId,
+  isAuthenticated,
+  onAttend,
+  onLeave,
+  isAttendLoading,
+  isLeaveLoading,
+  onLoginPrompt,
+}: {
+  meet: CarMeet;
+  currentUserId: string | undefined;
+  isAuthenticated: boolean;
+  onAttend: (meetId: string) => Promise<void>;
+  onLeave: (meetId: string) => Promise<void>;
+  isAttendLoading: boolean;
+  isLeaveLoading: boolean;
+  onLoginPrompt: () => void;
+}) {
+  const isAttending = currentUserId
+    ? meet.attendees.some(a => a.toString() === currentUserId)
+    : false;
+
+  const meetDate = new Date(Number(meet.date) / 1_000_000);
+  const isPast = meetDate < new Date();
+
+  const handleAttend = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (!isAuthenticated) {
+      onLoginPrompt();
+      return;
+    }
+    if (isAttending) {
+      onLeave(meet.id);
+    } else {
+      onAttend(meet.id);
+    }
+  };
+
+  return (
+    <Link to="/meets/$meetId" params={{ meetId: meet.id }} className="block">
+      <div className="bg-card border border-border rounded-2xl p-4 hover:border-neon-orange/40 transition-colors">
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="flex-1 min-w-0">
+            <h3 className="font-bold text-foreground text-base leading-tight line-clamp-1">
+              {meet.title}
+            </h3>
+            <span className="inline-block mt-1 px-2 py-0.5 rounded-full bg-neon-orange/20 text-neon-orange text-xs font-bold">
+              {meet.category}
+            </span>
+          </div>
+          {isPast && (
+            <span className="flex-shrink-0 px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-xs font-medium">
+              Past
+            </span>
+          )}
+        </div>
+
+        <div className="space-y-1.5 mb-3">
+          <div className="flex items-center gap-2 text-muted-foreground text-sm">
+            <MapPin size={14} className="flex-shrink-0" />
+            <span className="line-clamp-1">{meet.location}</span>
+          </div>
+          <div className="flex items-center gap-2 text-muted-foreground text-sm">
+            <Calendar size={14} className="flex-shrink-0" />
+            <span>{meetDate.toLocaleDateString()} {meetDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+          </div>
+          <div className="flex items-center gap-2 text-muted-foreground text-sm">
+            <Users size={14} className="flex-shrink-0" />
+            <span>{meet.attendees.length} attending</span>
+          </div>
+        </div>
+
+        {isAuthenticated && !isPast && (
+          <button
+            onClick={handleAttend}
+            disabled={isAttendLoading || isLeaveLoading}
+            className={`w-full py-3 rounded-xl text-sm font-bold transition-colors disabled:opacity-50 ${
+              isAttending
+                ? 'bg-muted text-muted-foreground hover:bg-red-500/20 hover:text-red-400'
+                : 'bg-neon-orange/20 text-neon-orange hover:bg-neon-orange/30'
+            }`}
+          >
+            {isAttending ? 'Leave Meet' : 'Attend Meet'}
+          </button>
+        )}
+      </div>
+    </Link>
+  );
+}
+
 export default function CarMeets() {
   const { identity } = useInternetIdentity();
   const isAuthenticated = !!identity;
+  const currentUserId = identity?.getPrincipal().toString();
 
   const [showPostModal, setShowPostModal] = useState(false);
   const [activeCategory, setActiveCategory] = useState('ALL');
@@ -29,15 +123,12 @@ export default function CarMeets() {
   const now = Date.now();
 
   const filteredMeets = (meets ?? []).filter((meet) => {
-    // Category filter
     const categoryMatch = activeCategory === 'ALL' || meet.category.toLowerCase() === activeCategory.toLowerCase();
-    // Date filter
     const meetMs = Number(meet.date) / 1_000_000;
     const dateMatch = dateFilter === 'upcoming' ? meetMs >= now : meetMs < now;
     return categoryMatch && dateMatch;
   });
 
-  // Sort upcoming ascending (soonest first), past descending (most recent first)
   const sortedMeets = [...filteredMeets].sort((a, b) => {
     const aMs = Number(a.date) / 1_000_000;
     const bMs = Number(b.date) / 1_000_000;
@@ -48,7 +139,7 @@ export default function CarMeets() {
     setLoadingMeetId(meetId);
     setLoadingAction('attend');
     try {
-      await joinMeet.mutateAsync(meetId);
+      await joinMeet.mutateAsync({ meetId });
       toast.success("You're attending! 🚗");
     } catch {
       toast.error('Failed to join meet.');
@@ -62,7 +153,7 @@ export default function CarMeets() {
     setLoadingMeetId(meetId);
     setLoadingAction('leave');
     try {
-      await leaveMeet.mutateAsync(meetId);
+      await leaveMeet.mutateAsync({ meetId });
       toast.success('Left the meet.');
     } catch {
       toast.error('Failed to leave meet.');
@@ -181,9 +272,11 @@ export default function CarMeets() {
           </div>
         ) : (
           sortedMeets.map((meet) => (
-            <CarMeetCard
+            <MeetCard
               key={meet.id}
               meet={meet}
+              currentUserId={currentUserId}
+              isAuthenticated={isAuthenticated}
               onAttend={handleAttend}
               onLeave={handleLeave}
               isAttendLoading={loadingMeetId === meet.id && loadingAction === 'attend'}

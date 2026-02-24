@@ -1,7 +1,7 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-24T18:48:33.412Z",
+  "generatedAt": "2026-02-24T19:47:00.432Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
@@ -12,13 +12,13 @@
     "items": [
       {
         "id": "REQ-1",
-        "summary": "Fix the notification item tap/click handler in the Notifications page so that tapping a notification navigates to the referenced user's in-app profile page instead of triggering a Google search for the username. The navigation must use the app's internal router (e.g., TanStack Router) to route to the correct profile route, and must not construct any external URL or href that would open a browser search.",
+        "summary": "Replace the existing car image on the landing page hero section with a newly generated tuner import style car image. Use the generated image asset from frontend/public/assets/generated and render it in LandingPage.tsx.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/pages/Notifications.tsx"
+          "frontend/src/pages/LandingPage.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/pages/Notifications.tsx"
+          "frontend/src/pages/LandingPage.tsx"
         ]
       }
     ]
@@ -28,7 +28,8 @@
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/pages/Notifications.tsx",
+    "frontend/public/assets/generated/tuner-car-hero.dim_1200x600.png",
+    "frontend/src/pages/LandingPage.tsx",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

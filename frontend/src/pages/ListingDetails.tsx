@@ -8,9 +8,12 @@ export default function ListingDetails() {
   const { listingId } = useParams({ from: '/app-layout/classifieds/$listingId' });
   const navigate = useNavigate();
   const { identity } = useInternetIdentity();
-  const id = parseInt(listingId, 10);
-  const { data: listing, isLoading } = useGetListingById(isNaN(id) ? undefined : id);
-  const { data: seller } = useGetUserProfile(listing?.sellerId.toString());
+
+  const idNum = Number(listingId);
+
+  const { data: listing, isLoading } = useGetListingById(isNaN(idNum) ? 0 : idNum);
+  const sellerId = listing?.sellerId?.toString() ?? '';
+  const { data: seller } = useGetUserProfile(sellerId);
   const deactivate = useDeactivateListing();
 
   const currentUserId = identity?.getPrincipal().toString();
@@ -19,18 +22,19 @@ export default function ListingDetails() {
   const handleRemove = async () => {
     if (!listing || !confirm('Remove this listing?')) return;
     try {
-      await deactivate.mutateAsync(Number(listing.id));
-      navigate({ to: '/classifieds' });
+      await deactivate.mutateAsync({ id: listing.id });
+      navigate({ to: '/feed' });
     } catch (err) {
       console.error(err);
     }
   };
 
-  const conditionColor = {
-    New: 'text-green-400 border-green-400/30 bg-green-400/10',
-    Used: 'text-yellow-400 border-yellow-400/30 bg-yellow-400/10',
-    Parts: 'text-red-400 border-red-400/30 bg-red-400/10',
-  }[listing?.condition ?? ''] ?? 'text-muted-foreground border-border bg-card/50';
+  const conditionColor =
+    {
+      New: 'text-green-400 border-green-400/30 bg-green-400/10',
+      Used: 'text-yellow-400 border-yellow-400/30 bg-yellow-400/10',
+      Parts: 'text-red-400 border-red-400/30 bg-red-400/10',
+    }[listing?.condition ?? ''] ?? 'text-muted-foreground border-border bg-card/50';
 
   if (isLoading) {
     return (
@@ -46,8 +50,11 @@ export default function ListingDetails() {
       <div className="max-w-2xl mx-auto px-4 py-16 text-center">
         <ShoppingBag className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-50" />
         <p className="text-muted-foreground">Listing not found</p>
-        <button onClick={() => navigate({ to: '/classifieds' })} className="mt-4 text-neon-orange hover:underline text-sm">
-          Back to Classifieds
+        <button
+          onClick={() => navigate({ to: '/feed' })}
+          className="mt-4 text-neon-orange hover:underline text-sm"
+        >
+          Back to Feed
         </button>
       </div>
     );
@@ -56,11 +63,11 @@ export default function ListingDetails() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-6">
       <button
-        onClick={() => navigate({ to: '/classifieds' })}
+        onClick={() => navigate({ to: '/feed' })}
         className="flex items-center gap-1 text-muted-foreground hover:text-foreground mb-4 text-sm transition-colors"
       >
         <ChevronLeft className="w-4 h-4" />
-        Back to Classifieds
+        Back
       </button>
 
       <div className="bg-card/60 backdrop-blur border border-border rounded-xl overflow-hidden">
@@ -69,10 +76,16 @@ export default function ListingDetails() {
             src={listing.imageUrl}
             alt={listing.title}
             className="w-full aspect-video object-cover"
-            onError={e => { e.currentTarget.src = '/assets/generated/placeholder-thumb.dim_640x360.png'; }}
+            onError={(e) => {
+              e.currentTarget.src = '/assets/generated/placeholder-thumb.dim_640x360.png';
+            }}
           />
         ) : (
-          <img src="/assets/generated/placeholder-thumb.dim_640x360.png" alt="placeholder" className="w-full aspect-video object-cover" />
+          <img
+            src="/assets/generated/placeholder-thumb.dim_640x360.png"
+            alt="placeholder"
+            className="w-full aspect-video object-cover"
+          />
         )}
 
         <div className="p-5">
@@ -93,13 +106,19 @@ export default function ListingDetails() {
 
           <div className="mt-4 pt-4 border-t border-border/50">
             <h3 className="font-semibold text-foreground mb-2">Description</h3>
-            <p className="text-muted-foreground text-sm whitespace-pre-wrap">{listing.description}</p>
+            <p className="text-muted-foreground text-sm whitespace-pre-wrap">
+              {listing.description}
+            </p>
           </div>
 
           <div className="mt-4 pt-4 border-t border-border/50 flex items-center justify-between">
             <div className="flex items-center gap-2">
               {seller?.avatarUrl ? (
-                <img src={seller.avatarUrl} alt={seller.username} className="w-8 h-8 rounded-full object-cover" />
+                <img
+                  src={seller.avatarUrl}
+                  alt={seller.username}
+                  className="w-8 h-8 rounded-full object-cover"
+                />
               ) : (
                 <div className="w-8 h-8 rounded-full bg-neon-orange/20 flex items-center justify-center">
                   <User className="w-4 h-4 text-neon-orange" />

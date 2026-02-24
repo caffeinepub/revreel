@@ -27,14 +27,14 @@ export default function FollowButton({ userId, isFollowing, onSuccess, className
     }
     try {
       if (isFollowing) {
-        await unfollowUser.mutateAsync(userId);
+        await unfollowUser.mutateAsync({ userId });
         toast.success('Unfollowed');
       } else {
-        await followUser.mutateAsync(userId);
+        await followUser.mutateAsync({ userId });
         toast.success('Following! 🔥');
       }
       onSuccess?.();
-    } catch (error) {
+    } catch {
       toast.error('Action failed. Please try again.');
     }
   };

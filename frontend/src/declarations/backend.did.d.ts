@@ -10,55 +10,6 @@ import type { ActorMethod } from '@icp-sdk/core/agent';
 import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
-export type Badge = { 'buildMaster' : null } |
-  { 'verified' : null } |
-  { 'racingLegend' : null } |
-  { 'dragRacer' : null } |
-  { 'communityHelper' : null } |
-  { 'driftKing' : null } |
-  { 'mechanicPro' : null };
-export interface BuildLog {
-  'id' : bigint,
-  'stages' : Array<BuildStage>,
-  'title' : string,
-  'carModel' : string,
-  'authorId' : UserId,
-  'createdAt' : bigint,
-  'description' : string,
-  'updatedAt' : bigint,
-  'carMake' : string,
-  'carYear' : string,
-}
-export interface BuildStage {
-  'id' : bigint,
-  'title' : string,
-  'createdAt' : bigint,
-  'description' : string,
-  'imageUrl' : string,
-}
-export interface CarMeet {
-  'id' : CarMeetId,
-  'organizer' : UserId,
-  'title' : string,
-  'date' : Time,
-  'createdAt' : Time,
-  'description' : string,
-  'attendees' : Array<UserId>,
-  'category' : MeetCategory,
-  'location' : Location,
-}
-export interface CarMeetDetails {
-  'id' : CarMeetId,
-  'organizer' : [] | [UserProfile],
-  'title' : string,
-  'date' : Time,
-  'createdAt' : Time,
-  'description' : string,
-  'attendees' : Array<UserProfile>,
-  'category' : MeetCategory,
-  'location' : Location,
-}
-export type CarMeetId = string;
 export type Category = string;
 export interface Comment {
   'id' : CommentId,
@@ -69,120 +20,33 @@ export interface Comment {
   'videoId' : VideoId,
 }
 export type CommentId = bigint;
-export interface ConversationSummary {
-  'lastMessage' : DirectMessage,
-  'otherUser' : UserId,
-  'unreadCount' : bigint,
-}
-export interface DirectMessage {
-  'id' : MessageId,
-  'text' : string,
-  'isRead' : boolean,
-  'toUser' : UserId,
-  'timestamp' : Time,
-  'fromUser' : UserId,
-}
 export type ExternalBlob = Uint8Array;
 export type Hashtag = string;
-export interface Listing {
-  'id' : bigint,
-  'model' : string,
-  'title' : string,
-  'make' : string,
-  'createdAt' : bigint,
-  'year' : string,
-  'description' : string,
-  'isActive' : boolean,
-  'imageUrl' : string,
-  'category' : string,
-  'sellerId' : UserId,
-  'price' : string,
-  'condition' : string,
-}
-export type Location = string;
-export interface MechanicsComment {
-  'id' : CommentId,
-  'authorId' : UserId,
-  'text' : string,
-  'timestamp' : Time,
-  'postId' : bigint,
-}
-export interface MechanicsPost {
-  'id' : bigint,
-  'title' : string,
-  'createdAt' : Time,
-  'description' : string,
-  'author' : UserId,
-  'category' : string,
-  'comments' : Array<MechanicsComment>,
-}
-export type MeetCategory = string;
-export type MessageId = bigint;
-export interface Notification {
-  'id' : bigint,
-  'notificationType' : string,
-  'createdAt' : bigint,
-  'referenceId' : string,
-  'isRead' : boolean,
-  'message' : string,
-  'recipientId' : UserId,
-  'senderId' : UserId,
-}
-export interface RacingChallenge {
-  'id' : bigint,
-  'status' : string,
-  'createdAt' : bigint,
-  'originalVideoId' : bigint,
-  'challengedId' : UserId,
-  'challengerId' : UserId,
-  'videoId' : bigint,
-}
 export type ReactionType = { 'fire' : null } |
   { 'hype' : null } |
   { 'like' : null } |
   { 'wild' : null } |
   { 'respect' : null };
-export type Result = { 'ok' : string } |
-  { 'err' : string };
 export type Time = bigint;
 export type UserId = Principal;
-export interface UserProfile {
-  'id' : UserId,
-  'bio' : string,
-  'verified' : boolean,
-  'username' : string,
-  'badges' : Array<Badge>,
-  'joinedAt' : bigint,
-  'avatarUrl' : string,
-  'savedVideos' : Array<bigint>,
-  'avatar' : ExternalBlob,
-}
 export type UserRole = { 'admin' : null } |
   { 'user' : null } |
   { 'guest' : null };
-export interface UserStats {
-  'totalViews' : bigint,
-  'joinedAt' : bigint,
-  'totalLikes' : bigint,
-  'totalFollowers' : bigint,
-  'totalFollowing' : bigint,
-  'totalVideos' : bigint,
-  'totalBuildLogs' : bigint,
-  'totalComments' : bigint,
-}
 export interface Video {
   'id' : VideoId,
   'title' : string,
   'thumbnail' : ExternalBlob,
   'hashtags' : Array<Hashtag>,
   'description' : string,
+  'mediaUrl' : ExternalBlob,
   'likes' : Array<UserId>,
   'viewCount' : bigint,
   'timestamp' : Time,
+  'mediaType' : { 'video' : null } |
+    { 'photo' : null },
   'category' : Category,
   'uploader' : UserId,
   'comments' : Array<Comment>,
-  'videoUrl' : ExternalBlob,
   'reactions' : Array<[UserId, ReactionType]>,
 }
 export type VideoId = string;
@@ -214,100 +78,20 @@ export interface _SERVICE {
   >,
   '_caffeineStorageUpdateGatewayPrincipals' : ActorMethod<[], undefined>,
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
-  'addBuildStage' : ActorMethod<[bigint, string, string, string], Result>,
-  'addComment' : ActorMethod<[VideoId, string], undefined>,
-  'addMechanicsComment' : ActorMethod<[bigint, string], MechanicsComment>,
-  'addReaction' : ActorMethod<[VideoId, ReactionType], Result>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
-  'awardBadge' : ActorMethod<[Principal, Badge], Result>,
-  'closeChallenge' : ActorMethod<[bigint], Result>,
-  'createBuildLog' : ActorMethod<
-    [string, string, string, string, string],
-    Result
-  >,
-  'createCarMeet' : ActorMethod<
-    [string, Location, Time, string, MeetCategory],
-    CarMeet
-  >,
-  'createListing' : ActorMethod<
-    [string, string, string, string, string, string, string, string, string],
-    Result
-  >,
-  'createMechanicsPost' : ActorMethod<[string, string, string], MechanicsPost>,
-  'createUser' : ActorMethod<
-    [string, string, ExternalBlob, string],
-    UserProfile
-  >,
-  'deactivateListing' : ActorMethod<[bigint], Result>,
-  'deleteBuildLog' : ActorMethod<[bigint], Result>,
-  'deleteMechanicsPost' : ActorMethod<[bigint], undefined>,
-  'deleteMessage' : ActorMethod<[UserId, MessageId], undefined>,
-  'deleteUser' : ActorMethod<[UserId], undefined>,
-  'deleteVideo' : ActorMethod<[VideoId], undefined>,
-  'followUser' : ActorMethod<[UserId], undefined>,
-  'getAllActiveListings' : ActorMethod<[], Array<Listing>>,
-  'getAllBuildLogs' : ActorMethod<[], Array<BuildLog>>,
-  'getAllCarMeets' : ActorMethod<[], Array<CarMeet>>,
-  'getAllMechanicsPosts' : ActorMethod<[], Array<MechanicsPost>>,
-  'getAllUsers' : ActorMethod<[], Array<UserProfile>>,
-  'getAllVideos' : ActorMethod<[], Array<Video>>,
-  'getBuildLogById' : ActorMethod<[bigint], [] | [BuildLog]>,
-  'getBuildLogsByUser' : ActorMethod<[Principal], Array<BuildLog>>,
-  'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
-  'getCarMeetById' : ActorMethod<[CarMeetId], [] | [CarMeet]>,
-  'getCarMeetDetails' : ActorMethod<[CarMeetId], [] | [CarMeetDetails]>,
-  'getCarMeetsByCategory' : ActorMethod<[MeetCategory], Array<CarMeet>>,
-  'getCarMeetsByOrganizer' : ActorMethod<[UserId], Array<CarMeet>>,
-  'getChallengesForUser' : ActorMethod<[Principal], Array<RacingChallenge>>,
-  'getChallengesForVideo' : ActorMethod<[bigint], Array<RacingChallenge>>,
-  'getComments' : ActorMethod<[VideoId], Array<Comment>>,
-  'getConversation' : ActorMethod<[UserId], Array<DirectMessage>>,
-  'getInbox' : ActorMethod<[], Array<ConversationSummary>>,
-  'getListingById' : ActorMethod<[bigint], [] | [Listing]>,
-  'getListingsBySeller' : ActorMethod<[Principal], Array<Listing>>,
-  'getMechanicsPostById' : ActorMethod<[bigint], [] | [MechanicsPost]>,
-  'getNotifications' : ActorMethod<[], Array<Notification>>,
-  'getOwnProfile' : ActorMethod<[], UserProfile>,
-  'getProfile' : ActorMethod<[UserId], UserProfile>,
-  'getReactionCounts' : ActorMethod<[VideoId], Array<[ReactionType, bigint]>>,
-  'getSavedVideos' : ActorMethod<[], Array<Video>>,
-  'getTrendingVideos' : ActorMethod<[], Array<Video>>,
-  'getUnreadNotificationCount' : ActorMethod<[], bigint>,
-  'getUserBadges' : ActorMethod<[Principal], Array<Badge>>,
-  'getUserProfile' : ActorMethod<[UserId], [] | [UserProfile]>,
-  'getUserStats' : ActorMethod<[Principal], UserStats>,
-  'getVideo' : ActorMethod<[VideoId], Video>,
-  'getVideoById' : ActorMethod<[VideoId], [] | [Video]>,
-  'getVideosByCategory' : ActorMethod<[Category], Array<Video>>,
-  'getVideosByHashtag' : ActorMethod<[Hashtag], Array<Video>>,
-  'incrementViewCount' : ActorMethod<[VideoId], undefined>,
-  'isAdmin' : ActorMethod<[], boolean>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
-  'joinCarMeet' : ActorMethod<[CarMeetId], CarMeet>,
-  'leaveCarMeet' : ActorMethod<[CarMeetId], CarMeet>,
-  'markAllNotificationsRead' : ActorMethod<[], Result>,
-  'markAsRead' : ActorMethod<[UserId, MessageId], undefined>,
-  'markNotificationRead' : ActorMethod<[bigint], Result>,
-  'postChallenge' : ActorMethod<[bigint, bigint, Principal], Result>,
-  'removeReaction' : ActorMethod<[VideoId], Result>,
-  'saveCallerUserProfile' : ActorMethod<
-    [string, string, ExternalBlob, string],
-    undefined
-  >,
-  'saveVideo' : ActorMethod<[bigint], Result>,
-  'sendMessage' : ActorMethod<[UserId, string], MessageId>,
-  'setVerified' : ActorMethod<[Principal, boolean], Result>,
-  'toggleLike' : ActorMethod<[VideoId], Video>,
-  'unfollowUser' : ActorMethod<[UserId], undefined>,
-  'unsaveVideo' : ActorMethod<[bigint], Result>,
-  'updateAvatar' : ActorMethod<[string], UserProfile>,
-  'updateProfile' : ActorMethod<
-    [string, string, ExternalBlob, string],
-    UserProfile
-  >,
   'uploadVideo' : ActorMethod<
-    [string, string, Array<Hashtag>, Category, ExternalBlob, ExternalBlob],
+    [
+      string,
+      string,
+      Array<Hashtag>,
+      Category,
+      ExternalBlob,
+      ExternalBlob,
+      { 'video' : null } |
+        { 'photo' : null },
+    ],
     Video
   >,
 }

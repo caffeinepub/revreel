@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from '@tanstack/react-router';
-import { useGetVideosByCategory, useGetVideosByHashtag } from '../hooks/useQueries';
+import { useGetVideosByCategory, useGetVideosByHashtag, useGetCallerUserProfile } from '../hooks/useQueries';
 import VideoCard from '../components/VideoCard';
 import { ArrowLeft, Hash, Layers } from 'lucide-react';
 
@@ -27,6 +27,7 @@ export default function FilteredFeed() {
 
   const categoryQuery = useGetVideosByCategory(type === 'category' ? value : '');
   const hashtagQuery = useGetVideosByHashtag(type === 'hashtag' ? value : '');
+  const { data: currentUserProfile } = useGetCallerUserProfile();
 
   const { data: videos, isLoading } = type === 'category' ? categoryQuery : hashtagQuery;
 
@@ -102,6 +103,7 @@ export default function FilteredFeed() {
                 isActive={index === activeIndex}
                 isMuted={isMuted}
                 onMuteToggle={handleMuteToggle}
+                currentUserProfile={currentUserProfile ?? null}
               />
             </div>
           ))}

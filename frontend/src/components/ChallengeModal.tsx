@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Flag, X } from 'lucide-react';
+import { Flag } from 'lucide-react';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import { usePostChallenge, useGetAllVideos } from '../hooks/useQueries';
 import { Video } from '../backend';
@@ -18,17 +18,14 @@ export default function ChallengeModal({ video, onClose }: Props) {
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
 
   const currentUserId = identity?.getPrincipal().toString();
-  const myVideos = allVideos?.filter(v => v.uploader.toString() === currentUserId) ?? [];
+  const myVideos = allVideos?.filter((v) => v.uploader.toString() === currentUserId) ?? [];
 
   const handleSubmit = async () => {
     if (!selectedVideoId || !identity) return;
-    const originalVideoIdNum = parseInt(video.id, 10);
-    const responseVideoIdNum = parseInt(selectedVideoId, 10);
-    if (isNaN(originalVideoIdNum) || isNaN(responseVideoIdNum)) return;
     try {
       await postChallenge.mutateAsync({
-        originalVideoId: originalVideoIdNum,
-        responseVideoId: responseVideoIdNum,
+        originalVideoId: video.id,
+        responseVideoId: selectedVideoId,
         challengedPrincipal: video.uploader.toString(),
       });
       onClose();
@@ -47,13 +44,18 @@ export default function ChallengeModal({ video, onClose }: Props) {
           </DialogTitle>
         </DialogHeader>
         <p className="text-sm text-muted-foreground mb-3">
-          Select one of your videos to challenge <span className="text-neon-orange font-semibold">{video.uploader.toString().slice(0, 8)}...</span>
+          Select one of your videos to challenge{' '}
+          <span className="text-neon-orange font-semibold">
+            {video.uploader.toString().slice(0, 8)}...
+          </span>
         </p>
         {myVideos.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-4">You need to upload a video first to challenge someone.</p>
+          <p className="text-sm text-muted-foreground text-center py-4">
+            You need to upload a video first to challenge someone.
+          </p>
         ) : (
           <div className="space-y-2 max-h-60 overflow-y-auto">
-            {myVideos.map(v => (
+            {myVideos.map((v) => (
               <button
                 key={v.id}
                 onClick={() => setSelectedVideoId(v.id)}
@@ -74,7 +76,9 @@ export default function ChallengeModal({ video, onClose }: Props) {
           </div>
         )}
         <div className="flex gap-2 mt-3">
-          <Button variant="outline" onClick={onClose} className="flex-1 border-border">Cancel</Button>
+          <Button variant="outline" onClick={onClose} className="flex-1 border-border">
+            Cancel
+          </Button>
           <Button
             onClick={handleSubmit}
             disabled={!selectedVideoId || postChallenge.isPending}

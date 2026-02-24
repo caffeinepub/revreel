@@ -1,142 +1,76 @@
 import React from 'react';
 import { Link } from '@tanstack/react-router';
-import { MessageCircle, Inbox as InboxIcon } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
+import { MessageCircle } from 'lucide-react';
+import { type ConversationSummary, useGetInbox, useGetUserProfile } from '../hooks/useQueries';
 import AuthGuard from '../components/AuthGuard';
-import { useGetInbox, useGetUserProfile } from '../hooks/useQueries';
-import { type ConversationSummary } from '../backend';
+import { useInternetIdentity } from '../hooks/useInternetIdentity';
 
-function formatRelativeTime(timestamp: bigint): string {
-  const now = Date.now();
-  const msgTime = Number(timestamp) / 1_000_000; // nanoseconds to milliseconds
-  const diffMs = now - msgTime;
-  const diffSec = Math.floor(diffMs / 1000);
-  const diffMin = Math.floor(diffSec / 60);
-  const diffHour = Math.floor(diffMin / 60);
-  const diffDay = Math.floor(diffHour / 24);
+function ConversationRow({ conv }: { conv: ConversationSummary }) {
+  const { data: profile } = useGetUserProfile(conv.otherUser.toString());
+  const name = profile?.username || conv.otherUser.toString().slice(0, 8) + '...';
+  const avatarUrl = profile?.avatarUrl || '/assets/generated/default-avatar.dim_128x128.png';
 
-  if (diffSec < 60) return 'just now';
-  if (diffMin < 60) return `${diffMin}m ago`;
-  if (diffHour < 24) return `${diffHour}h ago`;
-  if (diffDay < 7) return `${diffDay}d ago`;
-  return new Date(msgTime).toLocaleDateString();
-}
-
-function ConversationRow({ summary }: { summary: ConversationSummary }) {
-  const otherUserId = summary.otherUser.toString();
-  const { data: profile } = useGetUserProfile(otherUserId);
-  const unreadCount = Number(summary.unreadCount);
-
-  const avatarSrc =
-    profile?.avatarUrl && profile.avatarUrl.length > 0
-      ? profile.avatarUrl
-      : profile?.avatar?.getDirectURL() || '/assets/generated/default-avatar.dim_128x128.png';
-
-  const preview =
-    summary.lastMessage.text.length > 50
-      ? summary.lastMessage.text.slice(0, 50) + '…'
-      : summary.lastMessage.text;
+  const timestamp = new Date(Number(conv.lastMessage.timestamp) / 1_000_000);
+  const timeStr = timestamp.toLocaleDateString() === new Date().toLocaleDateString()
+    ? timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : timestamp.toLocaleDateString();
 
   return (
-    <Link
-      to="/messages/$userId"
-      params={{ userId: otherUserId }}
-      className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors border-b border-white/5 last:border-b-0"
-    >
-      {/* Avatar */}
-      <div className="relative flex-shrink-0">
-        <img
-          src={avatarSrc}
-          alt={profile?.username ?? 'User'}
-          className="w-12 h-12 rounded-full object-cover border-2 border-neon/30"
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = '/assets/generated/default-avatar.dim_128x128.png';
-          }}
-        />
-        {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-full bg-neon text-background text-[10px] font-bold flex items-center justify-center px-1 leading-none">
-            {unreadCount > 99 ? '99+' : unreadCount}
-          </span>
-        )}
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between gap-2">
-          <span className="font-display text-sm text-foreground truncate">
-            {profile?.username ?? otherUserId.slice(0, 8) + '…'}
-          </span>
-          <span className="text-muted-foreground text-xs flex-shrink-0">
-            {formatRelativeTime(summary.lastMessage.timestamp)}
-          </span>
+    <Link to="/messages/$userId" params={{ userId: conv.otherUser.toString() }} className="block">
+      <div className="flex items-center gap-3 px-4 py-4 hover:bg-muted/50 transition-colors border-b border-border/50">
+        <div className="relative flex-shrink-0">
+          <div className="w-12 h-12 rounded-full overflow-hidden border border-border">
+            <img src={avatarUrl} alt={name} className="w-full h-full object-cover" />
+          </div>
+          {conv.unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center rounded-full bg-neon-orange text-black text-xs font-bold">
+              {conv.unreadCount > 9 ? '9+' : conv.unreadCount}
+            </span>
+          )}
         </div>
-        <p className={`text-xs mt-0.5 truncate ${unreadCount > 0 ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
-          {preview}
-        </p>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between mb-0.5">
+            <span className="font-bold text-foreground text-base truncate">{name}</span>
+            <span className="text-xs text-muted-foreground flex-shrink-0 ml-2">{timeStr}</span>
+          </div>
+          <p className={`text-sm truncate ${conv.unreadCount > 0 ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+            {conv.lastMessage.text}
+          </p>
+        </div>
       </div>
     </Link>
   );
 }
 
-function InboxContent() {
-  const { data: inbox, isLoading } = useGetInbox();
-
-  const sorted = [...(inbox ?? [])].sort(
-    (a, b) => Number(b.lastMessage.timestamp) - Number(a.lastMessage.timestamp)
-  );
-
-  if (isLoading) {
-    return (
-      <div className="space-y-0">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-3 px-4 py-3 border-b border-white/5">
-            <Skeleton className="w-12 h-12 rounded-full flex-shrink-0" />
-            <div className="flex-1 space-y-2">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-3 w-48" />
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  if (sorted.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 gap-4 px-6">
-        <div className="w-16 h-16 rounded-full bg-neon/10 border border-neon/20 flex items-center justify-center">
-          <MessageCircle className="w-8 h-8 text-neon/60" />
-        </div>
-        <h3 className="font-display text-xl text-foreground">NO MESSAGES YET</h3>
-        <p className="text-muted-foreground text-sm text-center">
-          Visit a racer's profile and tap Message to start a conversation.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      {sorted.map((summary) => (
-        <ConversationRow key={summary.otherUser.toString()} summary={summary} />
-      ))}
-    </div>
-  );
-}
-
 export default function Inbox() {
+  const { data: conversations = [], isLoading } = useGetInbox();
+  const { identity } = useInternetIdentity();
+
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-background">
-        {/* Header */}
-        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-white/10 px-4 py-3 flex items-center gap-3">
-          <InboxIcon className="w-5 h-5 text-neon" />
-          <h1 className="font-display text-xl text-foreground tracking-wider">MESSAGES</h1>
-        </div>
+      <div className="min-h-screen bg-background pb-24 pt-20">
+        <div className="max-w-lg mx-auto">
+          <div className="px-4 mb-5">
+            <h1 className="text-3xl font-display font-bold text-foreground">Messages</h1>
+          </div>
 
-        {/* Conversation list */}
-        <div className="bg-card/30 mx-0">
-          <InboxContent />
+          {isLoading ? (
+            <div className="flex justify-center py-16">
+              <div className="w-8 h-8 border-2 border-neon-orange border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : conversations.length === 0 ? (
+            <div className="text-center py-16 text-muted-foreground px-4">
+              <MessageCircle size={48} className="mx-auto mb-4 opacity-30" />
+              <p className="text-lg font-medium">No messages yet</p>
+              <p className="text-sm mt-1">Start a conversation from someone's profile</p>
+            </div>
+          ) : (
+            <div>
+              {conversations.map(conv => (
+                <ConversationRow key={conv.otherUser.toString()} conv={conv} />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </AuthGuard>

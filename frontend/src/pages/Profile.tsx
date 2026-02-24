@@ -1,14 +1,22 @@
 import React, { useState, useRef } from 'react';
 import { useParams, Link } from '@tanstack/react-router';
-import { useGetUserProfile, useGetAllVideos, useGetCallerUserProfile, useDeleteVideo, useUpdateAvatar, useGetUserBadges, useGetUserStats, useGetSavedVideos } from '../hooks/useQueries';
+import { Settings, MessageCircle, Grid3X3, Bookmark, Wrench, Trophy, Star, Zap, Wind, Flame, Camera, Loader2, AlertCircle, BadgeCheck, BarChart2, Eye, Heart, Users, UserPlus, Video, Trash2 } from 'lucide-react';
+import {
+  type Video as VideoType,
+  type Badge,
+  useGetUserProfile,
+  useGetAllVideos,
+  useGetSavedVideos,
+  useGetUserStats,
+  useGetCallerUserProfile,
+  useGetUserBadges,
+  useUpdateAvatar,
+  useDeleteVideo,
+} from '../hooks/useQueries';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Grid3X3, Car, Settings, AlertCircle, Trash2, Camera, Loader2, MessageCircle, BadgeCheck, Award, Wrench, Zap, Heart, Hammer, Trophy, Eye, Users, UserPlus, Video, BarChart2, Bookmark } from 'lucide-react';
 import FollowButton from '../components/FollowButton';
 import EditProfileModal from '../components/EditProfileModal';
-import { type Video as VideoType, Badge } from '../backend';
-import { toast } from 'sonner';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,16 +28,23 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { toast } from 'sonner';
 
-const BADGE_CONFIG: Record<string, { icon: React.ElementType; label: string; color: string }> = {
-  driftKing: { icon: Award, label: 'Drift King', color: 'text-blue-400 border-blue-400/30 bg-blue-400/10' },
-  mechanicPro: { icon: Wrench, label: 'Mechanic Pro', color: 'text-green-400 border-green-400/30 bg-green-400/10' },
-  dragRacer: { icon: Zap, label: 'Drag Racer', color: 'text-yellow-400 border-yellow-400/30 bg-yellow-400/10' },
-  communityHelper: { icon: Heart, label: 'Community Helper', color: 'text-pink-400 border-pink-400/30 bg-pink-400/10' },
-  verified: { icon: BadgeCheck, label: 'Verified', color: 'text-neon border-neon/30 bg-neon/10' },
-  buildMaster: { icon: Hammer, label: 'Build Master', color: 'text-orange-400 border-orange-400/30 bg-orange-400/10' },
-  racingLegend: { icon: Trophy, label: 'Racing Legend', color: 'text-purple-400 border-purple-400/30 bg-purple-400/10' },
+const BADGE_CONFIG: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
+  driftKing: { label: 'Drift King', icon: <Wind size={14} />, color: 'text-blue-400' },
+  mechanicPro: { label: 'Mechanic Pro', icon: <Wrench size={14} />, color: 'text-green-400' },
+  dragRacer: { label: 'Drag Racer', icon: <Zap size={14} />, color: 'text-yellow-400' },
+  communityHelper: { label: 'Community Helper', icon: <Star size={14} />, color: 'text-purple-400' },
+  verified: { label: 'Verified', icon: <Trophy size={14} />, color: 'text-neon-orange' },
+  buildMaster: { label: 'Build Master', icon: <Wrench size={14} />, color: 'text-orange-400' },
+  racingLegend: { label: 'Racing Legend', icon: <Flame size={14} />, color: 'text-red-400' },
 };
+
+function badgeKey(badge: Badge): string {
+  if (typeof badge === 'string') return badge;
+  if (typeof badge === 'object' && badge !== null) return Object.keys(badge as object)[0] ?? '';
+  return '';
+}
 
 export default function Profile() {
   const params = useParams({ strict: false }) as { userId?: string };
@@ -37,14 +52,14 @@ export default function Profile() {
   const currentUserId = identity?.getPrincipal().toString();
   const isAuthenticated = !!identity;
 
-  const targetUserId = params.userId ?? currentUserId ?? undefined;
-  const isOwnProfile = targetUserId === currentUserId;
+  const targetUserId = params.userId ?? currentUserId ?? '';
+  const isOwnProfile = !!targetUserId && targetUserId === currentUserId;
 
   const { data: profile, isLoading: profileLoading } = useGetUserProfile(targetUserId);
   const { data: callerProfile } = useGetCallerUserProfile();
   const { data: allVideos } = useGetAllVideos();
   const { data: badges } = useGetUserBadges(targetUserId);
-  const { data: stats } = useGetUserStats(isOwnProfile ? targetUserId : undefined);
+  const { data: stats } = useGetUserStats(targetUserId);
   const { data: savedVideos } = useGetSavedVideos();
   const [showEditModal, setShowEditModal] = useState(false);
 
@@ -69,7 +84,7 @@ export default function Profile() {
       const dataUrl = event.target?.result as string;
       if (!dataUrl) return;
       try {
-        await updateAvatar.mutateAsync(dataUrl);
+        await updateAvatar.mutateAsync({ avatarUrl: dataUrl });
         toast.success('Profile picture updated! 📸');
       } catch {
         toast.error('Failed to update profile picture');
@@ -194,16 +209,15 @@ export default function Profile() {
         {badges && badges.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mt-3">
             {badges.map((badge) => {
-              const badgeKey = typeof badge === 'object' ? Object.keys(badge)[0] : String(badge);
-              const config = BADGE_CONFIG[badgeKey];
+              const key = badgeKey(badge);
+              const config = BADGE_CONFIG[key];
               if (!config) return null;
-              const IconComp = config.icon;
               return (
                 <span
-                  key={badgeKey}
-                  className={`flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs font-medium ${config.color}`}
+                  key={key}
+                  className={`flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs font-medium border-current/30 bg-current/10 ${config.color}`}
                 >
-                  <IconComp className="w-3 h-3" />
+                  {config.icon}
                   {config.label}
                 </span>
               );
@@ -266,13 +280,6 @@ export default function Profile() {
               STATS
             </TabsTrigger>
           )}
-          <TabsTrigger
-            value="garage"
-            className="flex-1 rounded-none py-3 font-display text-sm data-[state=active]:text-neon data-[state=active]:border-b-2 data-[state=active]:border-neon"
-          >
-            <Car className="w-4 h-4 mr-1.5" />
-            GARAGE
-          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="videos" className="mt-0">
@@ -321,7 +328,6 @@ export default function Profile() {
                   { label: 'Total Videos', value: Number(stats.totalVideos), icon: Video },
                   { label: 'Total Views', value: Number(stats.totalViews), icon: Eye },
                   { label: 'Total Likes', value: Number(stats.totalLikes), icon: Heart },
-                  { label: 'Comments', value: Number(stats.totalComments), icon: MessageCircle },
                   { label: 'Followers', value: Number(stats.totalFollowers), icon: Users },
                   { label: 'Following', value: Number(stats.totalFollowing), icon: UserPlus },
                   { label: 'Build Logs', value: Number(stats.totalBuildLogs), icon: Wrench },
@@ -340,14 +346,6 @@ export default function Profile() {
             )}
           </TabsContent>
         )}
-
-        <TabsContent value="garage" className="mt-0 p-4">
-          <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground">
-            <Car className="w-10 h-10 opacity-40" />
-            <p className="font-display text-sm">GARAGE COMING SOON</p>
-            <p className="text-xs text-center">Add your cars to show off your collection</p>
-          </div>
-        </TabsContent>
       </Tabs>
 
       {showEditModal && callerProfile && (
@@ -366,7 +364,7 @@ function VideoThumbnail({ video, isOwner }: { video: VideoType; isOwner: boolean
 
   const handleDelete = async () => {
     try {
-      await deleteVideo.mutateAsync(video.id);
+      await deleteVideo.mutateAsync({ videoId: video.id });
       toast.success('Reel deleted 🗑️');
     } catch {
       toast.error('Failed to delete reel');
@@ -424,13 +422,16 @@ function VideoThumbnail({ video, isOwner }: { video: VideoType; isOwner: boolean
 function ProfileSkeleton() {
   return (
     <div className="min-h-screen bg-background">
-      <Skeleton className="h-32 w-full" />
-      <div className="pt-14 px-4 space-y-3">
-        <Skeleton className="h-6 w-40" />
-        <Skeleton className="h-4 w-full" />
-        <div className="flex gap-6">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-10 w-12" />
+      <div className="h-32 bg-card/50 animate-pulse" />
+      <div className="px-4 pt-14 pb-4 space-y-3">
+        <div className="h-6 w-40 bg-card/50 animate-pulse rounded" />
+        <div className="h-4 w-24 bg-card/50 animate-pulse rounded" />
+        <div className="flex gap-6 mt-4">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="text-center space-y-1">
+              <div className="h-6 w-8 bg-card/50 animate-pulse rounded mx-auto" />
+              <div className="h-3 w-12 bg-card/50 animate-pulse rounded" />
+            </div>
           ))}
         </div>
       </div>

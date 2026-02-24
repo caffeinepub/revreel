@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from '@tanstack/react-router';
-import { ArrowLeft, Calendar, MapPin, Users, Loader2, Car } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, Users, Car } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -86,10 +86,10 @@ export default function CarMeetDetails() {
     setActionLoading(true);
     try {
       if (isAttending) {
-        await leaveMeet.mutateAsync(meetId);
+        await leaveMeet.mutateAsync({ meetId });
         toast.success('Left the meet.');
       } else {
-        await joinMeet.mutateAsync(meetId);
+        await joinMeet.mutateAsync({ meetId });
         toast.success("You're attending! 🚗");
       }
     } catch {
@@ -217,60 +217,53 @@ export default function CarMeetDetails() {
           ) : (
             <ScrollArea className="max-h-64">
               <div className="space-y-2 pr-2">
-                {meet.attendees.map((attendee) => {
-                  const avatarUrl = attendee.avatar?.getDirectURL() || '/assets/generated/default-avatar.dim_128x128.png';
-                  const isCurrentUser = attendee.id.toString() === currentPrincipal;
-                  return (
-                    <Link
-                      key={attendee.id.toString()}
-                      to="/profile/$userId"
-                      params={{ userId: attendee.id.toString() }}
-                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary/50 transition-colors group"
-                    >
-                      <Avatar className="w-9 h-9 border border-border/60">
-                        <AvatarImage src={avatarUrl} alt={attendee.username} />
-                        <AvatarFallback className="bg-neon/10 text-neon text-xs font-display">
-                          {attendee.username.slice(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="text-sm text-foreground group-hover:text-neon transition-colors font-display tracking-wide">
-                        {attendee.username}
-                        {isCurrentUser && (
-                          <span className="ml-2 text-[10px] text-neon/60">(you)</span>
-                        )}
-                      </span>
-                    </Link>
-                  );
-                })}
+                {meet.attendees.map((attendee) => (
+                  <Link
+                    key={attendee.id.toString()}
+                    to="/profile/$userId"
+                    params={{ userId: attendee.id.toString() }}
+                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary/50 transition-colors"
+                  >
+                    <Avatar className="w-8 h-8 border border-border/40">
+                      <AvatarImage
+                        src={attendee.avatarUrl || attendee.avatar?.getDirectURL() || '/assets/generated/default-avatar.dim_128x128.png'}
+                        alt={attendee.username}
+                      />
+                      <AvatarFallback className="bg-neon/10 text-neon text-xs font-display">
+                        {attendee.username.slice(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm text-foreground font-medium">{attendee.username}</span>
+                  </Link>
+                ))}
               </div>
             </ScrollArea>
           )}
         </div>
-      </div>
 
-      {/* Sticky attend button */}
-      <div className="fixed bottom-20 left-0 right-0 px-4 z-30">
-        <div className="max-w-lg mx-auto">
+        {/* Attend/Leave Button */}
+        {isAuthenticated && upcoming && (
           <Button
             onClick={handleAttend}
             disabled={actionLoading}
-            className={`w-full h-12 font-display text-base tracking-widest rounded-xl transition-all ${
+            className={`w-full font-display tracking-wider py-6 text-base ${
               isAttending
-                ? 'bg-secondary text-foreground hover:bg-secondary/80 border border-border'
-                : 'bg-neon text-primary-foreground hover:bg-neon/90 shadow-neon'
+                ? 'bg-secondary text-foreground border border-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/40'
+                : 'bg-neon text-primary-foreground hover:bg-neon/90 neon-glow'
             }`}
           >
             {actionLoading ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
+              <span className="flex items-center gap-2">
+                <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                {isAttending ? 'LEAVING...' : 'JOINING...'}
+              </span>
             ) : isAttending ? (
               'LEAVE MEET'
-            ) : upcoming ? (
-              "ATTEND THIS MEET 🚗"
             ) : (
-              "I WAS THERE 🏁"
+              'ATTEND MEET 🚗'
             )}
           </Button>
-        </div>
+        )}
       </div>
     </div>
   );

@@ -2,7 +2,6 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useGetAllVideos, useGetCallerUserProfile } from '../hooks/useQueries';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import VideoCard from '../components/VideoCard';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Flame, Users } from 'lucide-react';
 import { type Video } from '../backend';
 
@@ -31,7 +30,7 @@ export default function Feed() {
   }, []);
 
   const { data: allVideos, isLoading } = useGetAllVideos();
-  const { data: userProfile } = useGetCallerUserProfile();
+  const { data: currentUserProfile } = useGetCallerUserProfile();
 
   const videos: Video[] = allVideos ?? [];
 
@@ -103,6 +102,7 @@ export default function Feed() {
                 isActive={index === activeIndex}
                 isMuted={isMuted}
                 onMuteToggle={handleMuteToggle}
+                currentUserProfile={currentUserProfile ?? null}
               />
             </div>
           ))}

@@ -1,39 +1,41 @@
 {
   "kind": "build_request",
-  "title": "Fix notification tap navigating to Google search instead of user profile",
-  "priority": "high",
+  "title": "Replace landing page car image with a tuner import style car",
+  "projectName": "RevReel",
+  "priority": "normal",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Fix the notification item tap/click handler in the Notifications page so that tapping a notification navigates to the referenced user's in-app profile page instead of triggering a Google search for the username. The navigation must use the app's internal router (e.g., TanStack Router) to route to the correct profile route, and must not construct any external URL or href that would open a browser search.",
+      "text": "Replace the existing car image on the landing page hero section with a newly generated tuner import style car image. Use the generated image asset from frontend/public/assets/generated and render it in LandingPage.tsx.",
       "target": "frontend",
       "source": {
         "messageIds": [
           "msg-4"
         ],
         "quotes": [
-          "When I tap it it brings up a Google search for that word whatever the user name is"
+          "Make the picture of the car on the landing page a tuner import style car"
         ]
       },
       "acceptanceCriteria": [
-        "Tapping a notification item navigates to the referenced user's profile page within the app.",
-        "No external browser navigation or Google search is triggered when tapping a notification.",
-        "The correct username/principal is passed to the profile route so the right profile loads.",
-        "Navigation works for all notification types that reference a user."
+        "The landing page displays a tuner/import style car image (e.g., lowered Japanese sport compact with aftermarket body kit, wide-body styling, racing livery, or similar JDM/import tuner aesthetic)",
+        "The old car image is replaced by the new generated image",
+        "The image renders correctly across desktop and mobile viewports"
       ]
     }
   ],
   "constraints": [
-    "Do not modify any files listed in frontend.immutablePaths.",
-    "Use the existing TanStack Router navigation pattern already established in App.tsx."
+    "Do not modify files listed in frontend.immutablePaths",
+    "Only LandingPage.tsx and the image asset need to change"
   ],
   "nonGoals": [
-    "Redesigning the Notifications page UI.",
-    "Adding new notification types.",
-    "Changing notification read/unread logic."
+    "Redesigning the overall landing page layout or hero section",
+    "Changing any other images or visual assets across the app",
+    "Backend changes"
   ],
   "imageRequirements": {
-    "required": [],
+    "required": [
+      "A sleek lowered JDM tuner import style sport car with aftermarket wide-body kit, large aftermarket wheels, aggressive front splitter, and colorful racing livery under dramatic studio-style lighting (tuner-car-hero.dim_1200x600.png)"
+    ],
     "edits": []
   }
 }

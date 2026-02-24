@@ -1,22 +1,21 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Fix notification tap navigating to Google search instead of user profile",
+  "title": "Replace landing page car image with tuner import style car",
   "requirements": [
     {
       "id": "REQ-1",
-      "summary": "Fix the notification item tap/click handler in the Notifications page so that tapping a notification navigates to the referenced user's in-app profile page instead of triggering a Google search for the username.",
+      "summary": "Replace the existing car image on the landing page hero section with a newly generated tuner import style car image",
       "acceptanceCriteria": [
-        "Tapping a notification item navigates to the referenced user's profile page within the app.",
-        "No external browser navigation or Google search is triggered when tapping a notification.",
-        "The correct username/principal is passed to the profile route so the right profile loads.",
-        "Navigation works for all notification types that reference a user."
+        "The landing page displays a tuner/import style car image (e.g., lowered Japanese sport compact with aftermarket body kit, wide-body styling, racing livery, or similar JDM/import tuner aesthetic)",
+        "The old car image is replaced by the new generated image",
+        "The image renders correctly across desktop and mobile viewports"
       ],
       "file_operations": [
         {
-          "path": "frontend/src/pages/Notifications.tsx",
+          "path": "frontend/src/pages/LandingPage.tsx",
           "operation": "modify",
-          "description": "Replace the current notification item click handler that constructs an external href (triggering Google search) with a TanStack Router navigate call to the in-app profile route. Use the existing `useNavigate` hook from '@tanstack/react-router' (already imported in App.tsx and other components). When a notification is clicked, call `navigate({ to: '/profile/$userId', params: { userId: notification.senderId.toString() } })` to route to the sender's profile page within the app. Ensure the notification senderId Principal is converted to a string for the route param. Remove any anchor tag or href that constructs a search URL, and replace it with an onClick handler or use the router's Link component with proper params."
+          "description": "Replace the existing hero section car image source with the generated tuner import style car image at frontend/public/assets/generated/tuner-car-hero.dim_1200x600.png. Update the image element to reference the new asset path and ensure responsive rendering across desktop and mobile viewports using appropriate CSS classes."
         }
       ]
     }
