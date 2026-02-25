@@ -231,6 +231,12 @@ actor {
     joinedAt : Int;
   };
 
+  public type ProfileResult = {
+    #ok : UserProfile;
+    #unauthorized : Text;
+    #notFound : Text;
+  };
+
   public type Result = {
     #ok : Text;
     #err : Text;
@@ -322,18 +328,22 @@ actor {
     };
   };
 
-  // Get the caller's own profile. Requires the caller to be a registered user.
-  public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
+  /// Get the caller's own profile. Returns `#unauthorized` if the caller is not a registered user,
+  /// and `#notFound` if the profile does not exist.
+  public query ({ caller }) func getCallerUserProfile() : async ProfileResult {
     if (not checkIsUser(caller)) {
-      Runtime.trap("Unauthorized: Only users can get their profile");
+      return #unauthorized("Only registered users can get their profile");
     };
-    users.get(caller).map(func(u) { u.profile });
+    switch (users.get(caller)) {
+      case (null) { #notFound("Profile not found") };
+      case (?user) { #ok(user.profile) };
+    };
   };
 
-  // Save (create or update) the caller's own profile. Requires the caller to be a registered user.
+  /// Save (create or update) the caller's own profile. Only registered users can save profiles.
   public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
     if (not checkIsUser(caller)) {
-      Runtime.trap("Unauthorized: Only users can save their profile");
+      Runtime.trap("Unauthorized: Only users can save profiles");
     };
     // Ensure the profile id matches the caller
     let profileWithCorrectId : UserProfile = { profile with id = caller };
@@ -357,11 +367,15 @@ actor {
     };
   };
 
-  // Get any user's profile by principal. Caller must be the same user or an admin.
-  public query ({ caller }) func getUserProfile(user : Principal) : async ?UserProfile {
+  /// Get any user's profile by principal. Returns `#unauthorized` if the caller is not the user or an admin,
+  /// and `#notFound` if the profile does not exist.
+  public query ({ caller }) func getUserProfile(user : Principal) : async ProfileResult {
     if (caller != user and not checkIsAdmin(caller)) {
-      Runtime.trap("Unauthorized: Can only view your own profile");
+      return #unauthorized("Can only view your own profile");
     };
-    users.get(user).map(func(u) { u.profile });
+    switch (users.get(user)) {
+      case (null) { #notFound("Profile not found") };
+      case (?u) { #ok(u.profile) };
+    };
   };
 };

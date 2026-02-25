@@ -15,6 +15,16 @@ export class ExternalBlob {
     withUploadProgress(onProgress: (percentage: number) => void): ExternalBlob;
 }
 export type UserId = Principal;
+export type ProfileResult = {
+    __kind__: "ok";
+    ok: UserProfile;
+} | {
+    __kind__: "notFound";
+    notFound: string;
+} | {
+    __kind__: "unauthorized";
+    unauthorized: string;
+};
 export interface UserProfile {
     id: UserId;
     bio: string;
@@ -42,9 +52,20 @@ export enum UserRole {
 }
 export interface backendInterface {
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
-    getCallerUserProfile(): Promise<UserProfile | null>;
+    /**
+     * / Get the caller's own profile. Returns `#unauthorized` if the caller is not a registered user,
+     * / and `#notFound` if the profile does not exist.
+     */
+    getCallerUserProfile(): Promise<ProfileResult>;
     getCallerUserRole(): Promise<UserRole>;
-    getUserProfile(user: Principal): Promise<UserProfile | null>;
+    /**
+     * / Get any user's profile by principal. Returns `#unauthorized` if the caller is not the user or an admin,
+     * / and `#notFound` if the profile does not exist.
+     */
+    getUserProfile(user: Principal): Promise<ProfileResult>;
     isCallerAdmin(): Promise<boolean>;
+    /**
+     * / Save (create or update) the caller's own profile. Only registered users can save profiles.
+     */
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
 }

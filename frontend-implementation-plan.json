@@ -1,40 +1,140 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Fix missing upload button for reels and pictures",
+  "title": "Fix profile page 'not found' error and resolve all routing/code issues",
   "requirements": [
     {
       "id": "REQ-1",
-      "summary": "Add a clearly visible upload button accessible from the main navigation or Feed page that navigates authenticated users to the Upload page",
+      "summary": "Audit and fix the Profile page route configuration in App.tsx so that navigating to a user's profile renders the Profile component correctly without a 'not found' error",
       "acceptanceCriteria": [
-        "An upload button or icon is visible in the bottom navigation bar or as a floating action button on the Feed, Profile, and Discover pages.",
-        "Tapping/clicking the upload button navigates to the /upload route.",
-        "The button is only functional when the user is authenticated; unauthenticated users see the AuthGuard login prompt.",
-        "The button is present on both mobile (small screens) and desktop layouts."
+        "Navigating to /profile/:userId (or the correct route path) loads the Profile page without a 'not found' error",
+        "Own profile link from the navigation bar loads the authenticated user's profile correctly",
+        "Clicking another user's profile link navigates to their profile page correctly",
+        "No console errors related to route resolution on the profile page"
       ],
       "file_operations": [
         {
-          "path": "frontend/src/components/Layout.tsx",
+          "path": "frontend/src/App.tsx",
           "operation": "modify",
-          "description": "Add an upload button/icon to the bottom navigation bar (primaryNavItems or secondaryNavItems array) that routes to /upload. The button must use the Plus or Upload icon from lucide-react and include responsive styling for both mobile and desktop layouts. Ensure the navigation item is visible and tappable on all screen sizes."
+          "description": "Review and fix the profile route definition in the TanStack Router configuration. Ensure the route parameter (userId or username) is correctly defined and matches what Profile.tsx expects. Verify that the route path is properly nested under the Layout component and that the route tree correctly exports the profile route for use throughout the app."
         }
       ]
     },
     {
       "id": "REQ-2",
-      "summary": "Verify and fix the Upload page so that users can successfully upload both video and image files with proper file input, submit button visibility, and chunked upload completion",
+      "summary": "Review the Profile.tsx component and fix any issues with how it resolves the userId from route params",
       "acceptanceCriteria": [
-        "The Upload page renders a file picker that accepts video/* and image/* MIME types.",
-        "A submit/upload button is visible on the Upload page and becomes enabled once a file, title, and category are provided.",
-        "Selecting a video file and submitting triggers the chunked upload progress indicator and completes successfully.",
-        "Selecting an image/photo file and submitting completes successfully.",
-        "On successful upload the user is navigated to the feed and the new post appears."
+        "Profile page correctly loads profile data for the given user ID",
+        "Videos tab shows videos belonging to the correct user",
+        "Saved videos tab shows only the authenticated user's saved videos when viewing own profile",
+        "Edit profile button appears only when viewing own profile",
+        "Follow button appears only when viewing another user's profile"
       ],
       "file_operations": [
         {
-          "path": "frontend/src/pages/Upload.tsx",
+          "path": "frontend/src/pages/Profile.tsx",
           "operation": "modify",
-          "description": "Review and fix the Upload page to ensure: (1) the file input accept attribute includes both video/* and image/* MIME types; (2) the submit/upload button is visible and properly styled, with disabled state controlled by form validation (file selected, title and category provided); (3) the chunked upload progress indicator displays correctly during upload; (4) successful uploads navigate to /feed and the new video/photo appears in the feed. Preserve the existing chunked upload logic using ExternalBlob.fromBytes().withUploadProgress() as documented in the blob-storage component usage instructions. Verify that the form fields (title, description, category, hashtags, thumbnail) are wired correctly and that the createVideo mutation is called with the proper ExternalBlob instance."
+          "description": "Fix how Profile.tsx reads the userId from TanStack Router route params. Ensure it correctly distinguishes between viewing one's own profile (using the authenticated principal from useInternetIdentity) and viewing another user's profile. Verify that all backend query calls (useFetchUserProfile, fetch videos by user, fetch saved videos) use the correct user identifier. Ensure the edit profile button and follow button visibility logic correctly compares the authenticated user's principal with the profile owner's principal."
+        }
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "summary": "Audit all navigation links and programmatic navigations throughout the app that link to a user profile page, and ensure they all use the correct route path and pass the correct user identifier",
+      "acceptanceCriteria": [
+        "All profile links throughout the app navigate to the correct profile route with a valid user identifier",
+        "No broken or malformed profile URLs exist anywhere in the UI",
+        "Bottom navigation 'Profile' item navigates to the authenticated user's own profile"
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/components/Layout.tsx",
+          "operation": "modify",
+          "description": "Review the bottom navigation bar's Profile link and ensure it navigates to the authenticated user's own profile using the correct route path (e.g., /profile/:userId where userId is the current user's principal). Verify the link uses the TanStack Router Link component with the correct route and params."
+        },
+        {
+          "path": "frontend/src/components/VideoCard.tsx",
+          "operation": "modify",
+          "description": "Audit any profile links or navigation triggered by clicking on a video author's name or avatar. Ensure these links navigate to /profile/:userId with the video author's principal correctly passed as the route parameter."
+        },
+        {
+          "path": "frontend/src/pages/Notifications.tsx",
+          "operation": "modify",
+          "description": "Review the notification click handler that navigates to a sender's profile. Ensure it uses the correct profile route path and passes the sender's principal as the userId route parameter."
+        },
+        {
+          "path": "frontend/src/pages/Leaderboard.tsx",
+          "operation": "modify",
+          "description": "Audit any profile links in the leaderboard (e.g., clicking on a top racer) and ensure they navigate to the correct profile route with the user's principal."
+        },
+        {
+          "path": "frontend/src/pages/Conversation.tsx",
+          "operation": "modify",
+          "description": "Review any navigation to the other user's profile from the conversation page (e.g., clicking their name or avatar) and ensure it uses the correct route path and user identifier."
+        },
+        {
+          "path": "frontend/src/pages/Inbox.tsx",
+          "operation": "modify",
+          "description": "Audit any profile links visible in the inbox conversations list (e.g., clicking on a conversation partner's avatar or name) and ensure they navigate to the correct profile route."
+        }
+      ]
+    },
+    {
+      "id": "REQ-5",
+      "summary": "Audit the useQueries.ts hooks related to profiles and fix any issues with how backend responses are decoded, how loading/error states are handled, and ensure the Profile page correctly handles missing profiles",
+      "acceptanceCriteria": [
+        "Profile query hooks correctly decode backend response types including option/null variants",
+        "Profile page shows a meaningful 'User not found' message for invalid user IDs rather than a broken state",
+        "Profile page shows a profile setup prompt for authenticated users who have not yet created a profile",
+        "No unhandled promise rejections or query errors in the browser console when visiting a profile"
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/hooks/useQueries.ts",
+          "operation": "modify",
+          "description": "Review and fix the useFetchUserProfile, useGetCallerUserProfile, useSaveCallerUserProfile, and useUpdateProfile hooks. Ensure they correctly decode the backend's ProfileResult type which can be { __kind__: 'ok', ok: UserProfile }, { __kind__: 'notFound', notFound: string }, or { __kind__: 'unauthorized', unauthorized: string }. Update the hooks to return appropriate loading, error, and data states, and ensure the Profile page can differentiate between a profile not found vs. unauthorized access vs. a new user who hasn't created a profile yet."
+        },
+        {
+          "path": "frontend/src/pages/Profile.tsx",
+          "operation": "modify",
+          "description": "Update Profile.tsx to handle all possible states from the profile query: loading, profile found, profile not found (show 'User not found' message), unauthorized access, and new user without a profile (show profile setup prompt or link). Ensure the component gracefully handles all ProfileResult variants returned by the backend."
+        }
+      ]
+    },
+    {
+      "id": "REQ-6",
+      "summary": "Fix any remaining issues across the entire frontend codebase found during the audit: broken imports, TypeScript type errors, missing route definitions, incorrect query key usage, or stale data not being invalidated after mutations",
+      "acceptanceCriteria": [
+        "No TypeScript compilation errors in the frontend",
+        "All route paths defined in App.tsx match the links used throughout the app",
+        "Mutations that modify profile or video data correctly invalidate related React Query caches",
+        "No broken imports or missing component references"
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/App.tsx",
+          "operation": "modify",
+          "description": "Perform a final review of all route definitions in App.tsx. Ensure every route path matches the links used throughout the app (feed, profile, upload, builds, classifieds, discover, leaderboard, inbox, conversation, notifications, mechanics help, car meets, listing details, etc.). Verify that route parameters are consistently named and that all routes are properly nested under the Layout component."
+        },
+        {
+          "path": "frontend/src/hooks/useQueries.ts",
+          "operation": "modify",
+          "description": "Audit all mutation hooks (useUpdateProfile, useSaveCallerUserProfile, useDeleteVideo, useCreateVideo, etc.) and ensure they correctly invalidate related React Query cache keys after successful mutations. For example, updating a profile should invalidate both 'currentUserProfile' and the 'userProfile' query for that user; deleting a video should invalidate 'allVideos' and the user's video list. Review all query keys for consistency and ensure no stale data issues remain."
+        },
+        {
+          "path": "frontend/src/components/EditProfileModal.tsx",
+          "operation": "modify",
+          "description": "Review EditProfileModal for any TypeScript type errors or issues with the useUpdateProfile mutation. Ensure the modal correctly handles avatar uploads using ExternalBlob and that the profile update payload matches the backend's expected UserProfile type."
+        },
+        {
+          "path": "frontend/src/components/ProfileSetupModal.tsx",
+          "operation": "modify",
+          "description": "Review ProfileSetupModal for any TypeScript type errors or issues with the useSaveCallerUserProfile mutation. Ensure the modal correctly checks if a profile already exists using useGetCallerUserProfile with proper loading state handling, and that the profile creation payload matches the backend's expected UserProfile type."
+        },
+        {
+          "path": "frontend/src/components/VideoCard.tsx",
+          "operation": "modify",
+          "description": "Review VideoCard for any broken imports, TypeScript errors, or incorrect usage of mutation hooks (like/unlike, save/unsave, delete video, increment view count). Ensure all mutation callbacks correctly invalidate related query caches and that the component handles all video operations without console errors."
         }
       ]
     }

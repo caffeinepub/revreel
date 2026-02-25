@@ -1,216 +1,282 @@
-import React, { useState } from 'react';
-import { useParams, useNavigate } from '@tanstack/react-router';
+import { useState } from "react";
+import { useParams, useNavigate, Link } from "@tanstack/react-router";
+import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import {
-  useGetBuildLogById,
+  useGetBuildLog,
   useAddBuildStage,
   useDeleteBuildLog,
-  useGetUserProfile,
-  type BuildLog,
-  type BuildStage,
-} from '../hooks/useQueries';
-import { useInternetIdentity } from '../hooks/useInternetIdentity';
-import AuthGuard from '../components/AuthGuard';
-import { Loader2, Plus, Trash2, ArrowLeft, Wrench } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
+} from "../hooks/useQueries";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  BookOpen,
+  Plus,
+  Trash2,
+  ChevronLeft,
+  Loader2,
+  Calendar,
+  Car,
+} from "lucide-react";
 
 export default function BuildLogDetails() {
-  const { buildId } = useParams({ strict: false }) as { buildId: string };
+  const { buildId } = useParams({ from: "/app-layout/builds/$buildId" });
   const navigate = useNavigate();
   const { identity } = useInternetIdentity();
 
-  const id = Number(buildId);
-  const { data: log, isLoading } = useGetBuildLogById(id);
-  const { data: authorProfile } = useGetUserProfile(log?.authorId?.toString() || '');
+  const { data: log, isLoading } = useGetBuildLog(Number(buildId));
   const addStage = useAddBuildStage();
   const deleteBuildLog = useDeleteBuildLog();
 
   const [showAddStage, setShowAddStage] = useState(false);
-  const [stageTitle, setStageTitle] = useState('');
-  const [stageDesc, setStageDesc] = useState('');
-  const [stageImage, setStageImage] = useState('');
+  const [stageTitle, setStageTitle] = useState("");
+  const [stageDesc, setStageDesc] = useState("");
+  const [stageImage, setStageImage] = useState("");
 
-  const myPrincipal = identity?.getPrincipal().toString();
-  const isOwner = log?.authorId?.toString() === myPrincipal;
+  const currentUserId = identity?.getPrincipal().toString() ?? "";
+  const isAuthor =
+    log && currentUserId && log.authorId?.toString() === currentUserId;
 
   const handleAddStage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!log || !stageTitle.trim()) return;
     await addStage.mutateAsync({
-      buildId: Number(log.id),
-      title: stageTitle.trim(),
-      description: stageDesc.trim(),
-      imageUrl: stageImage.trim(),
+      buildLogId: Number(log.id),
+      stage: {
+        title: stageTitle.trim(),
+        description: stageDesc.trim(),
+        imageUrl: stageImage.trim(),
+      },
     });
-    setStageTitle('');
-    setStageDesc('');
-    setStageImage('');
+    setStageTitle("");
+    setStageDesc("");
+    setStageImage("");
     setShowAddStage(false);
   };
 
   const handleDelete = async () => {
     if (!log) return;
-    if (confirm('Delete this build log?')) {
-      await deleteBuildLog.mutateAsync({ buildId: Number(log.id) });
-      navigate({ to: '/builds' });
-    }
+    await deleteBuildLog.mutateAsync({ id: Number(log.id) });
+    navigate({ to: "/builds" });
   };
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="max-w-2xl mx-auto px-4 py-8 space-y-4">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-32 w-full" />
       </div>
     );
   }
 
   if (!log) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-16 text-center text-muted-foreground">
-        Build log not found.
+      <div className="max-w-2xl mx-auto px-4 py-16 text-center">
+        <BookOpen className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+        <h2 className="text-2xl font-display font-bold mb-2">
+          Build Log Not Found
+        </h2>
+        <Link
+          to="/builds"
+          className="text-primary hover:underline"
+        >
+          Back to Build Logs
+        </Link>
       </div>
     );
   }
 
   return (
-    <AuthGuard>
-      <div className="max-w-2xl mx-auto px-4 py-6">
-        {/* Back */}
-        <button
-          onClick={() => navigate({ to: '/builds' })}
-          className="flex items-center gap-1 text-muted-foreground hover:text-foreground text-sm mb-4 transition-colors"
+    <div className="max-w-2xl mx-auto px-4 py-6">
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-6">
+        <Link
+          to="/builds"
+          className="p-2 rounded hover:bg-muted transition-colors"
         >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Builds
-        </button>
-
-        {/* Header */}
-        <div className="flex items-start justify-between gap-3 mb-6">
-          <div>
-            <h1 className="font-display text-2xl font-black text-primary neon-text">{log.title}</h1>
-            <p className="text-muted-foreground text-sm mt-1">
+          <ChevronLeft className="h-5 w-5" />
+        </Link>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-xl font-display font-bold truncate">
+            {log.title}
+          </h1>
+          <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+            <span className="flex items-center gap-1">
+              <Car className="h-3 w-3" />
               {log.carYear} {log.carMake} {log.carModel}
-            </p>
-            {authorProfile && (
-              <p className="text-xs text-muted-foreground mt-0.5">by {authorProfile.username}</p>
-            )}
+            </span>
+            <span className="flex items-center gap-1">
+              <Calendar className="h-3 w-3" />
+              {new Date(Number(log.createdAt) / 1_000_000).toLocaleDateString()}
+            </span>
           </div>
-          {isOwner && (
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={handleDelete}
-              disabled={deleteBuildLog.isPending}
+        </div>
+        {isAuthor && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <button className="p-2 rounded hover:bg-destructive/10 text-destructive transition-colors">
+                <Trash2 className="h-5 w-5" />
+              </button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Build Log?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action cannot be undone. All stages will be permanently
+                  deleted.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDelete}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {deleteBuildLog.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "Delete"
+                  )}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
+      </div>
+
+      {/* Description */}
+      {log.description && (
+        <p className="text-muted-foreground text-sm mb-6">{log.description}</p>
+      )}
+
+      {/* Stages */}
+      <div className="space-y-4 mb-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-display font-semibold">
+            Build Stages ({(log.stages ?? []).length})
+          </h2>
+          {isAuthor && (
+            <button
+              onClick={() => setShowAddStage(!showAddStage)}
+              className="flex items-center gap-1.5 text-sm text-primary hover:underline"
             >
-              {deleteBuildLog.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Trash2 className="w-4 h-4" />
-              )}
-            </Button>
+              <Plus className="h-4 w-4" />
+              Add Stage
+            </button>
           )}
         </div>
 
-        {log.description && (
-          <p className="text-foreground/80 text-sm mb-6">{log.description}</p>
+        {/* Add Stage Form */}
+        {showAddStage && (
+          <form
+            onSubmit={handleAddStage}
+            className="bg-muted/30 rounded-xl p-4 space-y-3 border border-border"
+          >
+            <div className="space-y-1.5">
+              <Label>Stage Title *</Label>
+              <Input
+                value={stageTitle}
+                onChange={(e) => setStageTitle(e.target.value)}
+                placeholder="e.g. Engine Swap"
+                disabled={addStage.isPending}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Description</Label>
+              <Textarea
+                value={stageDesc}
+                onChange={(e) => setStageDesc(e.target.value)}
+                placeholder="Describe what you did..."
+                rows={3}
+                disabled={addStage.isPending}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Image URL (optional)</Label>
+              <Input
+                value={stageImage}
+                onChange={(e) => setStageImage(e.target.value)}
+                placeholder="https://..."
+                disabled={addStage.isPending}
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setShowAddStage(false)}
+                className="flex-1 py-2 rounded border border-border text-sm hover:bg-muted transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={addStage.isPending || !stageTitle.trim()}
+                className="flex-1 py-2 rounded bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {addStage.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  "Add Stage"
+                )}
+              </button>
+            </div>
+          </form>
         )}
 
-        {/* Stages */}
-        <div className="space-y-4 mb-6">
-          <div className="flex items-center justify-between">
-            <h2 className="font-display text-lg font-bold flex items-center gap-2">
-              <Wrench className="w-5 h-5 text-primary" />
-              Build Stages ({log.stages.length})
-            </h2>
-            {isOwner && (
-              <Button
-                size="sm"
-                onClick={() => setShowAddStage(!showAddStage)}
-                className="bg-primary text-primary-foreground hover:bg-primary/90"
-              >
-                <Plus className="w-4 h-4 mr-1" />
-                Add Stage
-              </Button>
-            )}
+        {/* Stage List */}
+        {(log.stages ?? []).length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <BookOpen className="h-10 w-10 mx-auto mb-2 opacity-50" />
+            <p className="text-sm">No stages yet. Add your first build stage!</p>
           </div>
-
-          {showAddStage && (
-            <form onSubmit={handleAddStage} className="p-4 rounded-lg bg-card border border-border space-y-3">
-              <div className="space-y-1">
-                <Label>Stage Title *</Label>
-                <Input
-                  value={stageTitle}
-                  onChange={(e) => setStageTitle(e.target.value)}
-                  placeholder="e.g. Engine Swap"
-                  className="bg-muted border-border"
-                  required
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>Description</Label>
-                <Textarea
-                  value={stageDesc}
-                  onChange={(e) => setStageDesc(e.target.value)}
-                  placeholder="Describe this stage..."
-                  className="bg-muted border-border resize-none"
-                  rows={2}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>Image URL (optional)</Label>
-                <Input
-                  value={stageImage}
-                  onChange={(e) => setStageImage(e.target.value)}
-                  placeholder="https://..."
-                  className="bg-muted border-border"
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button type="button" variant="outline" size="sm" onClick={() => setShowAddStage(false)}>
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  size="sm"
-                  className="bg-primary text-primary-foreground hover:bg-primary/90"
-                  disabled={addStage.isPending}
-                >
-                  {addStage.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Add Stage'}
-                </Button>
-              </div>
-            </form>
-          )}
-
-          {log.stages.length === 0 ? (
-            <p className="text-muted-foreground text-sm text-center py-6">No stages yet.</p>
-          ) : (
-            log.stages.map((stage: BuildStage, index: number) => (
-              <div key={stage.id.toString()} className="p-4 rounded-lg bg-card border border-border">
+        ) : (
+          <div className="space-y-3">
+            {(log.stages as any[]).map((stage: any, idx: number) => (
+              <div
+                key={stage.id ?? idx}
+                className="bg-muted/20 rounded-xl p-4 border border-border"
+              >
                 <div className="flex items-start gap-3">
-                  <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                    <span className="text-xs font-bold text-primary">{index + 1}</span>
+                  <div className="flex-shrink-0 h-7 w-7 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-bold">
+                    {idx + 1}
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-bold text-sm">{stage.title}</h3>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-sm">{stage.title}</h3>
                     {stage.description && (
-                      <p className="text-muted-foreground text-xs mt-1">{stage.description}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {stage.description}
+                      </p>
                     )}
                     {stage.imageUrl && (
                       <img
                         src={stage.imageUrl}
                         alt={stage.title}
-                        className="mt-2 rounded-lg w-full max-h-48 object-cover"
+                        className="mt-2 rounded-lg max-h-48 object-cover w-full"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = "none";
+                        }}
                       />
                     )}
                   </div>
                 </div>
               </div>
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
-    </AuthGuard>
+    </div>
   );
 }

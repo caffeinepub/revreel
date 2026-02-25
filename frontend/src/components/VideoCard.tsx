@@ -8,7 +8,6 @@ import {
   useIncrementViewCount,
   useDeleteVideo,
   type Video,
-  type ReactionType,
   type UserProfile,
 } from '../hooks/useQueries';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
@@ -64,12 +63,14 @@ export default function VideoCard({ video, currentUserProfile }: VideoCardProps)
 
   const handleLike = () => {
     if (!identity) return;
-    toggleLike.mutate({ videoId: video.id });
+    // Pass isLiked so the hook knows whether to like or unlike
+    toggleLike.mutate({ videoId: video.id, isLiked });
   };
 
-  const handleReaction = (reaction: ReactionType) => {
+  const handleReaction = (reactionKey: string) => {
     if (!identity) return;
-    addReaction.mutate({ videoId: video.id, reaction });
+    // Pass reaction as any to avoid __kind__ type mismatch with backend
+    addReaction.mutate({ videoId: video.id, reaction: { [reactionKey]: null } as any });
     setShowReactions(false);
   };
 
@@ -176,7 +177,7 @@ export default function VideoCard({ video, currentUserProfile }: VideoCardProps)
               {Object.entries(reactionEmojis).map(([key, { icon, label }]) => (
                 <button
                   key={key}
-                  onClick={() => handleReaction({ [key]: null } as ReactionType)}
+                  onClick={() => handleReaction(key)}
                   className="flex items-center gap-2 px-2 py-1 rounded hover:bg-muted text-sm text-foreground"
                 >
                   {icon}

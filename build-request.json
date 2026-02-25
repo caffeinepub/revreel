@@ -1,57 +1,131 @@
 {
   "kind": "build_request",
-  "title": "Fix missing upload button for reels and pictures",
+  "title": "Fix profile page 'not found' error and resolve all routing/code issues",
   "projectName": "RevReel",
   "priority": "high",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Add a clearly visible upload button (or FAB) accessible from the main navigation or Feed page that navigates authenticated users to the Upload page (/upload route). The button must be present and tappable on both mobile and desktop layouts.",
+      "text": "Audit and fix the Profile page route configuration in App.tsx so that navigating to a user's profile (both own profile and other users' profiles) renders the Profile component correctly without a 'not found' error. Ensure the route parameter (e.g., userId or username) is correctly defined in the TanStack Router route tree and matches what Profile.tsx expects to read from route params.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-6"
+          "msg-5"
         ],
         "quotes": [
-          "The uploads of reels and pictures don't work no button to upload"
+          "Now the profile page says not found please go through all code and solve all issues"
         ]
       },
       "acceptanceCriteria": [
-        "An upload button or icon is visible in the bottom navigation bar or as a floating action button on the Feed, Profile, and Discover pages.",
-        "Tapping/clicking the upload button navigates to the /upload route.",
-        "The button is only functional when the user is authenticated; unauthenticated users see the AuthGuard login prompt.",
-        "The button is present on both mobile (small screens) and desktop layouts."
+        "Navigating to /profile/:userId (or the correct route path) loads the Profile page without a 'not found' error",
+        "Own profile link from the navigation bar loads the authenticated user's profile correctly",
+        "Clicking another user's profile link navigates to their profile page correctly",
+        "No console errors related to route resolution on the profile page"
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Verify and fix the Upload page (/upload) so that users can successfully upload both video (reels) and image (picture) files. The file input must accept video and image MIME types, the submit/upload button must be visible and enabled when a file is selected, and the chunked upload flow must complete without errors.",
+      "text": "Review the Profile.tsx component and fix any issues with how it resolves the userId from route params. Ensure it correctly distinguishes between viewing one's own profile (using the authenticated principal) and viewing another user's profile, and that all backend query calls (fetch profile, fetch videos, fetch saved videos) use the correct user identifier.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-6"
+          "msg-5"
         ],
         "quotes": [
-          "The uploads of reels and pictures don't work no button to upload"
+          "please go through all code and solve all issues"
         ]
       },
       "acceptanceCriteria": [
-        "The Upload page renders a file picker that accepts video/* and image/* MIME types.",
-        "A submit/upload button is visible on the Upload page and becomes enabled once a file, title, and category are provided.",
-        "Selecting a video file and submitting triggers the chunked upload progress indicator and completes successfully.",
-        "Selecting an image/photo file and submitting completes successfully.",
-        "On successful upload the user is navigated to the feed and the new post appears."
+        "Profile page correctly loads profile data for the given user ID",
+        "Videos tab shows videos belonging to the correct user",
+        "Saved videos tab shows only the authenticated user's saved videos when viewing own profile",
+        "Edit profile button appears only when viewing own profile",
+        "Follow button appears only when viewing another user's profile"
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "text": "Audit all navigation links and programmatic navigations throughout the app (Layout.tsx bottom nav, VideoCard.tsx, Notifications.tsx, Leaderboard.tsx, Conversation.tsx, Inbox.tsx, etc.) that link to a user profile page, and ensure they all use the correct route path and pass the correct user identifier as a route parameter.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-5"
+        ],
+        "quotes": [
+          "please go through all code and solve all issues"
+        ]
+      },
+      "acceptanceCriteria": [
+        "All profile links throughout the app navigate to the correct profile route with a valid user identifier",
+        "No broken or malformed profile URLs exist anywhere in the UI",
+        "Bottom navigation 'Profile' item navigates to the authenticated user's own profile"
+      ]
+    },
+    {
+      "id": "REQ-4",
+      "text": "Perform a full audit of backend/main.mo to identify and fix any issues with profile-related query and update functions: getUserProfile, saveCallerUserProfile, updateProfile. Ensure they handle missing profiles gracefully and return appropriate error variants rather than trapping.",
+      "target": "backend",
+      "source": {
+        "messageIds": [
+          "msg-5"
+        ],
+        "quotes": [
+          "please go through all code and solve all issues"
+        ]
+      },
+      "acceptanceCriteria": [
+        "getUserProfile returns a proper null/option or error variant when a profile does not exist instead of trapping",
+        "saveCallerUserProfile and updateProfile correctly persist and retrieve profile data",
+        "No runtime traps occur when accessing profile-related endpoints"
+      ]
+    },
+    {
+      "id": "REQ-5",
+      "text": "Audit the useQueries.ts hooks related to profiles (useFetchUserProfile, useSaveCallerUserProfile, useUpdateProfile) and fix any issues with how backend responses are decoded, how loading/error states are handled, and ensure the Profile page correctly handles the case where a profile is not yet created (new user) versus a genuinely missing/invalid user ID.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-5"
+        ],
+        "quotes": [
+          "please go through all code and solve all issues"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Profile query hooks correctly decode backend response types including option/null variants",
+        "Profile page shows a meaningful 'User not found' message for invalid user IDs rather than a broken state",
+        "Profile page shows a profile setup prompt for authenticated users who have not yet created a profile",
+        "No unhandled promise rejections or query errors in the browser console when visiting a profile"
+      ]
+    },
+    {
+      "id": "REQ-6",
+      "text": "Fix any remaining issues across the entire frontend codebase found during the audit: broken imports, TypeScript type errors, missing route definitions, incorrect query key usage, or stale data not being invalidated after mutations that affect profile or video data.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-5"
+        ],
+        "quotes": [
+          "please go through all code and solve all issues"
+        ]
+      },
+      "acceptanceCriteria": [
+        "No TypeScript compilation errors in the frontend",
+        "All route paths defined in App.tsx match the links used throughout the app",
+        "Mutations that modify profile or video data correctly invalidate related React Query caches",
+        "No broken imports or missing component references"
       ]
     }
   ],
   "constraints": [
-    "Do not modify files under frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, or frontend/src/components/ui.",
-    "Preserve the existing chunked upload logic in the Upload page; only fix UI/routing issues."
+    "Do not modify files under frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, or frontend/src/components/ui",
+    "Preserve all existing features including the upload flow for reels and pictures restored in Version 28"
   ],
   "nonGoals": [
-    "Changing the backend upload or blob-storage API.",
-    "Redesigning the Upload page form fields or layout beyond fixing the broken button.",
-    "Adding new media types beyond video and images."
+    "Adding new profile features beyond fixing existing ones",
+    "Redesigning the profile page UI",
+    "Adding new backend data types or schemas unrelated to the profile fix"
   ],
   "imageRequirements": {
     "required": [],

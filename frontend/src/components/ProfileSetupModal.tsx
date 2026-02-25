@@ -1,205 +1,190 @@
-import React, { useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import { useActor } from '../hooks/useActor';
-import { useInternetIdentity } from '../hooks/useInternetIdentity';
-import { useSaveCallerUserProfile, ExternalBlob } from '../hooks/useQueries';
-import { User, Camera, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
+import { useState } from "react";
+import { useInternetIdentity } from "../hooks/useInternetIdentity";
+import { useActor } from "../hooks/useActor";
+import { useSaveCallerUserProfile } from "../hooks/useQueries";
+import { ExternalBlob } from "../backend";
+import type { UserProfile } from "../backend";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { User, Camera, Loader2 } from "lucide-react";
 
-interface ProfileSetupModalProps {
-  open?: boolean;
-  onClose?: () => void;
-}
-
-export default function ProfileSetupModal({ onClose }: ProfileSetupModalProps) {
-  const { actor } = useActor();
+export default function ProfileSetupModal() {
   const { identity } = useInternetIdentity();
-  const queryClient = useQueryClient();
+  const { actor } = useActor();
   const saveProfile = useSaveCallerUserProfile();
 
-  const [username, setUsername] = useState('');
-  const [bio, setBio] = useState('');
+  const [username, setUsername] = useState("");
+  const [bio, setBio] = useState("");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [isVerifying, setIsVerifying] = useState(false);
-
-  const principalStr = identity?.getPrincipal().toString() ?? 'anonymous';
+  const [avatarPreview, setAvatarPreview] = useState<string>("");
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setAvatarFile(file);
     const reader = new FileReader();
-    reader.onloadend = () => setAvatarPreview(reader.result as string);
+    reader.onload = (ev) => setAvatarPreview(ev.target?.result as string);
     reader.readAsDataURL(file);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-
     if (!username.trim()) {
-      setError('Username is required');
+      setError("Username is required");
+      return;
+    }
+    if (!identity || !actor) {
+      setError("Not authenticated");
       return;
     }
 
-    if (!actor) {
-      setError('Connection not ready. Please wait a moment and try again.');
-      return;
-    }
+    setUploading(true);
+    setError("");
 
-    // Defensive check: verify no profile already exists before creating one
-    setIsVerifying(true);
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const existingProfile = await (actor as any).getCallerUserProfile();
-      if (existingProfile !== null) {
-        // Profile already exists — close modal by invalidating the query
-        queryClient.invalidateQueries({ queryKey: ['currentUserProfile', principalStr] });
-        queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
-        onClose?.();
-        return;
+      // Defensive check: see if profile already exists
+      try {
+        const existingResult = await actor.getCallerUserProfile();
+        if (existingResult.__kind__ === "ok") {
+          // Profile already exists, no need to create
+          setUploading(false);
+          return;
+        }
+      } catch {
+        // Ignore errors here, proceed with creation
       }
-    } catch {
-      // If the check fails, proceed with profile creation
-    } finally {
-      setIsVerifying(false);
-    }
 
-    try {
-      let avatarBlob: ExternalBlob;
-      let avatarUrl = '';
-
+      let avatarBlob = ExternalBlob.fromURL("");
       if (avatarFile) {
         const bytes = new Uint8Array(await avatarFile.arrayBuffer());
         avatarBlob = ExternalBlob.fromBytes(bytes);
-        avatarUrl = avatarPreview ?? '';
-      } else {
-        avatarBlob = ExternalBlob.fromURL('/assets/generated/default-avatar.dim_128x128.png');
-        avatarUrl = '/assets/generated/default-avatar.dim_128x128.png';
       }
 
-      await saveProfile.mutateAsync({
+      const profile: UserProfile = {
+        id: identity.getPrincipal(),
         username: username.trim(),
         bio: bio.trim(),
         avatar: avatarBlob,
-        avatarUrl,
-      });
+        avatarUrl: avatarPreview || "",
+        verified: false,
+        badges: [],
+        savedVideos: [],
+        joinedAt: BigInt(Date.now()) * BigInt(1_000_000),
+      };
 
-      onClose?.();
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to create profile. Please try again.';
-      setError(message);
+      await saveProfile.mutateAsync(profile);
+    } catch (err: any) {
+      setError(err?.message ?? "Failed to create profile");
+    } finally {
+      setUploading(false);
     }
   };
 
-  const isLoading = isVerifying || saveProfile.isPending;
+  const isLoading = uploading || saveProfile.isPending;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-      <div className="bg-card border border-border rounded-2xl w-full max-w-md shadow-2xl">
-        {/* Header */}
-        <div className="p-6 border-b border-border text-center">
-          <div className="w-16 h-16 rounded-full bg-neon-orange/20 flex items-center justify-center mx-auto mb-3">
-            <User className="w-8 h-8 text-neon-orange" />
-          </div>
-          <h2 className="font-display text-2xl font-bold text-foreground">Welcome to RevReel</h2>
-          <p className="text-muted-foreground text-sm mt-1">Set up your profile to get started</p>
-        </div>
+    <Dialog open={true}>
+      <DialogContent
+        className="sm:max-w-md"
+        onInteractOutside={(e) => e.preventDefault()}
+      >
+        <DialogHeader>
+          <DialogTitle className="font-display text-xl">
+            Set Up Your Profile
+          </DialogTitle>
+          <DialogDescription>
+            Welcome to RevReel! Tell us a bit about yourself to get started.
+          </DialogDescription>
+        </DialogHeader>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
           {/* Avatar Upload */}
           <div className="flex flex-col items-center gap-3">
-            <div className="relative">
-              <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-neon-orange/40 bg-muted">
+            <label htmlFor="avatar-upload" className="cursor-pointer group">
+              <div className="h-20 w-20 rounded-full bg-muted border-2 border-dashed border-border group-hover:border-primary transition-colors flex items-center justify-center overflow-hidden">
                 {avatarPreview ? (
-                  <img src={avatarPreview} alt="Avatar preview" className="w-full h-full object-cover" />
+                  <img
+                    src={avatarPreview}
+                    alt="Avatar preview"
+                    className="h-full w-full object-cover"
+                  />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <User className="w-10 h-10 text-muted-foreground" />
+                  <div className="flex flex-col items-center gap-1">
+                    <User className="h-8 w-8 text-muted-foreground" />
+                    <Camera className="h-4 w-4 text-muted-foreground" />
                   </div>
                 )}
               </div>
-              <label
-                htmlFor="avatar-upload"
-                className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-neon-orange flex items-center justify-center cursor-pointer hover:bg-neon-yellow transition-colors"
-              >
-                <Camera className="w-3.5 h-3.5 text-black" />
-              </label>
-              <input
-                id="avatar-upload"
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleAvatarChange}
-                disabled={isLoading}
-              />
-            </div>
-            <span className="text-xs text-muted-foreground">Upload profile photo (optional)</span>
+            </label>
+            <input
+              id="avatar-upload"
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleAvatarChange}
+            />
+            <span className="text-xs text-muted-foreground">
+              Click to upload avatar (optional)
+            </span>
           </div>
 
           {/* Username */}
           <div className="space-y-1.5">
-            <Label htmlFor="username" className="text-sm font-medium">
-              Username <span className="text-destructive">*</span>
-            </Label>
+            <Label htmlFor="username">Username *</Label>
             <Input
               id="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="e.g. driftking99"
-              disabled={isLoading}
               maxLength={30}
-              className="bg-background border-border focus:border-neon-orange"
+              disabled={isLoading}
             />
           </div>
 
           {/* Bio */}
           <div className="space-y-1.5">
-            <Label htmlFor="bio" className="text-sm font-medium">
-              Bio <span className="text-muted-foreground text-xs">(optional)</span>
-            </Label>
+            <Label htmlFor="bio">Bio</Label>
             <Textarea
               id="bio"
               value={bio}
               onChange={(e) => setBio(e.target.value)}
-              placeholder="Tell the community about yourself and your ride..."
-              disabled={isLoading}
-              maxLength={200}
+              placeholder="Tell the community about yourself..."
               rows={3}
-              className="bg-background border-border focus:border-neon-orange resize-none"
+              maxLength={200}
+              disabled={isLoading}
             />
           </div>
 
-          {/* Error */}
           {error && (
-            <div className="text-destructive text-sm bg-destructive/10 border border-destructive/20 rounded-lg px-3 py-2">
-              {error}
-            </div>
+            <p className="text-sm text-destructive">{error}</p>
           )}
 
-          {/* Submit */}
-          <Button
+          <button
             type="submit"
             disabled={isLoading || !username.trim()}
-            className="w-full bg-neon-orange hover:bg-neon-yellow text-black font-bold font-display tracking-wider"
+            className="w-full bg-primary text-primary-foreground py-2.5 rounded font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {isLoading ? (
               <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                {isVerifying ? 'Checking...' : 'Setting up...'}
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Setting up...
               </>
             ) : (
-              'Join RevReel'
+              "Get Started"
             )}
-          </Button>
+          </button>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

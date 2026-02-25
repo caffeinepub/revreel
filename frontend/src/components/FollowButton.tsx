@@ -1,55 +1,59 @@
-import React from 'react';
-import { useFollowUser, useUnfollowUser } from '../hooks/useQueries';
-import { useInternetIdentity } from '../hooks/useInternetIdentity';
-import { UserPlus, UserMinus, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useInternetIdentity } from "../hooks/useInternetIdentity";
+import { useFollowUser, useUnfollowUser, useGetFollowers } from "../hooks/useQueries";
+import { UserPlus, UserMinus, Loader2 } from "lucide-react";
 
-export interface FollowButtonProps {
+interface FollowButtonProps {
   userId: string;
-  isFollowing?: boolean;
 }
 
-export default function FollowButton({ userId, isFollowing = false }: FollowButtonProps) {
+export default function FollowButton({ userId }: FollowButtonProps) {
   const { identity } = useInternetIdentity();
-  const followUser = useFollowUser();
-  const unfollowUser = useUnfollowUser();
+  const currentUserId = identity?.getPrincipal().toString() ?? "";
 
-  if (!identity) return null;
+  const { data: followers = [] } = useGetFollowers(userId);
+  const followMutation = useFollowUser();
+  const unfollowMutation = useUnfollowUser();
 
-  const myPrincipal = identity.getPrincipal().toString();
-  if (myPrincipal === userId) return null;
+  const isFollowing = (followers as any[]).some(
+    (f: any) => f.toString() === currentUserId
+  );
 
-  const isPending = followUser.isPending || unfollowUser.isPending;
+  const isLoading = followMutation.isPending || unfollowMutation.isPending;
 
-  const handleClick = () => {
+  const handleToggle = () => {
+    if (!identity) return;
     if (isFollowing) {
-      unfollowUser.mutate({ userId });
+      unfollowMutation.mutate({ userId });
     } else {
-      followUser.mutate({ userId });
+      followMutation.mutate({ userId });
     }
   };
 
+  if (!identity || currentUserId === userId) return null;
+
   return (
-    <Button
-      size="sm"
-      variant={isFollowing ? 'outline' : 'default'}
-      onClick={handleClick}
-      disabled={isPending}
-      className={isFollowing ? 'border-border' : 'bg-neon-orange text-black hover:bg-neon-yellow font-bold'}
+    <button
+      onClick={handleToggle}
+      disabled={isLoading}
+      className={`flex items-center gap-1.5 px-4 py-1.5 rounded text-sm font-semibold transition-colors disabled:opacity-50 ${
+        isFollowing
+          ? "border border-border hover:bg-muted"
+          : "bg-primary text-primary-foreground hover:bg-primary/90"
+      }`}
     >
-      {isPending ? (
-        <Loader2 className="w-4 h-4 animate-spin" />
+      {isLoading ? (
+        <Loader2 className="h-4 w-4 animate-spin" />
       ) : isFollowing ? (
         <>
-          <UserMinus className="w-4 h-4 mr-1" />
+          <UserMinus className="h-4 w-4" />
           Unfollow
         </>
       ) : (
         <>
-          <UserPlus className="w-4 h-4 mr-1" />
+          <UserPlus className="h-4 w-4" />
           Follow
         </>
       )}
-    </Button>
+    </button>
   );
 }

@@ -1,14 +1,14 @@
 # Specification
 
 ## Summary
-**Goal:** Fix the missing upload button and ensure the Upload page works correctly for both reels (video) and pictures (images) in RevReel.
+**Goal:** Fix the profile page "not found" error and resolve all related routing, backend, and frontend code issues in the RevReel app.
 
 **Planned changes:**
-- Add a clearly visible upload button (or floating action button) to the main navigation/bottom nav bar, accessible from the Feed, Profile, and Discover pages on both mobile and desktop layouts.
-- Ensure the upload button navigates authenticated users to the `/upload` route; unauthenticated users are shown the AuthGuard login prompt.
-- Fix the Upload page (`/upload`) so the file picker accepts `video/*` and `image/*` MIME types.
-- Ensure the submit/upload button is visible and becomes enabled once a file, title, and category are provided.
-- Verify the chunked upload flow completes successfully for video files and that image uploads also complete successfully.
-- Navigate the user to the feed and display the new post upon successful upload.
+- Fix profile route configuration in App.tsx so that `/profile/:userId` (or the correct path) resolves properly with the correct route parameter name
+- Fix Profile.tsx to correctly read route params, distinguish own profile vs. another user's profile, and pass the right user identifier to all backend queries
+- Audit and fix all navigation links and programmatic navigations (Layout.tsx, VideoCard.tsx, Notifications.tsx, Leaderboard.tsx, Conversation.tsx, Inbox.tsx, etc.) to use the correct profile route path and user identifier
+- Fix backend `getUserProfile`, `saveCallerUserProfile`, and `updateProfile` functions to handle missing profiles gracefully without trapping
+- Fix `useFetchUserProfile`, `useSaveCallerUserProfile`, and `useUpdateProfile` hooks to correctly decode backend responses and handle new-user vs. invalid-user cases
+- Fix any remaining TypeScript errors, broken imports, missing route definitions, incorrect query key usage, and stale cache invalidation issues across the frontend
 
-**User-visible outcome:** Users can tap/click an upload button from the main navigation to reach the Upload page, select a video or image file, and successfully upload it — with the new post appearing in the feed afterward.
+**User-visible outcome:** Users can navigate to any profile page (own or others') without encountering a "not found" error, and all profile-related functionality works correctly throughout the app.

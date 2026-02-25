@@ -1,85 +1,88 @@
-import React, { useState } from 'react';
-import { type Listing, useGetAllActiveListings } from '../hooks/useQueries';
-import { Link } from '@tanstack/react-router';
-import { ShoppingBag, Loader2, Plus, Tag } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useInternetIdentity } from '../hooks/useInternetIdentity';
-import PostListingModal from '../components/PostListingModal';
+import { Link } from "@tanstack/react-router";
+import { useGetListings } from "../hooks/useQueries";
+import type { Listing } from "../hooks/useQueries";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tag, Car, DollarSign } from "lucide-react";
 
 export default function Classifieds() {
-  const { data: listings = [], isLoading } = useGetAllActiveListings();
-  const { identity } = useInternetIdentity();
-  const [showModal, setShowModal] = useState(false);
+  const { data: listings = [], isLoading } = useGetListings();
 
-  const activeListings = listings.filter((l: Listing) => l.isActive);
+  const activeListings = (listings as Listing[]).filter((l) => l.isActive);
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6">
+    <div className="max-w-2xl mx-auto px-4 py-6">
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2">
-          <ShoppingBag className="w-6 h-6 text-primary" />
-          <h1 className="font-display text-2xl font-black text-primary neon-text">Classifieds</h1>
-        </div>
-        {identity && (
-          <Button
-            onClick={() => setShowModal(true)}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
-          >
-            <Plus className="w-4 h-4 mr-1" />
-            Post Listing
-          </Button>
-        )}
+        <h1 className="text-2xl font-display font-bold">Classifieds</h1>
+        <Link
+          to="/classifieds/$listingId"
+          params={{ listingId: "new" }}
+          className="flex items-center gap-1.5 bg-primary text-primary-foreground px-3 py-2 rounded text-sm font-semibold hover:bg-primary/90 transition-colors"
+        >
+          <Tag className="h-4 w-4" />
+          Post Listing
+        </Link>
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <div className="space-y-3">
+          {[...Array(3)].map((_, i) => (
+            <Skeleton key={i} className="h-28 w-full rounded-xl" />
+          ))}
         </div>
       ) : activeListings.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-          <ShoppingBag className="w-12 h-12 mb-3 opacity-30" />
-          <p className="text-lg font-semibold">No listings yet</p>
-          <p className="text-sm mt-1">Be the first to post a listing!</p>
+        <div className="text-center py-16 text-muted-foreground">
+          <Tag className="h-16 w-16 mx-auto mb-4 opacity-50" />
+          <p className="text-lg font-medium mb-2">No listings yet</p>
+          <p className="text-sm">Be the first to post a car or part!</p>
         </div>
       ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {activeListings.map((listing: Listing) => (
+        <div className="space-y-3">
+          {activeListings.map((listing) => (
             <Link
-              key={listing.id.toString()}
+              key={listing.id}
               to="/classifieds/$listingId"
-              params={{ listingId: listing.id.toString() }}
-              className="block rounded-xl bg-card border border-border hover:border-primary/50 transition-colors overflow-hidden"
+              params={{ listingId: String(listing.id) }}
+              className="block bg-card border border-border rounded-xl p-4 hover:border-primary/50 transition-colors"
             >
-              {listing.imageUrl ? (
-                <img
-                  src={listing.imageUrl}
-                  alt={listing.title}
-                  className="w-full h-40 object-cover"
-                />
-              ) : (
-                <div className="w-full h-40 bg-muted flex items-center justify-center">
-                  <ShoppingBag className="w-10 h-10 text-muted-foreground/30" />
-                </div>
-              )}
-              <div className="p-4">
-                <h3 className="font-bold text-sm truncate">{listing.title}</h3>
-                <p className="text-primary font-bold text-lg mt-1">${listing.price}</p>
-                <div className="flex items-center gap-2 mt-2">
-                  <span className="text-xs text-muted-foreground">
-                    {listing.year} {listing.make} {listing.model}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1 mt-1">
-                  <Tag className="w-3 h-3 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground">{listing.condition}</span>
+              <div className="flex gap-3">
+                {listing.imageUrl && (
+                  <img
+                    src={listing.imageUrl}
+                    alt={listing.title}
+                    className="h-20 w-20 rounded-lg object-cover flex-shrink-0"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = "none";
+                    }}
+                  />
+                )}
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-display font-bold text-base truncate">
+                    {listing.title}
+                  </h3>
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                    <span className="flex items-center gap-1">
+                      <Car className="h-3 w-3" />
+                      {listing.year} {listing.make} {listing.model}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <DollarSign className="h-3 w-3" />
+                      {listing.price}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                    {listing.description}
+                  </p>
+                  <div className="mt-1">
+                    <span className="text-xs bg-muted px-2 py-0.5 rounded-full">
+                      {listing.condition}
+                    </span>
+                  </div>
                 </div>
               </div>
             </Link>
           ))}
         </div>
       )}
-
-      <PostListingModal open={showModal} onClose={() => setShowModal(false)} />
     </div>
   );
 }

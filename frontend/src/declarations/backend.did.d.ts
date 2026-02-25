@@ -18,6 +18,9 @@ export type Badge = { 'buildMaster' : null } |
   { 'driftKing' : null } |
   { 'mechanicPro' : null };
 export type ExternalBlob = Uint8Array;
+export type ProfileResult = { 'ok' : UserProfile } |
+  { 'notFound' : string } |
+  { 'unauthorized' : string };
 export type UserId = Principal;
 export interface UserProfile {
   'id' : UserId,
@@ -62,10 +65,21 @@ export interface _SERVICE {
   '_caffeineStorageUpdateGatewayPrincipals' : ActorMethod<[], undefined>,
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
-  'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
+  /**
+   * / Get the caller's own profile. Returns `#unauthorized` if the caller is not a registered user,
+   * / and `#notFound` if the profile does not exist.
+   */
+  'getCallerUserProfile' : ActorMethod<[], ProfileResult>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
-  'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
+  /**
+   * / Get any user's profile by principal. Returns `#unauthorized` if the caller is not the user or an admin,
+   * / and `#notFound` if the profile does not exist.
+   */
+  'getUserProfile' : ActorMethod<[Principal], ProfileResult>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
+  /**
+   * / Save (create or update) the caller's own profile. Only registered users can save profiles.
+   */
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
 }
 export declare const idlService: IDL.ServiceClass;

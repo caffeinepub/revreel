@@ -1,456 +1,316 @@
-import React, { useState } from 'react';
-import { useParams, Link } from '@tanstack/react-router';
+import { useState } from "react";
+import { useParams, Link } from "@tanstack/react-router";
+import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import {
-  type Video as VideoType,
-  type Badge,
-  type UserProfile,
-  useGetUserProfile,
   useGetCallerUserProfile,
+  useGetUserProfile,
   useGetVideosByUser,
   useGetSavedVideos,
-  useGetUserStats,
-  useGetUserBadges,
-  useDeleteVideo,
-} from '../hooks/useQueries';
-import { useInternetIdentity } from '../hooks/useInternetIdentity';
-import FollowButton from '../components/FollowButton';
-import EditProfileModal from '../components/EditProfileModal';
-import VideoCard from '../components/VideoCard';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+  useGetFollowers,
+  useGetFollowing,
+} from "../hooks/useQueries";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import VideoCard from "../components/VideoCard";
+import EditProfileModal from "../components/EditProfileModal";
+import FollowButton from "../components/FollowButton";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
-import {
-  Settings, MessageCircle, Grid3X3, Bookmark, Wrench, Trophy, Star, Zap,
-  Wind, Flame, Camera, Loader2, AlertCircle, BadgeCheck, BarChart2, Eye,
-  Heart, Users, UserPlus, Video, Trash2,
-} from 'lucide-react';
-import { toast } from 'sonner';
+  User,
+  Film,
+  Bookmark,
+  BookOpen,
+  CheckCircle,
+  Users,
+  Eye,
+  Heart,
+} from "lucide-react";
 
-const BADGE_CONFIG: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
-  driftKing: { label: 'Drift King', icon: <Wind size={14} />, color: 'text-blue-400' },
-  mechanicPro: { label: 'Mechanic Pro', icon: <Wrench size={14} />, color: 'text-green-400' },
-  dragRacer: { label: 'Drag Racer', icon: <Zap size={14} />, color: 'text-yellow-400' },
-  communityHelper: { label: 'Community Helper', icon: <Star size={14} />, color: 'text-purple-400' },
-  verified: { label: 'Verified', icon: <Trophy size={14} />, color: 'text-neon-orange' },
-  buildMaster: { label: 'Build Master', icon: <Wrench size={14} />, color: 'text-orange-400' },
-  racingLegend: { label: 'Racing Legend', icon: <Flame size={14} />, color: 'text-red-400' },
+const BADGE_LABELS: Record<string, string> = {
+  driftKing: "Drift King",
+  mechanicPro: "Mechanic Pro",
+  dragRacer: "Drag Racer",
+  communityHelper: "Community Helper",
+  verified: "Verified",
+  buildMaster: "Build Master",
+  racingLegend: "Racing Legend",
 };
 
-function badgeKey(badge: Badge): string {
-  if (typeof badge === 'string') return badge;
-  if (typeof badge === 'object' && badge !== null) return Object.keys(badge as object)[0] ?? '';
-  return '';
-}
-
-function ProfileSkeleton() {
-  return (
-    <div className="min-h-screen bg-background pt-14 pb-20">
-      <div className="h-32 bg-muted animate-pulse" />
-      <div className="px-4 pt-14 pb-4 space-y-3">
-        <div className="h-6 w-40 bg-muted animate-pulse rounded" />
-        <div className="h-4 w-64 bg-muted animate-pulse rounded" />
-        <div className="flex gap-6 mt-4">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="text-center">
-              <div className="h-6 w-10 bg-muted animate-pulse rounded mx-auto mb-1" />
-              <div className="h-3 w-12 bg-muted animate-pulse rounded mx-auto" />
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function Profile() {
-  const params = useParams({ strict: false }) as { userId?: string };
+  const { userId } = useParams({ from: "/app-layout/profile/$userId" });
   const { identity } = useInternetIdentity();
-  const currentUserId = identity?.getPrincipal().toString();
-  const isAuthenticated = !!identity;
-
-  const targetUserId = params.userId ?? currentUserId ?? '';
-  const isOwnProfile = !!targetUserId && targetUserId === currentUserId;
-
-  // Use getCallerUserProfile for own profile to avoid permission issues
-  const { data: callerProfile, isLoading: callerLoading } = useGetCallerUserProfile();
-  const { data: otherProfile, isLoading: otherLoading } = useGetUserProfile(
-    isOwnProfile ? '' : targetUserId
-  );
-
-  const profile: UserProfile | null | undefined = isOwnProfile ? callerProfile : otherProfile;
-  const profileLoading = isOwnProfile ? callerLoading : otherLoading;
-
-  const { data: allVideos } = useGetVideosByUser(targetUserId);
-  const { data: badges } = useGetUserBadges(targetUserId);
-  const { data: stats } = useGetUserStats(targetUserId);
-  const { data: savedVideos } = useGetSavedVideos();
   const [showEditModal, setShowEditModal] = useState(false);
-  const [activeVideoIndex, setActiveVideoIndex] = useState<number | null>(null);
 
-  const deleteVideo = useDeleteVideo();
+  const currentUserId = identity?.getPrincipal().toString() ?? "";
+  const isOwnProfile = !!currentUserId && currentUserId === userId;
 
-  const userVideos: VideoType[] = (allVideos ?? []).filter(
-    (v) => v.uploader.toString() === targetUserId
-  );
+  // Use appropriate hook based on whether viewing own or other profile
+  const callerProfileQuery = useGetCallerUserProfile();
+  const otherProfileQuery = useGetUserProfile(isOwnProfile ? "" : userId);
 
-  const handleDeleteVideo = async (videoId: string) => {
-    try {
-      await deleteVideo.mutateAsync({ videoId });
-      toast.success('Video deleted');
-    } catch {
-      toast.error('Failed to delete video');
-    }
-  };
+  const profileQuery = isOwnProfile ? callerProfileQuery : otherProfileQuery;
+  const profile = profileQuery.data;
+  const profileLoading = profileQuery.isLoading;
+
+  const { data: userVideos = [], isLoading: videosLoading } =
+    useGetVideosByUser(userId);
+  const { data: savedVideos = [], isLoading: savedLoading } =
+    useGetSavedVideos();
+  const { data: followers = [] } = useGetFollowers(userId);
+  const { data: following = [] } = useGetFollowing(userId);
+
+  const { data: callerProfile } = useGetCallerUserProfile();
 
   if (profileLoading) {
-    return <ProfileSkeleton />;
-  }
-
-  if (!profile) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 px-6">
-        <AlertCircle className="w-12 h-12 text-muted-foreground" />
-        <h2 className="font-display text-2xl text-foreground">PROFILE NOT FOUND</h2>
-        <p className="text-muted-foreground text-center">This racer hasn't set up their profile yet.</p>
+      <div className="max-w-2xl mx-auto px-4 py-8">
+        <div className="flex items-center gap-4 mb-6">
+          <Skeleton className="h-20 w-20 rounded-full" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-6 w-40" />
+            <Skeleton className="h-4 w-60" />
+          </div>
+        </div>
+        <Skeleton className="h-32 w-full" />
       </div>
     );
   }
 
-  const avatarSrc =
-    profile.avatarUrl && profile.avatarUrl.length > 0
-      ? profile.avatarUrl
-      : '/assets/generated/default-avatar.dim_128x128.png';
+  if (!profile) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-16 text-center">
+        <User className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+        <h2 className="text-2xl font-display font-bold mb-2">User Not Found</h2>
+        <p className="text-muted-foreground mb-6">
+          This profile doesn't exist or may have been removed.
+        </p>
+        <Link
+          to="/feed"
+          className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded font-semibold hover:bg-primary/90 transition-colors"
+        >
+          Back to Feed
+        </Link>
+      </div>
+    );
+  }
+
+  const avatarUrl =
+    profile.avatarUrl || profile.avatar?.getDirectURL?.() || "";
+  const totalLikes = (userVideos as any[]).reduce(
+    (sum: number, v: any) => sum + (v.likes?.length ?? 0),
+    0
+  );
+  const totalViews = (userVideos as any[]).reduce(
+    (sum: number, v: any) => sum + (v.viewCount ?? 0),
+    0
+  );
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="max-w-2xl mx-auto px-4 py-6">
       {/* Profile Header */}
-      <div className="relative">
-        <div className="h-32 bg-gradient-to-br from-neon/20 via-background to-background relative overflow-hidden">
-          <div
-            className="absolute inset-0 opacity-20"
-            style={{
-              backgroundImage: 'url(/assets/generated/feed-bg.dim_1080x1920.png)',
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-            }}
-          />
+      <div className="flex items-start gap-4 mb-6">
+        <div className="relative">
+          {avatarUrl ? (
+            <img
+              src={avatarUrl}
+              alt={profile.username}
+              className="h-20 w-20 rounded-full object-cover border-2 border-primary"
+            />
+          ) : (
+            <div className="h-20 w-20 rounded-full bg-muted flex items-center justify-center border-2 border-primary">
+              <User className="h-10 w-10 text-muted-foreground" />
+            </div>
+          )}
+          {profile.verified && (
+            <CheckCircle className="absolute -bottom-1 -right-1 h-5 w-5 text-primary fill-background" />
+          )}
         </div>
 
-        {/* Avatar */}
-        <div className="absolute left-4 bottom-0 translate-y-1/2">
-          <div className="relative w-20 h-20 rounded-full border-4 border-background overflow-hidden bg-card">
-            <img
-              src={avatarSrc}
-              alt={profile.username}
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = '/assets/generated/default-avatar.dim_128x128.png';
-              }}
-            />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-xl font-display font-bold truncate">
+              {profile.username}
+            </h1>
+            {profile.verified && (
+              <Badge variant="default" className="text-xs">
+                Verified
+              </Badge>
+            )}
+          </div>
+
+          {profile.bio && (
+            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+              {profile.bio}
+            </p>
+          )}
+
+          {/* Badges */}
+          {profile.badges && profile.badges.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              {profile.badges.map((badge: any) => (
+                <Badge key={badge} variant="outline" className="text-xs">
+                  {BADGE_LABELS[badge] ?? badge}
+                </Badge>
+              ))}
+            </div>
+          )}
+
+          {/* Action buttons */}
+          <div className="flex gap-2 mt-3">
+            {isOwnProfile ? (
+              <button
+                onClick={() => setShowEditModal(true)}
+                className="px-4 py-1.5 rounded border border-border text-sm font-medium hover:bg-muted transition-colors"
+              >
+                Edit Profile
+              </button>
+            ) : (
+              <FollowButton userId={userId} />
+            )}
           </div>
         </div>
       </div>
 
-      {/* Profile Info */}
-      <div className="pt-14 px-4 pb-4">
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="flex items-center gap-1.5">
-              <h1 className="font-display text-2xl text-foreground">{profile.username}</h1>
-              {profile.verified && (
-                <BadgeCheck className="w-5 h-5 text-neon flex-shrink-0" />
-              )}
-            </div>
-            <p className="text-muted-foreground text-xs mt-0.5">
-              {targetUserId?.slice(0, 12)}...
-            </p>
+      {/* Stats Row */}
+      <div className="grid grid-cols-4 gap-2 mb-6 bg-muted/30 rounded-xl p-3">
+        <div className="text-center">
+          <div className="text-lg font-display font-bold text-primary">
+            {(userVideos as any[]).length}
           </div>
-          <div className="flex gap-2 mt-1">
-            {isOwnProfile ? (
-              <button
-                onClick={() => setShowEditModal(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary border border-border text-foreground text-sm font-display hover:bg-secondary/80 transition-colors"
-              >
-                <Settings className="w-4 h-4" />
-                EDIT
-              </button>
-            ) : (
-              <div className="flex gap-2">
-                {targetUserId && (
-                  <FollowButton userId={targetUserId} isFollowing={false} />
-                )}
-                {isAuthenticated && targetUserId && (
-                  <Link
-                    to="/messages/$userId"
-                    params={{ userId: targetUserId }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-card border border-neon/30 text-neon text-sm font-display hover:bg-neon/10 transition-colors"
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                    MSG
-                  </Link>
-                )}
-              </div>
-            )}
+          <div className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+            <Film className="h-3 w-3" />
+            Videos
           </div>
         </div>
-
-        {profile.bio && (
-          <p className="text-foreground/80 text-sm mt-3 leading-relaxed">{profile.bio}</p>
-        )}
-
-        {/* Badges */}
-        {badges && badges.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mt-3">
-            {badges.map((badge) => {
-              const key = badgeKey(badge);
-              const config = BADGE_CONFIG[key];
-              if (!config) return null;
-              return (
-                <span
-                  key={key}
-                  className={`flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs font-medium border-current/30 bg-current/10 ${config.color}`}
-                >
-                  {config.icon}
-                  {config.label}
-                </span>
-              );
-            })}
+        <div className="text-center">
+          <div className="text-lg font-display font-bold text-primary">
+            {(followers as any[]).length}
           </div>
-        )}
-
-        {/* Stats */}
-        <div className="flex gap-6 mt-4">
-          <div className="text-center">
-            <div className="font-display text-xl text-neon">{userVideos.length}</div>
-            <div className="text-muted-foreground text-xs font-display">REELS</div>
+          <div className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+            <Users className="h-3 w-3" />
+            Followers
           </div>
-          <div className="text-center">
-            <div className="font-display text-xl text-foreground">
-              {stats ? Number(stats.totalFollowers) : '—'}
-            </div>
-            <div className="text-muted-foreground text-xs font-display">FOLLOWERS</div>
+        </div>
+        <div className="text-center">
+          <div className="text-lg font-display font-bold text-primary">
+            {totalLikes}
           </div>
-          <div className="text-center">
-            <div className="font-display text-xl text-foreground">
-              {stats ? Number(stats.totalFollowing) : '—'}
-            </div>
-            <div className="text-muted-foreground text-xs font-display">FOLLOWING</div>
+          <div className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+            <Heart className="h-3 w-3" />
+            Likes
           </div>
-          <div className="text-center">
-            <div className="font-display text-xl text-foreground">
-              {userVideos.reduce((sum, v) => sum + v.likes.length, 0)}
-            </div>
-            <div className="text-muted-foreground text-xs font-display">LIKES</div>
+        </div>
+        <div className="text-center">
+          <div className="text-lg font-display font-bold text-primary">
+            {totalViews}
+          </div>
+          <div className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+            <Eye className="h-3 w-3" />
+            Views
           </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="videos" className="w-full">
-        <TabsList className="w-full bg-card border-b border-border rounded-none h-auto p-0">
-          <TabsTrigger
-            value="videos"
-            className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-neon-orange data-[state=active]:text-neon-orange py-3"
-          >
-            <Grid3X3 className="w-4 h-4 mr-1.5" />
+      <Tabs defaultValue="videos">
+        <TabsList className="w-full mb-4">
+          <TabsTrigger value="videos" className="flex-1">
+            <Film className="h-4 w-4 mr-1" />
             Reels
           </TabsTrigger>
           {isOwnProfile && (
-            <TabsTrigger
-              value="saved"
-              className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-neon-orange data-[state=active]:text-neon-orange py-3"
-            >
-              <Bookmark className="w-4 h-4 mr-1.5" />
+            <TabsTrigger value="saved" className="flex-1">
+              <Bookmark className="h-4 w-4 mr-1" />
               Saved
             </TabsTrigger>
           )}
-          <TabsTrigger
-            value="stats"
-            className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-neon-orange data-[state=active]:text-neon-orange py-3"
-          >
-            <BarChart2 className="w-4 h-4 mr-1.5" />
-            Stats
+          <TabsTrigger value="builds" className="flex-1">
+            <BookOpen className="h-4 w-4 mr-1" />
+            Builds
           </TabsTrigger>
         </TabsList>
 
-        {/* Videos Tab */}
-        <TabsContent value="videos" className="mt-0">
-          {userVideos.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-              <Video className="w-12 h-12 mb-3 opacity-30" />
-              <p className="text-sm">No reels yet</p>
+        <TabsContent value="videos">
+          {videosLoading ? (
+            <div className="grid grid-cols-2 gap-2">
+              {[...Array(4)].map((_, i) => (
+                <Skeleton key={i} className="aspect-[9/16] rounded-lg" />
+              ))}
+            </div>
+          ) : (userVideos as any[]).length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <Film className="h-12 w-12 mx-auto mb-3 opacity-50" />
+              <p>No videos yet</p>
             </div>
           ) : (
-            <div className="grid grid-cols-3 gap-0.5">
-              {userVideos.map((video, index) => {
-                const thumbUrl = video.thumbnail?.getDirectURL?.() ?? '';
-                return (
-                  <div
-                    key={video.id}
-                    className="relative aspect-[9/16] bg-muted overflow-hidden cursor-pointer group"
-                    onClick={() => setActiveVideoIndex(index)}
-                  >
-                    {thumbUrl ? (
-                      <img
-                        src={thumbUrl}
-                        alt={video.title}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-muted">
-                        <Video className="w-6 h-6 text-muted-foreground" />
-                      </div>
-                    )}
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-3 text-white text-xs">
-                        <span className="flex items-center gap-1">
-                          <Heart className="w-3 h-3" /> {video.likes.length}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Eye className="w-3 h-3" /> {Number(video.viewCount)}
-                        </span>
-                      </div>
-                    </div>
-                    {isOwnProfile && (
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <button
-                            className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full bg-black/60 text-white"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Video?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleDeleteVideo(video.id)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              {deleteVideo.isPending ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                'Delete'
-                              )}
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    )}
-                  </div>
-                );
-              })}
+            <div className="grid grid-cols-2 gap-2">
+              {(userVideos as any[]).map((video: any) => (
+                <div
+                  key={video.id}
+                  className="aspect-[9/16] rounded-lg overflow-hidden"
+                >
+                  <VideoCard
+                    video={video}
+                    currentUserProfile={callerProfile ?? null}
+                  />
+                </div>
+              ))}
             </div>
           )}
         </TabsContent>
 
-        {/* Saved Tab */}
         {isOwnProfile && (
-          <TabsContent value="saved" className="mt-0">
-            {!savedVideos || savedVideos.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-                <Bookmark className="w-12 h-12 mb-3 opacity-30" />
-                <p className="text-sm">No saved reels yet</p>
+          <TabsContent value="saved">
+            {savedLoading ? (
+              <div className="grid grid-cols-2 gap-2">
+                {[...Array(4)].map((_, i) => (
+                  <Skeleton key={i} className="aspect-[9/16] rounded-lg" />
+                ))}
+              </div>
+            ) : (savedVideos as any[]).length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <Bookmark className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p>No saved videos yet</p>
               </div>
             ) : (
-              <div className="grid grid-cols-3 gap-0.5">
-                {savedVideos.map((video) => {
-                  const thumbUrl = video.thumbnail?.getDirectURL?.() ?? '';
-                  return (
-                    <div
-                      key={video.id}
-                      className="relative aspect-[9/16] bg-muted overflow-hidden"
-                    >
-                      {thumbUrl ? (
-                        <img
-                          src={thumbUrl}
-                          alt={video.title}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-muted">
-                          <Video className="w-6 h-6 text-muted-foreground" />
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+              <div className="grid grid-cols-2 gap-2">
+                {(savedVideos as any[]).map((video: any) => (
+                  <div
+                    key={video.id}
+                    className="aspect-[9/16] rounded-lg overflow-hidden"
+                  >
+                    <VideoCard
+                      video={video}
+                      currentUserProfile={callerProfile ?? null}
+                    />
+                  </div>
+                ))}
               </div>
             )}
           </TabsContent>
         )}
 
-        {/* Stats Tab */}
-        <TabsContent value="stats" className="mt-0 p-4">
-          {stats ? (
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                { label: 'Total Videos', value: Number(stats.totalVideos), icon: <Video className="w-4 h-4" /> },
-                { label: 'Total Views', value: Number(stats.totalViews), icon: <Eye className="w-4 h-4" /> },
-                { label: 'Total Likes', value: Number(stats.totalLikes), icon: <Heart className="w-4 h-4" /> },
-                { label: 'Total Comments', value: Number(stats.totalComments), icon: <MessageCircle className="w-4 h-4" /> },
-                { label: 'Followers', value: Number(stats.totalFollowers), icon: <Users className="w-4 h-4" /> },
-                { label: 'Following', value: Number(stats.totalFollowing), icon: <UserPlus className="w-4 h-4" /> },
-                { label: 'Build Logs', value: Number(stats.totalBuildLogs), icon: <Wrench className="w-4 h-4" /> },
-              ].map(({ label, value, icon }) => (
-                <div key={label} className="bg-card border border-border rounded-xl p-3 flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-neon-orange/10 flex items-center justify-center text-neon-orange flex-shrink-0">
-                    {icon}
-                  </div>
-                  <div>
-                    <div className="font-display text-lg text-foreground">{value.toLocaleString()}</div>
-                    <div className="text-muted-foreground text-xs">{label}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-              <BarChart2 className="w-12 h-12 mb-3 opacity-30" />
-              <p className="text-sm">No stats available</p>
-            </div>
-          )}
+        <TabsContent value="builds">
+          <div className="text-center py-12 text-muted-foreground">
+            <BookOpen className="h-12 w-12 mx-auto mb-3 opacity-50" />
+            <p>No build logs yet</p>
+            {isOwnProfile && (
+              <Link
+                to="/builds"
+                className="mt-3 inline-block text-primary text-sm hover:underline"
+              >
+                Start a build log →
+              </Link>
+            )}
+          </div>
         </TabsContent>
       </Tabs>
 
-      {/* Full-screen video viewer */}
-      {activeVideoIndex !== null && userVideos[activeVideoIndex] && (
-        <div className="fixed inset-0 z-50 bg-black">
-          <button
-            onClick={() => setActiveVideoIndex(null)}
-            className="absolute top-4 left-4 z-10 text-white p-2 bg-black/50 rounded-full"
-          >
-            ✕
-          </button>
-          <VideoCard
-            video={userVideos[activeVideoIndex]}
-            currentUserProfile={callerProfile ?? null}
-          />
-        </div>
-      )}
-
       {/* Edit Profile Modal */}
-      {isOwnProfile && profile && (
+      {showEditModal && profile && (
         <EditProfileModal
-          open={showEditModal}
+          profile={profile}
           onClose={() => setShowEditModal(false)}
-          currentProfile={profile}
         />
       )}
     </div>

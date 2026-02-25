@@ -46,6 +46,11 @@ export const UserProfile = IDL.Record({
   'savedVideos' : IDL.Vec(IDL.Nat),
   'avatar' : ExternalBlob,
 });
+export const ProfileResult = IDL.Variant({
+  'ok' : UserProfile,
+  'notFound' : IDL.Text,
+  'unauthorized' : IDL.Text,
+});
 
 export const idlService = IDL.Service({
   '_caffeineStorageBlobIsLive' : IDL.Func(
@@ -76,13 +81,9 @@ export const idlService = IDL.Service({
   '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
   '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
-  'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
+  'getCallerUserProfile' : IDL.Func([], [ProfileResult], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
-  'getUserProfile' : IDL.Func(
-      [IDL.Principal],
-      [IDL.Opt(UserProfile)],
-      ['query'],
-    ),
+  'getUserProfile' : IDL.Func([IDL.Principal], [ProfileResult], ['query']),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
 });
@@ -128,6 +129,11 @@ export const idlFactory = ({ IDL }) => {
     'savedVideos' : IDL.Vec(IDL.Nat),
     'avatar' : ExternalBlob,
   });
+  const ProfileResult = IDL.Variant({
+    'ok' : UserProfile,
+    'notFound' : IDL.Text,
+    'unauthorized' : IDL.Text,
+  });
   
   return IDL.Service({
     '_caffeineStorageBlobIsLive' : IDL.Func(
@@ -158,13 +164,9 @@ export const idlFactory = ({ IDL }) => {
     '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
     '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
-    'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
+    'getCallerUserProfile' : IDL.Func([], [ProfileResult], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
-    'getUserProfile' : IDL.Func(
-        [IDL.Principal],
-        [IDL.Opt(UserProfile)],
-        ['query'],
-      ),
+    'getUserProfile' : IDL.Func([IDL.Principal], [ProfileResult], ['query']),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
   });

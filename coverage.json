@@ -1,46 +1,122 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-24T21:37:00.450Z",
+  "generatedAt": "2026-02-24T21:55:18.214Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 2,
-    "implemented": 2,
+    "total": 6,
+    "implemented": 5,
     "items": [
       {
         "id": "REQ-1",
-        "summary": "Add a clearly visible upload button (or FAB) accessible from the main navigation or Feed page that navigates authenticated users to the Upload page (/upload route). The button must be present and tappable on both mobile and desktop layouts.",
+        "summary": "Audit and fix the Profile page route configuration in App.tsx so that navigating to a user's profile (both own profile and other users' profiles) renders the Profile component correctly without a 'not found' error. Ensure the route parameter (e.g., userId or username) is correctly defined in the TanStack Router route tree and matches what Profile.tsx expects to read from route params.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/components/Layout.tsx"
+          "frontend/src/App.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/components/Layout.tsx"
+          "frontend/src/App.tsx"
         ]
       },
       {
         "id": "REQ-2",
-        "summary": "Verify and fix the Upload page (/upload) so that users can successfully upload both video (reels) and image (picture) files. The file input must accept video and image MIME types, the submit/upload button must be visible and enabled when a file is selected, and the chunked upload flow must complete without errors.",
+        "summary": "Review the Profile.tsx component and fix any issues with how it resolves the userId from route params. Ensure it correctly distinguishes between viewing one's own profile (using the authenticated principal) and viewing another user's profile, and that all backend query calls (fetch profile, fetch videos, fetch saved videos) use the correct user identifier.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/pages/Upload.tsx"
+          "frontend/src/pages/Profile.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/pages/Upload.tsx"
+          "frontend/src/pages/Profile.tsx"
+        ]
+      },
+      {
+        "id": "REQ-3",
+        "summary": "Audit all navigation links and programmatic navigations throughout the app (Layout.tsx bottom nav, VideoCard.tsx, Notifications.tsx, Leaderboard.tsx, Conversation.tsx, Inbox.tsx, etc.) that link to a user profile page, and ensure they all use the correct route path and pass the correct user identifier as a route parameter.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/Layout.tsx",
+          "frontend/src/components/VideoCard.tsx",
+          "frontend/src/pages/Notifications.tsx",
+          "frontend/src/pages/Leaderboard.tsx",
+          "frontend/src/pages/Conversation.tsx",
+          "frontend/src/pages/Inbox.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/Layout.tsx",
+          "frontend/src/components/VideoCard.tsx"
+        ]
+      },
+      {
+        "id": "REQ-4",
+        "summary": "Perform a full audit of backend/main.mo to identify and fix any issues with profile-related query and update functions: getUserProfile, saveCallerUserProfile, updateProfile. Ensure they handle missing profiles gracefully and return appropriate error variants rather than trapping.",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
+      },
+      {
+        "id": "REQ-5",
+        "summary": "Audit the useQueries.ts hooks related to profiles (useFetchUserProfile, useSaveCallerUserProfile, useUpdateProfile) and fix any issues with how backend responses are decoded, how loading/error states are handled, and ensure the Profile page correctly handles the case where a profile is not yet created (new user) versus a genuinely missing/invalid user ID.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/pages/Profile.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/pages/Profile.tsx"
+        ]
+      },
+      {
+        "id": "REQ-6",
+        "summary": "Fix any remaining issues across the entire frontend codebase found during the audit: broken imports, TypeScript type errors, missing route definitions, incorrect query key usage, or stale data not being invalidated after mutations that affect profile or video data.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/App.tsx",
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/components/EditProfileModal.tsx",
+          "frontend/src/components/ProfileSetupModal.tsx",
+          "frontend/src/components/VideoCard.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/App.tsx",
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/components/EditProfileModal.tsx",
+          "frontend/src/components/ProfileSetupModal.tsx",
+          "frontend/src/components/VideoCard.tsx"
         ]
       }
     ]
   },
   "changedFiles": [
+    "backend/main.mo",
     "build-request.json",
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
+    "frontend/src/App.tsx",
+    "frontend/src/backend.d.ts",
+    "frontend/src/backend.ts",
+    "frontend/src/components/EditProfileModal.tsx",
+    "frontend/src/components/FollowButton.tsx",
     "frontend/src/components/Layout.tsx",
-    "frontend/src/pages/Upload.tsx",
+    "frontend/src/components/ProfileSetupModal.tsx",
+    "frontend/src/components/VideoCard.tsx",
+    "frontend/src/declarations/backend.did.d.ts",
+    "frontend/src/declarations/backend.did.js",
+    "frontend/src/hooks/useQueries.ts",
+    "frontend/src/pages/BuildLogDetails.tsx",
+    "frontend/src/pages/BuildLogs.tsx",
+    "frontend/src/pages/CarMeetDetails.tsx",
+    "frontend/src/pages/CarMeets.tsx",
+    "frontend/src/pages/Classifieds.tsx",
+    "frontend/src/pages/Discover.tsx",
+    "frontend/src/pages/ListingDetails.tsx",
+    "frontend/src/pages/MechanicsHelp.tsx",
+    "frontend/src/pages/MechanicsPostDetails.tsx",
+    "frontend/src/pages/Profile.tsx",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

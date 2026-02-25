@@ -1,31 +1,64 @@
 {
   "schemaVersion": "1.0.0",
   "projectStateVersion": 3,
-  "summary": "Social media app with profiles, Builds, Marketplace pages, and media upload functionality (reels and pictures).",
+  "summary": "Social media app with reels/pictures upload functionality. User is experiencing a 'not found' error on the profile page and has requested a full code review and fix of all issues.",
   "architectural_notes": [],
   "known_issues": [
-    "Upload button for reels and pictures is missing/non-functional"
+    "Profile page returns 'not found' error — requires route/component investigation"
   ],
   "isFixRequest": true,
   "existing_features": [
     {
-      "id": "feature-add-a-clearly-visible-upload-button-or-fab-accessible-from-the-main-navigation-or-feed-page-that-navigates-authenticated-users-to-the-upload-page-upload-route-the-button-must-be-present-and-tappable-on-both-mobile-and-desktop-layouts",
-      "title": "Add a clearly visible upload button (or FAB) accessible from the main navigation or Feed page that navigates authenticated users to the Upload page (/upload route). The button must be present and tappable on both mobile and desktop layouts.",
+      "id": "feature-audit-and-fix-the-profile-page-route-configuration-in-app-tsx-so-that-navigating-to-a-user-s-profile-both-own-profile-and-other-users-profiles-renders-the-profile-component-correctly-without-a-not-found-error-ensure-the-route-parameter-e-g-userid-or-username-is-correctly-defined-in-the-tanstack-router-route-tree-and-matches-what-profile-tsx-expects-to-read-from-route-params",
+      "title": "Audit and fix the Profile page route configuration in App.tsx so that navigating to a user's profile (both own profile and other users' profiles) renders the Profile component correctly without a 'not found' error. Ensure the route parameter (e.g., userId or username) is correctly defined in the TanStack Router route tree and matches what Profile.tsx expects to read from route params.",
       "reqIds": [
         "REQ-1"
       ],
       "version": 1
     },
     {
-      "id": "feature-verify-and-fix-the-upload-page-upload-so-that-users-can-successfully-upload-both-video-reels-and-image-picture-files-the-file-input-must-accept-video-and-image-mime-types-the-submit-upload-button-must-be-visible-and-enabled-when-a-file-is-selected-and-the-chunked-upload-flow-must-complete-without-errors",
-      "title": "Verify and fix the Upload page (/upload) so that users can successfully upload both video (reels) and image (picture) files. The file input must accept video and image MIME types, the submit/upload button must be visible and enabled when a file is selected, and the chunked upload flow must complete without errors.",
+      "id": "feature-review-the-profile-tsx-component-and-fix-any-issues-with-how-it-resolves-the-userid-from-route-params-ensure-it-correctly-distinguishes-between-viewing-one-s-own-profile-using-the-authenticated-principal-and-viewing-another-user-s-profile-and-that-all-backend-query-calls-fetch-profile-fetch-videos-fetch-saved-videos-use-the-correct-user-identifier",
+      "title": "Review the Profile.tsx component and fix any issues with how it resolves the userId from route params. Ensure it correctly distinguishes between viewing one's own profile (using the authenticated principal) and viewing another user's profile, and that all backend query calls (fetch profile, fetch videos, fetch saved videos) use the correct user identifier.",
       "reqIds": [
         "REQ-2"
       ],
       "version": 1
+    },
+    {
+      "id": "feature-audit-all-navigation-links-and-programmatic-navigations-throughout-the-app-layout-tsx-bottom-nav-videocard-tsx-notifications-tsx-leaderboard-tsx-conversation-tsx-inbox-tsx-etc-that-link-to-a-user-profile-page-and-ensure-they-all-use-the-correct-route-path-and-pass-the-correct-user-identifier-as-a-route-parameter",
+      "title": "Audit all navigation links and programmatic navigations throughout the app (Layout.tsx bottom nav, VideoCard.tsx, Notifications.tsx, Leaderboard.tsx, Conversation.tsx, Inbox.tsx, etc.) that link to a user profile page, and ensure they all use the correct route path and pass the correct user identifier as a route parameter.",
+      "reqIds": [
+        "REQ-3"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-audit-the-usequeries-ts-hooks-related-to-profiles-usefetchuserprofile-usesavecalleruserprofile-useupdateprofile-and-fix-any-issues-with-how-backend-responses-are-decoded-how-loading-error-states-are-handled-and-ensure-the-profile-page-correctly-handles-the-case-where-a-profile-is-not-yet-created-new-user-versus-a-genuinely-missing-invalid-user-id",
+      "title": "Audit the useQueries.ts hooks related to profiles (useFetchUserProfile, useSaveCallerUserProfile, useUpdateProfile) and fix any issues with how backend responses are decoded, how loading/error states are handled, and ensure the Profile page correctly handles the case where a profile is not yet created (new user) versus a genuinely missing/invalid user ID.",
+      "reqIds": [
+        "REQ-5"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-any-remaining-issues-across-the-entire-frontend-codebase-found-during-the-audit-broken-imports-typescript-type-errors-missing-route-definitions-incorrect-query-key-usage-or-stale-data-not-being-invalidated-after-mutations-that-affect-profile-or-video-data",
+      "title": "Fix any remaining issues across the entire frontend codebase found during the audit: broken imports, TypeScript type errors, missing route definitions, incorrect query key usage, or stale data not being invalidated after mutations that affect profile or video data.",
+      "reqIds": [
+        "REQ-6"
+      ],
+      "version": 1
     }
   ],
-  "new_feature_requests": [],
+  "new_feature_requests": [
+    {
+      "id": "AR-4",
+      "summary": "Perform a full audit of backend/main.mo to identify and fix any issues with profile-related query and update functions: getUserProfile, saveCallerUserProfile, updateProfile. Ensure they handle missing profiles gracefully and return appropriate error variants rather than trapping.",
+      "reqIds": [
+        "REQ-4"
+      ],
+      "status": "pending"
+    }
+  ],
   "gameProjectType": "none",
   "projectName": "RevReel",
   "clarification_mode": "instant",

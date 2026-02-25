@@ -1,74 +1,72 @@
-import { useState } from 'react';
-import { Link, useNavigate, useRouterState, Outlet } from '@tanstack/react-router';
+import { Outlet, Link, useNavigate, useLocation } from "@tanstack/react-router";
+import { useState } from "react";
 import {
   Home,
   Search,
   Trophy,
+  Bell,
+  MessageCircle,
   User,
-  MoreHorizontal,
+  Upload,
   Wrench,
   Car,
-  MessageSquare,
-  Bell,
-  ShieldCheck,
-  Info,
   BookOpen,
   Tag,
-  Plus,
+  Shield,
+  Info,
+  MoreHorizontal,
+  LogOut,
   X,
-} from 'lucide-react';
-import { useInternetIdentity } from '../hooks/useInternetIdentity';
-import { useGetCallerUserProfile } from '../hooks/useQueries';
-import ProfileSetupModal from './ProfileSetupModal';
-import { useQueryClient } from '@tanstack/react-query';
-
-const primaryNavItems = [
-  { icon: Home, label: 'Feed', path: '/feed' },
-  { icon: Search, label: 'Discover', path: '/discover' },
-  { icon: Trophy, label: 'Leaderboard', path: '/leaderboard' },
-  { icon: User, label: 'Profile', path: '/profile' },
-];
-
-const secondaryNavItems = [
-  { icon: Car, label: 'Car Meets', path: '/meets' },
-  { icon: Wrench, label: 'Mechanics', path: '/mechanics' },
-  { icon: MessageSquare, label: 'Inbox', path: '/inbox' },
-  { icon: Bell, label: 'Notifications', path: '/notifications' },
-  { icon: BookOpen, label: 'Build Logs', path: '/builds' },
-  { icon: Tag, label: 'Classifieds', path: '/classifieds' },
-  { icon: Info, label: 'About', path: '/about' },
-  { icon: ShieldCheck, label: 'Admin', path: '/admin' },
-];
+} from "lucide-react";
+import { useInternetIdentity } from "../hooks/useInternetIdentity";
+import { useQueryClient } from "@tanstack/react-query";
+import ProfileSetupModal from "./ProfileSetupModal";
+import { useGetCallerUserProfile } from "../hooks/useQueries";
 
 export default function Layout() {
   const { identity, clear } = useInternetIdentity();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const routerState = useRouterState();
-  const currentPath = routerState.location.pathname;
+  const location = useLocation();
   const [showMore, setShowMore] = useState(false);
 
+  const { data: userProfile, isLoading: profileLoading, isFetched } = useGetCallerUserProfile();
+
   const isAuthenticated = !!identity;
+  const currentUserId = identity?.getPrincipal().toString() ?? "";
 
-  const {
-    data: userProfile,
-    isLoading: profileLoading,
-    isFetched,
-  } = useGetCallerUserProfile();
-
-  const showProfileSetup =
-    isAuthenticated && !profileLoading && isFetched && userProfile === null;
+  // Show profile setup modal only when authenticated, actor is ready, and profile is null
+  const showProfileSetup = isAuthenticated && !profileLoading && isFetched && userProfile === null;
 
   const handleLogout = async () => {
     await clear();
     queryClient.clear();
-    navigate({ to: '/' });
+    navigate({ to: "/" });
   };
+
+  const primaryNavItems = [
+    { to: "/feed", icon: Home, label: "Home" },
+    { to: "/discover", icon: Search, label: "Discover" },
+    { to: "/leaderboard", icon: Trophy, label: "Leaderboard" },
+    { to: "/notifications", icon: Bell, label: "Alerts" },
+    { to: "/inbox", icon: MessageCircle, label: "Messages" },
+  ];
+
+  const secondaryNavItems = [
+    { to: "/mechanics", icon: Wrench, label: "Mechanics" },
+    { to: "/meets", icon: Car, label: "Car Meets" },
+    { to: "/builds", icon: BookOpen, label: "Build Logs" },
+    { to: "/classifieds", icon: Tag, label: "Classifieds" },
+    { to: "/admin", icon: Shield, label: "Admin" },
+    { to: "/about", icon: Info, label: "About" },
+  ];
+
+  const isActive = (path: string) => location.pathname.startsWith(path);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* Fixed Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 h-14 bg-background/90 backdrop-blur-md border-b border-border flex items-center justify-between px-4">
+      {/* Top Header */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur border-b border-border h-14 flex items-center justify-between px-4">
         <Link to="/feed" className="flex items-center gap-2">
           <img
             src="/assets/generated/revreel-logo.dim_256x256.png"
@@ -79,31 +77,36 @@ export default function Layout() {
             RevReel
           </span>
         </Link>
-        <div className="flex items-center gap-3">
-          {isAuthenticated && (
-            <button
-              onClick={() => navigate({ to: '/upload' })}
-              className="flex items-center gap-1.5 bg-primary text-primary-foreground px-3 py-1.5 rounded-full text-sm font-semibold hover:bg-primary/90 transition-colors"
-            >
-              <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">Upload</span>
-            </button>
-          )}
-          {isAuthenticated ? (
-            <button
-              onClick={handleLogout}
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded border border-border"
-            >
-              Logout
-            </button>
-          ) : (
+
+        <div className="flex items-center gap-2">
+          <Link
+            to="/upload"
+            className="flex items-center gap-1.5 bg-primary text-primary-foreground px-3 py-1.5 rounded text-sm font-semibold hover:bg-primary/90 transition-colors"
+          >
+            <Upload className="h-4 w-4" />
+            <span className="hidden sm:inline">Upload</span>
+          </Link>
+
+          {isAuthenticated && currentUserId && (
             <Link
-              to="/"
-              className="text-xs text-primary hover:text-primary/80 transition-colors px-2 py-1 rounded border border-primary/40"
+              to="/profile/$userId"
+              params={{ userId: currentUserId }}
+              className="flex items-center gap-1.5 px-2 py-1.5 rounded hover:bg-muted transition-colors"
             >
-              Login
+              <User className="h-4 w-4 text-muted-foreground" />
+              <span className="hidden sm:inline text-sm text-muted-foreground">
+                {userProfile?.username ?? "Profile"}
+              </span>
             </Link>
           )}
+
+          <button
+            onClick={handleLogout}
+            className="p-2 rounded hover:bg-muted transition-colors"
+            title="Logout"
+          >
+            <LogOut className="h-4 w-4 text-muted-foreground" />
+          </button>
         </div>
       </header>
 
@@ -113,91 +116,92 @@ export default function Layout() {
       </main>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 h-16 bg-background/95 backdrop-blur-md border-t border-border flex items-center justify-around px-2">
-        {primaryNavItems.map(({ icon: Icon, label, path }) => {
-          const isActive = currentPath === path || currentPath.startsWith(path + '/');
-          return (
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur border-t border-border">
+        <div className="flex items-center justify-around h-16 px-2 max-w-lg mx-auto">
+          {primaryNavItems.map(({ to, icon: Icon, label }) => (
             <Link
-              key={path}
-              to={path}
-              className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-colors min-w-0 ${
-                isActive
-                  ? 'text-primary'
-                  : 'text-muted-foreground hover:text-foreground'
+              key={to}
+              to={to}
+              className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg transition-colors ${
+                isActive(to)
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              <Icon className={`h-5 w-5 ${isActive ? 'drop-shadow-[0_0_6px_var(--color-primary)]' : ''}`} />
-              <span className="text-[10px] font-medium truncate">{label}</span>
+              <Icon className="h-5 w-5" />
+              <span className="text-[10px] font-medium">{label}</span>
             </Link>
-          );
-        })}
+          ))}
 
-        {/* More button */}
-        <button
-          onClick={() => setShowMore(!showMore)}
-          className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-colors ${
-            showMore ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          <MoreHorizontal className="h-5 w-5" />
-          <span className="text-[10px] font-medium">More</span>
-        </button>
+          {/* Profile link in bottom nav */}
+          {isAuthenticated && currentUserId ? (
+            <Link
+              to="/profile/$userId"
+              params={{ userId: currentUserId }}
+              className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg transition-colors ${
+                isActive("/profile")
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <User className="h-5 w-5" />
+              <span className="text-[10px] font-medium">Profile</span>
+            </Link>
+          ) : (
+            <Link
+              to="/feed"
+              className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+            >
+              <User className="h-5 w-5" />
+              <span className="text-[10px] font-medium">Profile</span>
+            </Link>
+          )}
+
+          {/* More button */}
+          <button
+            onClick={() => setShowMore(true)}
+            className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+          >
+            <MoreHorizontal className="h-5 w-5" />
+            <span className="text-[10px] font-medium">More</span>
+          </button>
+        </div>
       </nav>
 
-      {/* Floating Upload Button (FAB) */}
-      {isAuthenticated && (
-        <button
-          onClick={() => navigate({ to: '/upload' })}
-          className="fixed bottom-20 right-4 z-40 w-14 h-14 bg-primary text-primary-foreground rounded-full shadow-lg shadow-primary/40 flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all neon-glow"
-          aria-label="Upload reel or photo"
-        >
-          <Plus className="h-7 w-7" />
-        </button>
-      )}
-
-      {/* More Popup */}
+      {/* More Menu Overlay */}
       {showMore && (
-        <>
+        <div
+          className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm"
+          onClick={() => setShowMore(false)}
+        >
           <div
-            className="fixed inset-0 z-40 bg-black/50"
-            onClick={() => setShowMore(false)}
-          />
-          <div className="fixed bottom-20 left-4 right-4 z-50 bg-card border border-border rounded-2xl p-4 shadow-2xl">
-            <div className="flex items-center justify-between mb-3">
-              <span className="font-display text-sm font-bold text-muted-foreground uppercase tracking-widest">
-                More
-              </span>
+            className="absolute bottom-0 left-0 right-0 bg-card border-t border-border rounded-t-2xl p-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <span className="font-display text-lg font-bold">More</span>
               <button
                 onClick={() => setShowMore(false)}
-                className="text-muted-foreground hover:text-foreground"
+                className="p-1 rounded hover:bg-muted"
               >
-                <X className="h-4 w-4" />
+                <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="grid grid-cols-4 gap-2">
-              {secondaryNavItems.map(({ icon: Icon, label, path }) => {
-                const isActive = currentPath === path;
-                return (
-                  <Link
-                    key={path}
-                    to={path}
-                    onClick={() => setShowMore(false)}
-                    className={`flex flex-col items-center gap-1 p-3 rounded-xl transition-colors ${
-                      isActive
-                        ? 'bg-primary/20 text-primary'
-                        : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
-                    }`}
-                  >
-                    <Icon className="h-5 w-5" />
-                    <span className="text-[10px] font-medium text-center leading-tight">
-                      {label}
-                    </span>
-                  </Link>
-                );
-              })}
+            <div className="grid grid-cols-3 gap-3">
+              {secondaryNavItems.map(({ to, icon: Icon, label }) => (
+                <Link
+                  key={to}
+                  to={to}
+                  onClick={() => setShowMore(false)}
+                  className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors"
+                >
+                  <Icon className="h-6 w-6 text-primary" />
+                  <span className="text-xs font-medium text-center">{label}</span>
+                </Link>
+              ))}
             </div>
           </div>
-        </>
+        </div>
       )}
 
       {/* Profile Setup Modal */}

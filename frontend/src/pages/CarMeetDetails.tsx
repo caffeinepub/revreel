@@ -1,264 +1,150 @@
-import React, { useState } from 'react';
-import { useParams, Link, useNavigate } from '@tanstack/react-router';
-import { ArrowLeft, Calendar, MapPin, Users, Car } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { useGetCarMeetDetails, useJoinCarMeet, useLeaveCarMeet, type UserProfile } from '../hooks/useQueries';
-import { useInternetIdentity } from '../hooks/useInternetIdentity';
-import { toast } from 'sonner';
-
-const CATEGORY_COLORS: Record<string, string> = {
-  jdm: 'bg-neon-orange/20 text-neon-orange border-neon-orange/40',
-  muscle: 'bg-orange-500/20 text-orange-400 border-orange-500/40',
-  drift: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40',
-  drag: 'bg-red-500/20 text-red-400 border-red-500/40',
-  supercar: 'bg-purple-500/20 text-purple-400 border-purple-500/40',
-  offroad: 'bg-green-500/20 text-green-400 border-green-500/40',
-  all: 'bg-blue-500/20 text-blue-400 border-blue-500/40',
-};
-
-function formatDate(timestamp: bigint): string {
-  const ms = Number(timestamp) / 1_000_000;
-  return new Date(ms).toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-  });
-}
-
-function formatTime(timestamp: bigint): string {
-  const ms = Number(timestamp) / 1_000_000;
-  return new Date(ms).toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
-function isUpcoming(timestamp: bigint): boolean {
-  return Number(timestamp) / 1_000_000 > Date.now();
-}
-
-function DetailsSkeleton() {
-  return (
-    <div className="min-h-screen bg-background pb-24">
-      <div className="sticky top-0 z-20 bg-background/90 backdrop-blur-sm border-b border-border/40 px-4 py-3 flex items-center gap-3">
-        <Skeleton className="w-9 h-9 rounded-full" />
-        <Skeleton className="h-5 w-48 flex-1" />
-      </div>
-      <div className="px-4 pt-5 space-y-4">
-        <Skeleton className="h-8 w-3/4" />
-        <Skeleton className="h-5 w-24" />
-        <Skeleton className="h-20 w-full rounded-xl" />
-        <Skeleton className="h-4 w-full" />
-        <Skeleton className="h-4 w-2/3" />
-      </div>
-    </div>
-  );
-}
+import { useParams, Link } from "@tanstack/react-router";
+import { useInternetIdentity } from "../hooks/useInternetIdentity";
+import { useGetCarMeetDetails, useJoinCarMeet, useLeaveCarMeet } from "../hooks/useQueries";
+import type { UserProfile } from "../hooks/useQueries";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Car, MapPin, Calendar, Users, ChevronLeft, Loader2 } from "lucide-react";
 
 export default function CarMeetDetails() {
-  const { meetId } = useParams({ strict: false }) as { meetId: string };
-  const navigate = useNavigate();
+  const { meetId } = useParams({ from: "/app-layout/meets/$meetId" });
   const { identity } = useInternetIdentity();
-  const isAuthenticated = !!identity;
-  const currentPrincipal = identity?.getPrincipal().toString();
-
   const { data: meet, isLoading } = useGetCarMeetDetails(meetId);
   const joinMeet = useJoinCarMeet();
   const leaveMeet = useLeaveCarMeet();
-  const [actionLoading, setActionLoading] = useState(false);
 
-  const isAttending = currentPrincipal
-    ? (meet?.attendees ?? []).some((a: UserProfile) => a.id.toString() === currentPrincipal)
-    : false;
+  const currentUserId = identity?.getPrincipal().toString() ?? "";
+  const isAttending = (meet as any)?.attendees?.some(
+    (a: UserProfile) => a.id?.toString() === currentUserId
+  );
 
-  const upcoming = meet ? isUpcoming(meet.date) : false;
-  const categoryColor = meet ? (CATEGORY_COLORS[meet.category.toLowerCase()] ?? CATEGORY_COLORS['all']) : '';
-
-  const handleAttend = async () => {
-    if (!isAuthenticated) {
-      toast.info('Login to attend car meets!');
-      return;
-    }
-    setActionLoading(true);
-    try {
-      if (isAttending) {
-        await leaveMeet.mutateAsync({ meetId });
-        toast.success('Left the meet.');
-      } else {
-        await joinMeet.mutateAsync({ meetId });
-        toast.success("You're attending! 🚗");
-      }
-    } catch {
-      toast.error('Action failed. Please try again.');
-    } finally {
-      setActionLoading(false);
+  const handleToggleAttend = () => {
+    if (isAttending) {
+      leaveMeet.mutate({ meetId });
+    } else {
+      joinMeet.mutate({ meetId });
     }
   };
 
   if (isLoading) {
-    return <DetailsSkeleton />;
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-8 space-y-4">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-32 w-full" />
+      </div>
+    );
   }
 
   if (!meet) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 px-6">
-        <Car className="w-12 h-12 text-muted-foreground" />
-        <h2 className="font-display text-2xl text-foreground">MEET NOT FOUND</h2>
-        <p className="text-muted-foreground text-center">This car meet doesn't exist or was removed.</p>
-        <Link to="/meets" className="text-neon-orange font-display text-sm tracking-wider hover:underline">
-          ← BACK TO MEETS
+      <div className="max-w-2xl mx-auto px-4 py-16 text-center">
+        <Car className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+        <h2 className="text-2xl font-display font-bold mb-2">Meet Not Found</h2>
+        <Link to="/meets" className="text-primary hover:underline">
+          Back to Car Meets
         </Link>
       </div>
     );
   }
 
-  const organizerAvatarUrl = meet.organizer?.avatar?.getDirectURL() || '/assets/generated/default-avatar.dim_128x128.png';
+  const m = meet as any;
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="max-w-2xl mx-auto px-4 py-6">
       {/* Header */}
-      <div className="sticky top-0 z-20 bg-background/90 backdrop-blur-sm border-b border-border/40 px-4 py-3 flex items-center gap-3">
-        <button
-          onClick={() => navigate({ to: '/meets' })}
-          className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors"
-          aria-label="Back to meets"
-        >
-          <ArrowLeft className="w-4 h-4 text-foreground" />
-        </button>
-        <h1 className="font-display text-lg tracking-wider text-foreground truncate flex-1">{meet.title}</h1>
-        <span className={`shrink-0 text-[10px] font-display tracking-wider px-2 py-0.5 rounded border ${categoryColor}`}>
-          {meet.category.toUpperCase()}
-        </span>
+      <div className="flex items-center gap-3 mb-6">
+        <Link to="/meets" className="p-2 rounded hover:bg-muted transition-colors">
+          <ChevronLeft className="h-5 w-5" />
+        </Link>
+        <h1 className="flex-1 text-xl font-display font-bold truncate">
+          {m.title}
+        </h1>
       </div>
 
-      <div className="px-4 pt-5 space-y-6">
-        {/* Status badge */}
-        <div className="flex items-center gap-2">
-          <span className={`inline-flex items-center gap-1.5 text-xs font-display tracking-wider px-3 py-1 rounded-full border ${
-            upcoming
-              ? 'bg-neon-orange/10 text-neon-orange border-neon-orange/30'
-              : 'bg-muted text-muted-foreground border-border/40'
-          }`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${upcoming ? 'bg-neon-orange animate-pulse' : 'bg-muted-foreground'}`} />
-            {upcoming ? 'UPCOMING' : 'PAST EVENT'}
+      {/* Details Card */}
+      <div className="bg-card border border-border rounded-xl p-4 mb-4 space-y-3">
+        <div className="flex items-center gap-2 text-sm">
+          <MapPin className="h-4 w-4 text-primary" />
+          <span>{m.location}</span>
+        </div>
+        <div className="flex items-center gap-2 text-sm">
+          <Calendar className="h-4 w-4 text-primary" />
+          <span>
+            {new Date(Number(m.date) / 1_000_000).toLocaleString()}
           </span>
         </div>
-
-        {/* Title & Organizer */}
-        <div className="space-y-3">
-          <h2 className="font-display text-3xl tracking-wide text-foreground leading-tight">{meet.title}</h2>
-          {meet.organizer && (
-            <Link
-              to="/profile/$userId"
-              params={{ userId: meet.organizer.id.toString() }}
-              className="flex items-center gap-2.5 group w-fit"
-            >
-              <Avatar className="w-8 h-8 border border-neon-orange/30">
-                <AvatarImage src={organizerAvatarUrl} alt={meet.organizer.username} />
-                <AvatarFallback className="bg-neon-orange/10 text-neon-orange text-xs font-display">
-                  {meet.organizer.username.slice(0, 2).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="text-xs text-muted-foreground">Organized by</p>
-                <p className="text-sm font-display text-neon-orange group-hover:text-neon-orange/80 transition-colors">
-                  {meet.organizer.username}
-                </p>
-              </div>
-            </Link>
-          )}
+        <div className="flex items-center gap-2 text-sm">
+          <Car className="h-4 w-4 text-primary" />
+          <span>{m.category}</span>
         </div>
-
-        {/* Date & Location */}
-        <div className="bg-card/60 border border-border/60 rounded-xl p-4 space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-neon-orange/10 flex items-center justify-center flex-shrink-0">
-              <Calendar className="w-4 h-4 text-neon-orange" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-foreground">{formatDate(meet.date)}</p>
-              <p className="text-xs text-muted-foreground">{formatTime(meet.date)}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-neon-orange/10 flex items-center justify-center flex-shrink-0">
-              <MapPin className="w-4 h-4 text-neon-orange" />
-            </div>
-            <p className="text-sm font-semibold text-foreground">{meet.location}</p>
-          </div>
-        </div>
-
-        {/* Description */}
-        {meet.description && (
-          <div>
-            <h3 className="font-display text-sm tracking-wider text-muted-foreground mb-2">ABOUT THIS MEET</h3>
-            <p className="text-foreground/80 text-sm leading-relaxed">{meet.description}</p>
-          </div>
-        )}
-
-        {/* Attend Button */}
-        <Button
-          onClick={handleAttend}
-          disabled={actionLoading}
-          className={`w-full font-display tracking-wider ${
-            isAttending
-              ? 'bg-muted text-muted-foreground hover:bg-red-500/20 hover:text-red-400 border border-border'
-              : 'bg-neon-orange text-black hover:bg-neon-orange/90'
-          }`}
-        >
-          {actionLoading ? (
-            <span className="flex items-center gap-2">
-              <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-              {isAttending ? 'LEAVING...' : 'JOINING...'}
-            </span>
-          ) : isAttending ? (
-            'LEAVE MEET'
-          ) : (
-            <>
-              <Users className="w-4 h-4 mr-2" />
-              ATTEND MEET
-            </>
-          )}
-        </Button>
-
-        {/* Attendees */}
-        <div>
-          <h3 className="font-display text-sm tracking-wider text-muted-foreground mb-3">
-            ATTENDEES ({meet.attendees.length})
-          </h3>
-          {meet.attendees.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No attendees yet. Be the first!</p>
-          ) : (
-            <ScrollArea className="h-48">
-              <div className="space-y-2 pr-3">
-                {meet.attendees.map((attendee: UserProfile) => (
-                  <Link
-                    key={attendee.id.toString()}
-                    to="/profile/$userId"
-                    params={{ userId: attendee.id.toString() }}
-                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors"
-                  >
-                    <Avatar className="w-8 h-8">
-                      <AvatarImage
-                        src={attendee.avatarUrl || attendee.avatar?.getDirectURL() || '/assets/generated/default-avatar.dim_128x128.png'}
-                        alt={attendee.username}
-                      />
-                      <AvatarFallback className="bg-neon-orange/10 text-neon-orange text-xs">
-                        {attendee.username.slice(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm font-medium text-foreground">{attendee.username}</span>
-                  </Link>
-                ))}
-              </div>
-            </ScrollArea>
-          )}
+        <div className="flex items-center gap-2 text-sm">
+          <Users className="h-4 w-4 text-primary" />
+          <span>{(m.attendees ?? []).length} attending</span>
         </div>
       </div>
+
+      {/* Description */}
+      {m.description && (
+        <div className="mb-4">
+          <h2 className="font-display font-semibold mb-2">About</h2>
+          <p className="text-sm text-muted-foreground">{m.description}</p>
+        </div>
+      )}
+
+      {/* Attend Button */}
+      {identity && (
+        <button
+          onClick={handleToggleAttend}
+          disabled={joinMeet.isPending || leaveMeet.isPending}
+          className={`w-full py-3 rounded font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2 ${
+            isAttending
+              ? "border border-border hover:bg-muted"
+              : "bg-primary text-primary-foreground hover:bg-primary/90"
+          }`}
+        >
+          {joinMeet.isPending || leaveMeet.isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : isAttending ? (
+            "Leave Meet"
+          ) : (
+            "Attend Meet"
+          )}
+        </button>
+      )}
+
+      {/* Attendees */}
+      {(m.attendees ?? []).length > 0 && (
+        <div className="mt-6">
+          <h2 className="font-display font-semibold mb-3">
+            Attendees ({(m.attendees ?? []).length})
+          </h2>
+          <div className="space-y-2">
+            {(m.attendees as UserProfile[]).map((attendee, idx) => (
+              <Link
+                key={attendee.id?.toString() ?? idx}
+                to="/profile/$userId"
+                params={{ userId: attendee.id?.toString() ?? "" }}
+                className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors"
+              >
+                <div className="h-8 w-8 rounded-full bg-muted overflow-hidden flex-shrink-0">
+                  {attendee.avatarUrl ? (
+                    <img
+                      src={attendee.avatarUrl}
+                      alt={attendee.username}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="h-full w-full flex items-center justify-center text-xs font-bold text-muted-foreground">
+                      {attendee.username?.[0]?.toUpperCase() ?? "?"}
+                    </div>
+                  )}
+                </div>
+                <span className="text-sm font-medium">{attendee.username}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
