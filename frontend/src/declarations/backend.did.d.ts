@@ -17,10 +17,29 @@ export type Badge = { 'buildMaster' : null } |
   { 'communityHelper' : null } |
   { 'driftKing' : null } |
   { 'mechanicPro' : null };
+export type Category = string;
+export interface Comment {
+  'id' : CommentId,
+  'authorId' : UserId,
+  'text' : string,
+  'authorName' : string,
+  'timestamp' : Time,
+  'videoId' : VideoId,
+}
+export type CommentId = bigint;
 export type ExternalBlob = Uint8Array;
+export type Hashtag = string;
 export type ProfileResult = { 'ok' : UserProfile } |
   { 'notFound' : string } |
   { 'unauthorized' : string };
+export type ReactionType = { 'fire' : null } |
+  { 'hype' : null } |
+  { 'like' : null } |
+  { 'wild' : null } |
+  { 'respect' : null };
+export type Result = { 'ok' : string } |
+  { 'err' : string };
+export type Time = bigint;
 export type UserId = Principal;
 export interface UserProfile {
   'id' : UserId,
@@ -36,6 +55,24 @@ export interface UserProfile {
 export type UserRole = { 'admin' : null } |
   { 'user' : null } |
   { 'guest' : null };
+export interface Video {
+  'id' : VideoId,
+  'title' : string,
+  'thumbnail' : ExternalBlob,
+  'hashtags' : Array<Hashtag>,
+  'description' : string,
+  'mediaUrl' : ExternalBlob,
+  'likes' : Array<UserId>,
+  'viewCount' : bigint,
+  'timestamp' : Time,
+  'mediaType' : { 'video' : null } |
+    { 'photo' : null },
+  'category' : Category,
+  'uploader' : UserId,
+  'comments' : Array<Comment>,
+  'reactions' : Array<[UserId, ReactionType]>,
+}
+export type VideoId = string;
 export interface _CaffeineStorageCreateCertificateResult {
   'method' : string,
   'blob_hash' : string,
@@ -65,6 +102,19 @@ export interface _SERVICE {
   '_caffeineStorageUpdateGatewayPrincipals' : ActorMethod<[], undefined>,
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
+  'createVideo' : ActorMethod<
+    [
+      string,
+      string,
+      string,
+      Array<Hashtag>,
+      ExternalBlob,
+      ExternalBlob,
+      { 'video' : null } |
+        { 'photo' : null },
+    ],
+    Result
+  >,
   /**
    * / Get the caller's own profile. Returns `#unauthorized` if the caller is not a registered user,
    * / and `#notFound` if the profile does not exist.
@@ -76,6 +126,7 @@ export interface _SERVICE {
    * / and `#notFound` if the profile does not exist.
    */
   'getUserProfile' : ActorMethod<[Principal], ProfileResult>,
+  'getVideos' : ActorMethod<[], Array<Video>>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   /**
    * / Save (create or update) the caller's own profile. Only registered users can save profiles.

@@ -3,7 +3,7 @@ import {
   useGetNotifications,
   useMarkAllNotificationsRead,
   useMarkNotificationRead,
-  type Notification,
+  type NotificationItem,
 } from '../hooks/useQueries';
 import AuthGuard from '../components/AuthGuard';
 import { Bell, Loader2, CheckCheck } from 'lucide-react';
@@ -28,13 +28,13 @@ export default function Notifications() {
   const markOne = useMarkNotificationRead();
   const navigate = useNavigate();
 
-  const unreadCount = notifications.filter((n: Notification) => !n.isRead).length;
+  const unreadCount = notifications.filter((n: NotificationItem) => !n.isRead).length;
 
   const handleMarkAll = () => {
     markAll.mutate();
   };
 
-  const handleNotifClick = (notif: Notification) => {
+  const handleNotifClick = (notif: NotificationItem) => {
     markOne.mutate({ notificationId: notif.id });
     try {
       navigate({
@@ -89,7 +89,7 @@ export default function Notifications() {
           </div>
         ) : (
           <div className="space-y-2">
-            {notifications.map((notif: Notification) => (
+            {notifications.map((notif: NotificationItem) => (
               <div
                 key={notif.id.toString()}
                 onClick={() => handleNotifClick(notif)}
@@ -99,7 +99,7 @@ export default function Notifications() {
                     : 'bg-primary/5 border-primary/30 hover:border-primary/50'
                 }`}
               >
-                <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${notif.isRead ? 'bg-muted-foreground/30' : 'bg-primary'}`} />
+                <div className={`w-2 h-2 rounded-full mt-2 shrink-0 ${notif.isRead ? 'bg-muted-foreground/30' : 'bg-primary'}`} />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-foreground">{notif.message}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">{timeAgo(notif.createdAt)}</p>

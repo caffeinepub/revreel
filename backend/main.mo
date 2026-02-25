@@ -279,6 +279,7 @@ actor {
   var nextBuildStageId : Nat = 0;
   var nextListingId : Nat = 0;
   var nextChallengeId : Nat = 0;
+  var nextVideoId : Nat = 0;
 
   func createNotificationInternal(
     recipientId : UserId,
@@ -377,5 +378,49 @@ actor {
       case (null) { #notFound("Profile not found") };
       case (?u) { #ok(u.profile) };
     };
+  };
+
+  // Create video with authentication
+  public shared ({ caller }) func createVideo(
+    title : Text,
+    description : Text,
+    category : Text,
+    hashtags : [Hashtag],
+    video : Storage.ExternalBlob,
+    thumbnail : Storage.ExternalBlob,
+    mediaType : { #video; #photo }
+  ) : async Result {
+    // Check if the caller is authenticated as a user
+    if (not checkIsUser(caller)) {
+      return #err("Unauthorized: Only users can upload content");
+    };
+
+    // Generate a unique video ID (incremental)
+    let id = nextVideoId.toText();
+    nextVideoId += 1;
+
+    let videoRecord : Video = {
+      id;
+      title;
+      description;
+      uploader = caller;
+      likes = [];
+      comments = [];
+      hashtags;
+      category;
+      timestamp = Time.now();
+      thumbnail;
+      mediaUrl = video;
+      reactions = [];
+      viewCount = 0;
+      mediaType;
+    };
+
+    videos.add(id, videoRecord);
+    #ok(id);
+  };
+
+  public query ({ caller }) func getVideos() : async [Video] {
+    videos.values().toArray();
   };
 };

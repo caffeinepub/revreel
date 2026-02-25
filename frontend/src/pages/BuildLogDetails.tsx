@@ -53,12 +53,10 @@ export default function BuildLogDetails() {
     e.preventDefault();
     if (!log || !stageTitle.trim()) return;
     await addStage.mutateAsync({
-      buildLogId: Number(log.id),
-      stage: {
-        title: stageTitle.trim(),
-        description: stageDesc.trim(),
-        imageUrl: stageImage.trim(),
-      },
+      logId: Number(log.id),
+      title: stageTitle.trim(),
+      description: stageDesc.trim(),
+      imageUrl: stageImage.trim(),
     });
     setStageTitle("");
     setStageDesc("");
@@ -68,8 +66,8 @@ export default function BuildLogDetails() {
 
   const handleDelete = async () => {
     if (!log) return;
-    await deleteBuildLog.mutateAsync({ id: Number(log.id) });
-    navigate({ to: "/builds" });
+    await deleteBuildLog.mutateAsync({ logId: Number(log.id) });
+    navigate({ to: "/feed" });
   };
 
   if (isLoading) {
@@ -250,7 +248,7 @@ export default function BuildLogDetails() {
                 className="bg-muted/20 rounded-xl p-4 border border-border"
               >
                 <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 h-7 w-7 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-bold">
+                  <div className="shrink-0 h-7 w-7 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-bold">
                     {idx + 1}
                   </div>
                   <div className="flex-1 min-w-0">

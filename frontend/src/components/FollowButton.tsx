@@ -14,8 +14,8 @@ export default function FollowButton({ userId }: FollowButtonProps) {
   const followMutation = useFollowUser();
   const unfollowMutation = useUnfollowUser();
 
-  const isFollowing = (followers as any[]).some(
-    (f: any) => f.toString() === currentUserId
+  const isFollowing = (followers as string[]).some(
+    (f) => f === currentUserId
   );
 
   const isLoading = followMutation.isPending || unfollowMutation.isPending;
@@ -23,9 +23,9 @@ export default function FollowButton({ userId }: FollowButtonProps) {
   const handleToggle = () => {
     if (!identity) return;
     if (isFollowing) {
-      unfollowMutation.mutate({ userId });
+      unfollowMutation.mutate({ userId, followerId: currentUserId });
     } else {
-      followMutation.mutate({ userId });
+      followMutation.mutate({ userId, followerId: currentUserId });
     }
   };
 

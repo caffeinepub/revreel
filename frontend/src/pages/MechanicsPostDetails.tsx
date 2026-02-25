@@ -3,7 +3,7 @@ import { useParams, Link } from "@tanstack/react-router";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import {
   useGetMechanicsPost,
-  usePostMechanicsComment,
+  useAddMechanicsComment,
   useDeleteMechanicsPost,
 } from "../hooks/useQueries";
 import type { MechanicsComment } from "../hooks/useQueries";
@@ -37,7 +37,7 @@ export default function MechanicsPostDetails() {
   const { identity } = useInternetIdentity();
 
   const { data: post, isLoading } = useGetMechanicsPost(Number(postId));
-  const addComment = usePostMechanicsComment();
+  const addComment = useAddMechanicsComment();
   const deletePost = useDeleteMechanicsPost();
 
   const [commentText, setCommentText] = useState("");

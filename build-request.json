@@ -1,131 +1,54 @@
 {
   "kind": "build_request",
-  "title": "Fix profile page 'not found' error and resolve all routing/code issues",
+  "title": "Fix uploaded video not appearing on feed",
   "projectName": "RevReel",
   "priority": "high",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Audit and fix the Profile page route configuration in App.tsx so that navigating to a user's profile (both own profile and other users' profiles) renders the Profile component correctly without a 'not found' error. Ensure the route parameter (e.g., userId or username) is correctly defined in the TanStack Router route tree and matches what Profile.tsx expects to read from route params.",
+      "text": "After a successful video upload via the Upload page, the newly created video must appear in the main feed (Feed.tsx) without requiring a manual page refresh. Ensure the feed query cache is invalidated or refetched after the createVideo mutation completes successfully.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-5"
+          "msg-7"
         ],
         "quotes": [
-          "Now the profile page says not found please go through all code and solve all issues"
+          "I uploaded it and it didn't show up on the feed"
         ]
       },
       "acceptanceCriteria": [
-        "Navigating to /profile/:userId (or the correct route path) loads the Profile page without a 'not found' error",
-        "Own profile link from the navigation bar loads the authenticated user's profile correctly",
-        "Clicking another user's profile link navigates to their profile page correctly",
-        "No console errors related to route resolution on the profile page"
+        "After uploading a video and being navigated to the feed, the newly uploaded video is visible in the feed list.",
+        "The feed React Query cache is invalidated on successful createVideo mutation completion.",
+        "No manual page refresh is required for the new video to appear."
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Review the Profile.tsx component and fix any issues with how it resolves the userId from route params. Ensure it correctly distinguishes between viewing one's own profile (using the authenticated principal) and viewing another user's profile, and that all backend query calls (fetch profile, fetch videos, fetch saved videos) use the correct user identifier.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-5"
-        ],
-        "quotes": [
-          "please go through all code and solve all issues"
-        ]
-      },
-      "acceptanceCriteria": [
-        "Profile page correctly loads profile data for the given user ID",
-        "Videos tab shows videos belonging to the correct user",
-        "Saved videos tab shows only the authenticated user's saved videos when viewing own profile",
-        "Edit profile button appears only when viewing own profile",
-        "Follow button appears only when viewing another user's profile"
-      ]
-    },
-    {
-      "id": "REQ-3",
-      "text": "Audit all navigation links and programmatic navigations throughout the app (Layout.tsx bottom nav, VideoCard.tsx, Notifications.tsx, Leaderboard.tsx, Conversation.tsx, Inbox.tsx, etc.) that link to a user profile page, and ensure they all use the correct route path and pass the correct user identifier as a route parameter.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-5"
-        ],
-        "quotes": [
-          "please go through all code and solve all issues"
-        ]
-      },
-      "acceptanceCriteria": [
-        "All profile links throughout the app navigate to the correct profile route with a valid user identifier",
-        "No broken or malformed profile URLs exist anywhere in the UI",
-        "Bottom navigation 'Profile' item navigates to the authenticated user's own profile"
-      ]
-    },
-    {
-      "id": "REQ-4",
-      "text": "Perform a full audit of backend/main.mo to identify and fix any issues with profile-related query and update functions: getUserProfile, saveCallerUserProfile, updateProfile. Ensure they handle missing profiles gracefully and return appropriate error variants rather than trapping.",
+      "text": "Verify that the backend `createVideo` function correctly persists the uploaded video to stable storage and returns it in the `getVideos` (or equivalent feed-fetch) query. If the video is not being stored or returned by the backend feed query, fix the persistence or retrieval logic in backend/main.mo.",
       "target": "backend",
       "source": {
         "messageIds": [
-          "msg-5"
+          "msg-7"
         ],
         "quotes": [
-          "please go through all code and solve all issues"
+          "I uploaded it and it didn't show up on the feed"
         ]
       },
       "acceptanceCriteria": [
-        "getUserProfile returns a proper null/option or error variant when a profile does not exist instead of trapping",
-        "saveCallerUserProfile and updateProfile correctly persist and retrieve profile data",
-        "No runtime traps occur when accessing profile-related endpoints"
-      ]
-    },
-    {
-      "id": "REQ-5",
-      "text": "Audit the useQueries.ts hooks related to profiles (useFetchUserProfile, useSaveCallerUserProfile, useUpdateProfile) and fix any issues with how backend responses are decoded, how loading/error states are handled, and ensure the Profile page correctly handles the case where a profile is not yet created (new user) versus a genuinely missing/invalid user ID.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-5"
-        ],
-        "quotes": [
-          "please go through all code and solve all issues"
-        ]
-      },
-      "acceptanceCriteria": [
-        "Profile query hooks correctly decode backend response types including option/null variants",
-        "Profile page shows a meaningful 'User not found' message for invalid user IDs rather than a broken state",
-        "Profile page shows a profile setup prompt for authenticated users who have not yet created a profile",
-        "No unhandled promise rejections or query errors in the browser console when visiting a profile"
-      ]
-    },
-    {
-      "id": "REQ-6",
-      "text": "Fix any remaining issues across the entire frontend codebase found during the audit: broken imports, TypeScript type errors, missing route definitions, incorrect query key usage, or stale data not being invalidated after mutations that affect profile or video data.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-5"
-        ],
-        "quotes": [
-          "please go through all code and solve all issues"
-        ]
-      },
-      "acceptanceCriteria": [
-        "No TypeScript compilation errors in the frontend",
-        "All route paths defined in App.tsx match the links used throughout the app",
-        "Mutations that modify profile or video data correctly invalidate related React Query caches",
-        "No broken imports or missing component references"
+        "A video created via createVideo is retrievable by the feed query (e.g., getVideos) immediately after creation.",
+        "The backend stores the video in stable state so it persists across calls.",
+        "The feed query returns the newly uploaded video in the response list."
       ]
     }
   ],
   "constraints": [
-    "Do not modify files under frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, or frontend/src/components/ui",
-    "Preserve all existing features including the upload flow for reels and pictures restored in Version 28"
+    "Do not modify files listed in frontend.immutablePaths.",
+    "All Motoko logic must remain in backend/main.mo (single-actor architecture)."
   ],
   "nonGoals": [
-    "Adding new profile features beyond fixing existing ones",
-    "Redesigning the profile page UI",
-    "Adding new backend data types or schemas unrelated to the profile fix"
+    "Redesigning the upload form UI.",
+    "Adding new video fields or metadata beyond what already exists.",
+    "Changing authentication or authorization logic."
   ],
   "imageRequirements": {
     "required": [],

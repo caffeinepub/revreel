@@ -10,6 +10,7 @@ import {
   type Video,
   type UserProfile,
 } from '../hooks/useQueries';
+import { Variant_video_photo } from '../backend';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import CommentsPanel from './CommentsPanel';
 import ChallengeModal from './ChallengeModal';
@@ -59,18 +60,17 @@ export default function VideoCard({ video, currentUserProfile }: VideoCardProps)
 
   const mediaUrl = video.mediaUrl?.getDirectURL?.() ?? '';
   const thumbnailUrl = video.thumbnail?.getDirectURL?.() ?? '';
-  const isPhoto = 'photo' in (video.mediaType ?? {});
+  // Variant_video_photo is a string enum: "video" | "photo"
+  const isPhoto = video.mediaType === Variant_video_photo.photo;
 
   const handleLike = () => {
     if (!identity) return;
-    // Pass isLiked so the hook knows whether to like or unlike
     toggleLike.mutate({ videoId: video.id, isLiked });
   };
 
   const handleReaction = (reactionKey: string) => {
     if (!identity) return;
-    // Pass reaction as any to avoid __kind__ type mismatch with backend
-    addReaction.mutate({ videoId: video.id, reaction: { [reactionKey]: null } as any });
+    addReaction.mutate({ videoId: video.id, reaction: { [reactionKey]: null } });
     setShowReactions(false);
   };
 
@@ -223,10 +223,8 @@ export default function VideoCard({ video, currentUserProfile }: VideoCardProps)
 
       {/* Comments Panel */}
       {showComments && (
-        <div className="absolute inset-0 z-20 flex flex-col justify-end">
-          <div className="h-2/3 bg-card rounded-t-2xl overflow-hidden">
-            <CommentsPanel videoId={video.id} onClose={() => setShowComments(false)} />
-          </div>
+        <div className="absolute inset-0 z-20 bg-background/95">
+          <CommentsPanel videoId={video.id} onClose={() => setShowComments(false)} />
         </div>
       )}
 

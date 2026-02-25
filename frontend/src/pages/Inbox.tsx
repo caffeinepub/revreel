@@ -1,5 +1,5 @@
 import React from 'react';
-import { useGetInbox, useGetUserProfile, type ConversationSummary } from '../hooks/useQueries';
+import { useGetConversations, useGetUserProfile, type ConversationSummary } from '../hooks/useQueries';
 import AuthGuard from '../components/AuthGuard';
 import { Link } from '@tanstack/react-router';
 import { MessageCircle, Loader2 } from 'lucide-react';
@@ -56,7 +56,7 @@ function ConversationRow({ conv }: { conv: ConversationSummary }) {
 }
 
 export default function Inbox() {
-  const { data: conversations = [], isLoading } = useGetInbox();
+  const { data: conversations = [], isLoading } = useGetConversations();
 
   return (
     <AuthGuard>
@@ -78,7 +78,7 @@ export default function Inbox() {
           </div>
         ) : (
           <div className="space-y-2">
-            {conversations.map((conv: ConversationSummary) => (
+            {(conversations as ConversationSummary[]).map((conv: ConversationSummary) => (
               <ConversationRow key={conv.otherUser?.toString()} conv={conv} />
             ))}
           </div>

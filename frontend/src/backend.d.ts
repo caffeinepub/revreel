@@ -14,6 +14,33 @@ export class ExternalBlob {
     static fromBytes(blob: Uint8Array<ArrayBuffer>): ExternalBlob;
     withUploadProgress(onProgress: (percentage: number) => void): ExternalBlob;
 }
+export interface Video {
+    id: VideoId;
+    title: string;
+    thumbnail: ExternalBlob;
+    hashtags: Array<Hashtag>;
+    description: string;
+    mediaUrl: ExternalBlob;
+    likes: Array<UserId>;
+    viewCount: bigint;
+    timestamp: Time;
+    mediaType: Variant_video_photo;
+    category: Category;
+    uploader: UserId;
+    comments: Array<Comment>;
+    reactions: Array<[UserId, ReactionType]>;
+}
+export type Category = string;
+export type CommentId = bigint;
+export type Time = bigint;
+export interface Comment {
+    id: CommentId;
+    authorId: UserId;
+    text: string;
+    authorName: string;
+    timestamp: Time;
+    videoId: VideoId;
+}
 export type UserId = Principal;
 export type ProfileResult = {
     __kind__: "ok";
@@ -25,6 +52,15 @@ export type ProfileResult = {
     __kind__: "unauthorized";
     unauthorized: string;
 };
+export type Result = {
+    __kind__: "ok";
+    ok: string;
+} | {
+    __kind__: "err";
+    err: string;
+};
+export type Hashtag = string;
+export type VideoId = string;
 export interface UserProfile {
     id: UserId;
     bio: string;
@@ -45,13 +81,25 @@ export enum Badge {
     driftKing = "driftKing",
     mechanicPro = "mechanicPro"
 }
+export enum ReactionType {
+    fire = "fire",
+    hype = "hype",
+    like = "like",
+    wild = "wild",
+    respect = "respect"
+}
 export enum UserRole {
     admin = "admin",
     user = "user",
     guest = "guest"
 }
+export enum Variant_video_photo {
+    video = "video",
+    photo = "photo"
+}
 export interface backendInterface {
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    createVideo(title: string, description: string, category: string, hashtags: Array<Hashtag>, video: ExternalBlob, thumbnail: ExternalBlob, mediaType: Variant_video_photo): Promise<Result>;
     /**
      * / Get the caller's own profile. Returns `#unauthorized` if the caller is not a registered user,
      * / and `#notFound` if the profile does not exist.
@@ -63,6 +111,7 @@ export interface backendInterface {
      * / and `#notFound` if the profile does not exist.
      */
     getUserProfile(user: Principal): Promise<ProfileResult>;
+    getVideos(): Promise<Array<Video>>;
     isCallerAdmin(): Promise<boolean>;
     /**
      * / Save (create or update) the caller's own profile. Only registered users can save profiles.

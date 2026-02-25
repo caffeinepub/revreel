@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { useGetComments, useAddComment, type Comment, useGetAllUsers, type UserProfile } from '../hooks/useQueries';
+import React, { useState, useRef } from 'react';
+import { useGetComments, useAddComment, type Comment } from '../hooks/useQueries';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import { X, Send, Loader2, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -74,7 +74,7 @@ export default function CommentsPanel({ videoId, onClose }: CommentsPanelProps) 
         ) : (
           sortedComments.map((comment: Comment) => (
             <div key={comment.id.toString()} className="flex gap-3">
-              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
                 <span className="text-xs font-bold text-primary">
                   {(comment.authorName || 'U').slice(0, 1).toUpperCase()}
                 </span>
@@ -106,7 +106,7 @@ export default function CommentsPanel({ videoId, onClose }: CommentsPanelProps) 
           <Button
             type="submit"
             size="icon"
-            className="rounded-full bg-primary text-primary-foreground hover:bg-primary/90 flex-shrink-0"
+            className="rounded-full bg-primary text-primary-foreground hover:bg-primary/90 shrink-0"
             disabled={addComment.isPending || !text.trim()}
           >
             {addComment.isPending ? (

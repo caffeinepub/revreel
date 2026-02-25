@@ -54,8 +54,12 @@ export default function Profile() {
 
   const { data: userVideos = [], isLoading: videosLoading } =
     useGetVideosByUser(userId);
+
+  // Pass saved video IDs from profile to the hook
+  const savedVideoIds = profile?.savedVideos ?? [];
   const { data: savedVideos = [], isLoading: savedLoading } =
-    useGetSavedVideos();
+    useGetSavedVideos(savedVideoIds);
+
   const { data: followers = [] } = useGetFollowers(userId);
   const { data: following = [] } = useGetFollowing(userId);
 
@@ -101,7 +105,7 @@ export default function Profile() {
     0
   );
   const totalViews = (userVideos as any[]).reduce(
-    (sum: number, v: any) => sum + (v.viewCount ?? 0),
+    (sum: number, v: any) => sum + Number(v.viewCount ?? 0),
     0
   );
 

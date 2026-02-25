@@ -1,16 +1,25 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-24T21:55:18.210Z",
-  "summary": "The diff addresses all six requirements. REQ-1 is covered by the corrected profile route in App.tsx (/profile/$userId). REQ-2 is covered by Profile.tsx reading the correct param and using appropriate hooks for own vs other profiles. REQ-3 is covered by Layout.tsx and VideoCard.tsx using the correct route path with userId param. REQ-4 is covered by modifications to backend/main.mo. REQ-5 is covered by useQueries.ts correctly extracting UserProfile from the ProfileResult discriminated union. REQ-6 is covered by broad fixes across the frontend codebase. However, there are some gaps around specific REQ-3 components (Notifications.tsx, Leaderboard.tsx, Conversation.tsx, Inbox.tsx are not listed as modified) and the diff is truncated so full verification of REQ-4 backend changes and REQ-6 cache invalidation is limited.",
+  "generatedAt": "2026-02-25T02:42:03.039Z",
+  "summary": "The diff modifies 12 files but does not show evidence of the two core requirements being implemented: (1) REQ-1 requires cache invalidation of the feed query after a successful createVideo mutation in the Upload page, and (2) REQ-2 requires fixing backend persistence/retrieval in backend/main.mo. The frontend-file-summaries.txt mentions Upload.tsx was modified to fix field names and enum values, but does not mention cache invalidation. The backend/main.mo diff is truncated and shows no clear evidence of a persistence fix. Neither the useQueries.ts hook diff nor any Upload.tsx content shows invalidateQueries being called for the allVideos query key on successful upload.",
   "missing_requirements": [
     {
-      "id": "REQ-3",
-      "requirement": "Audit all navigation links and programmatic navigations throughout the app including Notifications.tsx, Leaderboard.tsx, Conversation.tsx, and Inbox.tsx that link to a user profile page.",
-      "reason": "The diff only lists modifications to Layout.tsx and VideoCard.tsx among the profile-link components. Notifications.tsx, Leaderboard.tsx, Conversation.tsx, and Inbox.tsx are not listed in the modified files, so it cannot be confirmed that profile links in those components were audited and fixed.",
+      "id": "REQ-1",
+      "requirement": "After a successful video upload via the Upload page, the feed React Query cache must be invalidated or refetched after the createVideo mutation completes successfully, so the new video appears without a manual page refresh.",
+      "reason": "The diff summary for useQueries.ts mentions various hook additions but does not mention cache invalidation for the feed/allVideos query after createVideo/useUploadVideo mutation success. The Upload.tsx summary only mentions fixing field names and enum values, with no mention of onSuccess cache invalidation. No evidence of invalidateQueries for allVideos or equivalent being added.",
       "evidence": [
-        "frontend/src/components/Layout.tsx",
-        "frontend/src/components/VideoCard.tsx"
+        "frontend/src/hooks/useQueries.ts",
+        "frontend-file-summaries.txt"
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "requirement": "The backend createVideo function must correctly persist the uploaded video to stable storage and return it in the getVideos feed query immediately after creation.",
+      "reason": "The backend/main.mo diff is truncated and only shows type definitions and imports. There is no visible evidence of a fix to the createVideo persistence logic or getVideos retrieval logic. The file-summaries.txt does not mention any backend fix.",
+      "evidence": [
+        "backend/main.mo",
+        "frontend-file-summaries.txt"
       ]
     }
   ],
@@ -19,22 +28,14 @@
   "changed_files": [
     "backend/main.mo",
     "frontend-file-summaries.txt",
-    "frontend/src/App.tsx",
-    "frontend/src/components/EditProfileModal.tsx",
+    "frontend/src/components/CommentsPanel.tsx",
     "frontend/src/components/FollowButton.tsx",
-    "frontend/src/components/Layout.tsx",
-    "frontend/src/components/ProfileSetupModal.tsx",
     "frontend/src/components/VideoCard.tsx",
     "frontend/src/hooks/useQueries.ts",
+    "frontend/src/pages/AdminPanel.tsx",
     "frontend/src/pages/BuildLogDetails.tsx",
-    "frontend/src/pages/BuildLogs.tsx",
-    "frontend/src/pages/CarMeetDetails.tsx",
-    "frontend/src/pages/CarMeets.tsx",
-    "frontend/src/pages/Classifieds.tsx",
-    "frontend/src/pages/Discover.tsx",
-    "frontend/src/pages/ListingDetails.tsx",
-    "frontend/src/pages/MechanicsHelp.tsx",
-    "frontend/src/pages/MechanicsPostDetails.tsx",
+    "frontend/src/pages/Conversation.tsx",
+    "frontend/src/pages/Notifications.tsx",
     "frontend/src/pages/Profile.tsx",
     "project_state.json"
   ]

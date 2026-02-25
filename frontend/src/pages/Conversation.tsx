@@ -4,7 +4,7 @@ import {
   type DirectMessage,
   useGetMessages,
   useSendMessage,
-  useMarkAsRead,
+  useMarkMessagesRead,
   useDeleteMessage,
   useGetUserProfile,
 } from '../hooks/useQueries';
@@ -23,15 +23,16 @@ export default function Conversation() {
   const { data: messages = [], isLoading } = useGetMessages(userId);
   const { data: otherProfile } = useGetUserProfile(userId);
   const sendMessage = useSendMessage();
-  const markAsRead = useMarkAsRead();
+  const markAsRead = useMarkMessagesRead();
   const deleteMessage = useDeleteMessage();
 
   const myPrincipal = identity?.getPrincipal().toString();
 
   useEffect(() => {
     if (userId) {
-      markAsRead.mutate({ otherUser: userId });
+      markAsRead.mutate({ otherUserId: userId });
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
   useEffect(() => {
@@ -50,7 +51,7 @@ export default function Conversation() {
   };
 
   const handleDelete = (msg: DirectMessage) => {
-    deleteMessage.mutate({ messageId: msg.id, otherUser: userId });
+    deleteMessage.mutate({ messageId: msg.id });
   };
 
   const formatTime = (timestamp: bigint) => {
@@ -89,58 +90,58 @@ export default function Conversation() {
               <Loader2 className="w-6 h-6 animate-spin text-primary" />
             </div>
           ) : messages.length === 0 ? (
-            <div className="flex items-center justify-center py-8 text-muted-foreground text-sm">
-              No messages yet. Say hello!
+            <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+              <p className="text-sm">No messages yet. Say hello!</p>
             </div>
           ) : (
-            [...messages]
-              .sort((a, b) => Number(a.timestamp) - Number(b.timestamp))
-              .map((msg: DirectMessage) => {
-                const isMe = msg.fromUser?.toString() === myPrincipal;
-                return (
-                  <div key={msg.id.toString()} className={`flex ${isMe ? 'justify-end' : 'justify-start'} group`}>
-                    <div className={`max-w-[70%] flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
-                      <div
-                        className={`px-4 py-2 rounded-2xl text-sm ${
-                          isMe
-                            ? 'bg-primary text-primary-foreground rounded-br-sm'
-                            : 'bg-card border border-border rounded-bl-sm'
-                        }`}
-                      >
-                        {msg.text}
-                      </div>
-                      <div className="flex items-center gap-1 mt-0.5">
-                        <span className="text-xs text-muted-foreground">{formatTime(msg.timestamp)}</span>
-                        {isMe && (
-                          <button
-                            onClick={() => handleDelete(msg)}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-muted"
-                          >
-                            <Trash2 className="w-3 h-3 text-muted-foreground" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
+            messages.map((msg: DirectMessage) => {
+              const isMine = msg.fromUser === myPrincipal || msg.fromUser === 'current-user';
+              return (
+                <div
+                  key={msg.id}
+                  className={`flex items-end gap-2 ${isMine ? 'flex-row-reverse' : 'flex-row'}`}
+                >
+                  <div
+                    className={`max-w-[75%] px-4 py-2 rounded-2xl text-sm ${
+                      isMine
+                        ? 'bg-primary text-primary-foreground rounded-br-sm'
+                        : 'bg-muted text-foreground rounded-bl-sm'
+                    }`}
+                  >
+                    <p>{msg.text}</p>
+                    <p className={`text-xs mt-1 ${isMine ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
+                      {formatTime(msg.timestamp)}
+                    </p>
                   </div>
-                );
-              })
+                  {isMine && (
+                    <button
+                      onClick={() => handleDelete(msg)}
+                      className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              );
+            })
           )}
           <div ref={bottomRef} />
         </div>
 
         {/* Input */}
-        <form onSubmit={handleSend} className="p-4 border-t border-border flex gap-2">
+        <form onSubmit={handleSend} className="p-4 border-t border-border flex gap-2 bg-card">
           <input
             value={msgText}
             onChange={(e) => setMsgText(e.target.value)}
             placeholder="Type a message..."
             className="flex-1 bg-muted border border-border rounded-full px-4 py-2 text-sm focus:outline-none focus:border-primary transition-colors"
+            maxLength={1000}
             disabled={sendMessage.isPending}
           />
           <Button
             type="submit"
             size="icon"
-            className="rounded-full bg-primary text-primary-foreground hover:bg-primary/90 flex-shrink-0"
+            className="rounded-full bg-primary text-primary-foreground hover:bg-primary/90 shrink-0"
             disabled={sendMessage.isPending || !msgText.trim()}
           >
             {sendMessage.isPending ? (

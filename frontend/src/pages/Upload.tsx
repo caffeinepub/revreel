@@ -3,7 +3,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { Upload as UploadIcon, X, Film, Image, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import AuthGuard from '../components/AuthGuard';
 import { useUploadVideo } from '../hooks/useQueries';
-import { ExternalBlob } from '../backend';
+import { ExternalBlob, Variant_video_photo } from '../backend';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -107,9 +107,9 @@ export default function Upload() {
         description: description.trim(),
         category,
         hashtags: hashtagList,
-        mediaUrl: mediaBlob,
+        video: mediaBlob,
         thumbnail: thumbnailBlob,
-        mediaType: mediaType === 'video' ? { video: null } : { photo: null },
+        mediaType: mediaType === 'video' ? Variant_video_photo.video : Variant_video_photo.photo,
       });
 
       setSuccess(true);
@@ -449,10 +449,12 @@ export default function Upload() {
                 {!isFormValid && !isUploading && (
                   <p className="text-center text-xs text-muted-foreground mt-2">
                     {!mediaFile
-                      ? `Select a ${mediaType === 'video' ? 'video' : 'photo'} file to continue`
+                      ? `Select a ${mediaType} file to continue`
                       : !title.trim()
                       ? 'Add a title to continue'
-                      : 'Select a category to continue'}
+                      : !category
+                      ? 'Select a category to continue'
+                      : ''}
                   </p>
                 )}
               </div>

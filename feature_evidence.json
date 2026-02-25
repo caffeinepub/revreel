@@ -2,95 +2,9 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-audit-and-fix-the-profile-page-route-configuration-in-app-tsx-so-that-navigating-to-a-user-s-profile-both-own-profile-and-other-users-profiles-renders-the-profile-component-correctly-without-a-not-found-error-ensure-the-route-parameter-e-g-userid-or-username-is-correctly-defined-in-the-tanstack-router-route-tree-and-matches-what-profile-tsx-expects-to-read-from-route-params",
-      "featureTitle": "Audit and fix the Profile page route configuration in App.tsx so that navigating to a user's profile (both own profile and other users' profiles) renders the Profile component correctly without a 'not found' error. Ensure the route parameter (e.g., userId or username) is correctly defined in the TanStack Router route tree and matches what Profile.tsx expects to read from route params.",
+      "featureId": "feature-after-a-successful-video-upload-via-the-upload-page-the-newly-created-video-must-appear-in-the-main-feed-feed-tsx-without-requiring-a-manual-page-refresh-ensure-the-feed-query-cache-is-invalidated-or-refetched-after-the-createvideo-mutation-completes-successfully",
+      "featureTitle": "After a successful video upload via the Upload page, the newly created video must appear in the main feed (Feed.tsx) without requiring a manual page refresh. Ensure the feed query cache is invalidated or refetched after the createVideo mutation completes successfully.",
       "files": [
-        "frontend/src/App.tsx"
-      ],
-      "components": [
-        "authorization@4.0.0",
-        "blob-storage@4.0.0",
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0"
-      ],
-      "testIds": [
-        "REQ-1"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-review-the-profile-tsx-component-and-fix-any-issues-with-how-it-resolves-the-userid-from-route-params-ensure-it-correctly-distinguishes-between-viewing-one-s-own-profile-using-the-authenticated-principal-and-viewing-another-user-s-profile-and-that-all-backend-query-calls-fetch-profile-fetch-videos-fetch-saved-videos-use-the-correct-user-identifier",
-      "featureTitle": "Review the Profile.tsx component and fix any issues with how it resolves the userId from route params. Ensure it correctly distinguishes between viewing one's own profile (using the authenticated principal) and viewing another user's profile, and that all backend query calls (fetch profile, fetch videos, fetch saved videos) use the correct user identifier.",
-      "files": [
-        "frontend/src/pages/Profile.tsx"
-      ],
-      "components": [
-        "authorization@4.0.0",
-        "blob-storage@4.0.0",
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0"
-      ],
-      "testIds": [
-        "REQ-2"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-audit-all-navigation-links-and-programmatic-navigations-throughout-the-app-layout-tsx-bottom-nav-videocard-tsx-notifications-tsx-leaderboard-tsx-conversation-tsx-inbox-tsx-etc-that-link-to-a-user-profile-page-and-ensure-they-all-use-the-correct-route-path-and-pass-the-correct-user-identifier-as-a-route-parameter",
-      "featureTitle": "Audit all navigation links and programmatic navigations throughout the app (Layout.tsx bottom nav, VideoCard.tsx, Notifications.tsx, Leaderboard.tsx, Conversation.tsx, Inbox.tsx, etc.) that link to a user profile page, and ensure they all use the correct route path and pass the correct user identifier as a route parameter.",
-      "files": [
-        "frontend/src/components/Layout.tsx",
-        "frontend/src/components/VideoCard.tsx"
-      ],
-      "components": [
-        "authorization@4.0.0",
-        "blob-storage@4.0.0",
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0"
-      ],
-      "testIds": [
-        "REQ-3"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-audit-the-usequeries-ts-hooks-related-to-profiles-usefetchuserprofile-usesavecalleruserprofile-useupdateprofile-and-fix-any-issues-with-how-backend-responses-are-decoded-how-loading-error-states-are-handled-and-ensure-the-profile-page-correctly-handles-the-case-where-a-profile-is-not-yet-created-new-user-versus-a-genuinely-missing-invalid-user-id",
-      "featureTitle": "Audit the useQueries.ts hooks related to profiles (useFetchUserProfile, useSaveCallerUserProfile, useUpdateProfile) and fix any issues with how backend responses are decoded, how loading/error states are handled, and ensure the Profile page correctly handles the case where a profile is not yet created (new user) versus a genuinely missing/invalid user ID.",
-      "files": [
-        "frontend/src/hooks/useQueries.ts",
-        "frontend/src/pages/Profile.tsx"
-      ],
-      "components": [
-        "authorization@4.0.0",
-        "blob-storage@4.0.0",
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0"
-      ],
-      "testIds": [
-        "REQ-5"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-fix-any-remaining-issues-across-the-entire-frontend-codebase-found-during-the-audit-broken-imports-typescript-type-errors-missing-route-definitions-incorrect-query-key-usage-or-stale-data-not-being-invalidated-after-mutations-that-affect-profile-or-video-data",
-      "featureTitle": "Fix any remaining issues across the entire frontend codebase found during the audit: broken imports, TypeScript type errors, missing route definitions, incorrect query key usage, or stale data not being invalidated after mutations that affect profile or video data.",
-      "files": [
-        "frontend/src/App.tsx",
-        "frontend/src/components/EditProfileModal.tsx",
-        "frontend/src/components/ProfileSetupModal.tsx",
-        "frontend/src/components/VideoCard.tsx",
         "frontend/src/hooks/useQueries.ts"
       ],
       "components": [
@@ -103,7 +17,7 @@
         "github-export-icp-cli@1.0.0"
       ],
       "testIds": [
-        "REQ-6"
+        "REQ-1"
       ],
       "confidence": "high"
     }

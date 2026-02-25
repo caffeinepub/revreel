@@ -1,8 +1,22 @@
 import React from 'react';
-import { useIsAdmin, useDeleteUser, useGetAllUsers, type UserProfile } from '../hooks/useQueries';
+import { useDeleteUser, useGetAllUsers, type UserProfile } from '../hooks/useQueries';
+import { useActor } from '../hooks/useActor';
+import { useQuery } from '@tanstack/react-query';
 import AuthGuard from '../components/AuthGuard';
 import { Loader2, Trash2, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+
+function useIsAdmin() {
+  const { actor, isFetching } = useActor();
+  return useQuery({
+    queryKey: ['isCallerAdmin'],
+    queryFn: async () => {
+      if (!actor) return false;
+      return actor.isCallerAdmin();
+    },
+    enabled: !!actor && !isFetching,
+  });
+}
 
 export default function AdminPanel() {
   const { data: isAdmin, isLoading: adminLoading } = useIsAdmin();
@@ -49,7 +63,7 @@ export default function AdminPanel() {
                     key={user.id?.toString()}
                     className="flex items-center gap-3 p-4 rounded-lg bg-card border border-border"
                   >
-                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
                       {user.avatarUrl ? (
                         <img src={user.avatarUrl} alt={user.username} className="w-full h-full rounded-full object-cover" />
                       ) : (
