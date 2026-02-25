@@ -58,7 +58,7 @@ export default function MechanicsPostDetails() {
 
   const handleDelete = async () => {
     if (!post) return;
-    await deletePost.mutateAsync({ postId: Number((post as any).id) });
+    await deletePost.mutateAsync(Number((post as any).id));
     navigate({ to: "/mechanics" });
   };
 

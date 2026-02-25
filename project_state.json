@@ -4,29 +4,20 @@
   "summary": "New project",
   "architectural_notes": [],
   "known_issues": [
-    "Uploaded video does not appear on the feed after upload"
+    "Upload fails with 'expected v3 response body' error"
   ],
   "isFixRequest": true,
   "existing_features": [
     {
-      "id": "feature-after-a-successful-video-upload-via-the-upload-page-the-newly-created-video-must-appear-in-the-main-feed-feed-tsx-without-requiring-a-manual-page-refresh-ensure-the-feed-query-cache-is-invalidated-or-refetched-after-the-createvideo-mutation-completes-successfully",
-      "title": "After a successful video upload via the Upload page, the newly created video must appear in the main feed (Feed.tsx) without requiring a manual page refresh. Ensure the feed query cache is invalidated or refetched after the createVideo mutation completes successfully.",
+      "id": "feature-fix-the-upload-flow-so-that-the-backend-upload-storage-response-is-correctly-parsed-and-conforms-to-the-expected-v3-response-body-format-the-backend-actor-s-blob-storage-or-video-upload-handler-must-return-a-response-shape-that-matches-what-the-frontend-upload-page-expects-eliminating-the-expected-v3-response-body-error-when-a-user-attempts-to-upload-a-video-or-photo",
+      "title": "Fix the upload flow so that the backend upload/storage response is correctly parsed and conforms to the expected v3 response body format. The backend actor's blob-storage or video upload handler must return a response shape that matches what the frontend Upload page expects, eliminating the 'expected v3 response body' error when a user attempts to upload a video or photo.",
       "reqIds": [
         "REQ-1"
       ],
       "version": 1
     }
   ],
-  "new_feature_requests": [
-    {
-      "id": "AR-2",
-      "summary": "Verify that the backend `createVideo` function correctly persists the uploaded video to stable storage and returns it in the `getVideos` (or equivalent feed-fetch) query. If the video is not being stored or returned by the backend feed query, fix the persistence or retrieval logic in backend/main.mo.",
-      "reqIds": [
-        "REQ-2"
-      ],
-      "status": "pending"
-    }
-  ],
+  "new_feature_requests": [],
   "projectName": "RevReel",
   "clarification_mode": "instant",
   "clarification_rounds": 0

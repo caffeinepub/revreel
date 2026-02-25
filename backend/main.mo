@@ -237,9 +237,17 @@ actor {
     #notFound : Text;
   };
 
+  /// Generic result type for common success/error handling patterns.
   public type Result = {
     #ok : Text;
-    #err : Text;
+    #notFound : Text;
+    #unauthorized : Text;
+    #internalError : Text;
+  };
+
+  public type UploadResponse = {
+    #ok : { blob : Storage.ExternalBlob };
+    #error : Text;
   };
 
   module Video {
@@ -380,6 +388,15 @@ actor {
     };
   };
 
+  /// Upload a blob (photo or video) and return its canister path.
+  /// Only registered users are allowed to upload blobs.
+  public shared ({ caller }) func uploadBlob(blob : Storage.ExternalBlob) : async UploadResponse {
+    if (not checkIsUser(caller)) {
+      return #error("Unauthorized: Only registered users can upload content");
+    };
+    #ok { blob };
+  };
+
   // Create video with authentication
   public shared ({ caller }) func createVideo(
     title : Text,
@@ -392,7 +409,7 @@ actor {
   ) : async Result {
     // Check if the caller is authenticated as a user
     if (not checkIsUser(caller)) {
-      return #err("Unauthorized: Only users can upload content");
+      return #unauthorized("Unauthorized: Only users can upload content");
     };
 
     // Generate a unique video ID (incremental)
@@ -422,5 +439,24 @@ actor {
 
   public query ({ caller }) func getVideos() : async [Video] {
     videos.values().toArray();
+  };
+
+  /// Delete a post (video or photo). Only the owner of the post or an admin can delete it.
+  public shared ({ caller }) func deletePost(postId : Text) : async Result {
+    // Caller must be at least a registered user or admin
+    if (not checkIsUser(caller) and not checkIsAdmin(caller)) {
+      return #unauthorized("Unauthorized: Only registered users can delete posts");
+    };
+    switch (videos.get(postId)) {
+      case (null) { #notFound("Post not found") };
+      case (?video) {
+        // Only the uploader (owner) or an admin may delete the post
+        if (video.uploader != caller and not checkIsAdmin(caller)) {
+          return #unauthorized("Not authorized to delete this post");
+        };
+        videos.remove(postId);
+        #ok("Post deleted");
+      };
+    };
   };
 };

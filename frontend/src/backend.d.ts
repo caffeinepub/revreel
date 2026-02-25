@@ -30,7 +30,6 @@ export interface Video {
     comments: Array<Comment>;
     reactions: Array<[UserId, ReactionType]>;
 }
-export type Category = string;
 export type CommentId = bigint;
 export type Time = bigint;
 export interface Comment {
@@ -41,6 +40,7 @@ export interface Comment {
     timestamp: Time;
     videoId: VideoId;
 }
+export type Category = string;
 export type UserId = Principal;
 export type ProfileResult = {
     __kind__: "ok";
@@ -56,8 +56,14 @@ export type Result = {
     __kind__: "ok";
     ok: string;
 } | {
-    __kind__: "err";
-    err: string;
+    __kind__: "notFound";
+    notFound: string;
+} | {
+    __kind__: "internalError";
+    internalError: string;
+} | {
+    __kind__: "unauthorized";
+    unauthorized: string;
 };
 export type Hashtag = string;
 export type VideoId = string;
@@ -72,6 +78,15 @@ export interface UserProfile {
     savedVideos: Array<bigint>;
     avatar: ExternalBlob;
 }
+export type UploadResponse = {
+    __kind__: "ok";
+    ok: {
+        blob: ExternalBlob;
+    };
+} | {
+    __kind__: "error";
+    error: string;
+};
 export enum Badge {
     buildMaster = "buildMaster",
     verified = "verified",
@@ -101,6 +116,10 @@ export interface backendInterface {
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     createVideo(title: string, description: string, category: string, hashtags: Array<Hashtag>, video: ExternalBlob, thumbnail: ExternalBlob, mediaType: Variant_video_photo): Promise<Result>;
     /**
+     * / Delete a post (video or photo). Only the owner of the post or an admin can delete it.
+     */
+    deletePost(postId: string): Promise<Result>;
+    /**
      * / Get the caller's own profile. Returns `#unauthorized` if the caller is not a registered user,
      * / and `#notFound` if the profile does not exist.
      */
@@ -117,4 +136,9 @@ export interface backendInterface {
      * / Save (create or update) the caller's own profile. Only registered users can save profiles.
      */
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
+    /**
+     * / Upload a blob (photo or video) and return its canister path.
+     * / Only registered users are allowed to upload blobs.
+     */
+    uploadBlob(blob: ExternalBlob): Promise<UploadResponse>;
 }

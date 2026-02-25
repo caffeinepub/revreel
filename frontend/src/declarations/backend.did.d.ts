@@ -38,8 +38,12 @@ export type ReactionType = { 'fire' : null } |
   { 'wild' : null } |
   { 'respect' : null };
 export type Result = { 'ok' : string } |
-  { 'err' : string };
+  { 'notFound' : string } |
+  { 'internalError' : string } |
+  { 'unauthorized' : string };
 export type Time = bigint;
+export type UploadResponse = { 'ok' : { 'blob' : ExternalBlob } } |
+  { 'error' : string };
 export type UserId = Principal;
 export interface UserProfile {
   'id' : UserId,
@@ -116,6 +120,10 @@ export interface _SERVICE {
     Result
   >,
   /**
+   * / Delete a post (video or photo). Only the owner of the post or an admin can delete it.
+   */
+  'deletePost' : ActorMethod<[string], Result>,
+  /**
    * / Get the caller's own profile. Returns `#unauthorized` if the caller is not a registered user,
    * / and `#notFound` if the profile does not exist.
    */
@@ -132,6 +140,11 @@ export interface _SERVICE {
    * / Save (create or update) the caller's own profile. Only registered users can save profiles.
    */
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
+  /**
+   * / Upload a blob (photo or video) and return its canister path.
+   * / Only registered users are allowed to upload blobs.
+   */
+  'uploadBlob' : ActorMethod<[ExternalBlob], UploadResponse>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

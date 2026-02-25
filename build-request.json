@@ -1,54 +1,36 @@
 {
   "kind": "build_request",
-  "title": "Fix uploaded video not appearing on feed",
+  "title": "Fix upload 'expected v3 response body' error",
   "projectName": "RevReel",
   "priority": "high",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "After a successful video upload via the Upload page, the newly created video must appear in the main feed (Feed.tsx) without requiring a manual page refresh. Ensure the feed query cache is invalidated or refetched after the createVideo mutation completes successfully.",
-      "target": "frontend",
+      "text": "Fix the upload flow so that the backend upload/storage response is correctly parsed and conforms to the expected v3 response body format. The backend actor's blob-storage or video upload handler must return a response shape that matches what the frontend Upload page expects, eliminating the 'expected v3 response body' error when a user attempts to upload a video or photo.",
+      "target": "both",
       "source": {
         "messageIds": [
-          "msg-7"
+          "msg-1"
         ],
         "quotes": [
-          "I uploaded it and it didn't show up on the feed"
+          "When I go to upload it says expected v3 response body"
         ]
       },
       "acceptanceCriteria": [
-        "After uploading a video and being navigated to the feed, the newly uploaded video is visible in the feed list.",
-        "The feed React Query cache is invalidated on successful createVideo mutation completion.",
-        "No manual page refresh is required for the new video to appear."
-      ]
-    },
-    {
-      "id": "REQ-2",
-      "text": "Verify that the backend `createVideo` function correctly persists the uploaded video to stable storage and returns it in the `getVideos` (or equivalent feed-fetch) query. If the video is not being stored or returned by the backend feed query, fix the persistence or retrieval logic in backend/main.mo.",
-      "target": "backend",
-      "source": {
-        "messageIds": [
-          "msg-7"
-        ],
-        "quotes": [
-          "I uploaded it and it didn't show up on the feed"
-        ]
-      },
-      "acceptanceCriteria": [
-        "A video created via createVideo is retrievable by the feed query (e.g., getVideos) immediately after creation.",
-        "The backend stores the video in stable state so it persists across calls.",
-        "The feed query returns the newly uploaded video in the response list."
+        "Navigating to the Upload page and submitting a video or photo file completes without throwing an 'expected v3 response body' error.",
+        "The backend upload/storage handler returns a response body that satisfies the v3 candid/API contract the frontend actor client expects.",
+        "After a successful upload, the user is redirected to the feed and the newly uploaded content appears.",
+        "Error states (oversized file, unsupported format) still display user-friendly error messages rather than a v3 response body parse error."
       ]
     }
   ],
   "constraints": [
-    "Do not modify files listed in frontend.immutablePaths.",
-    "All Motoko logic must remain in backend/main.mo (single-actor architecture)."
+    "Do not modify files listed under frontend.immutablePaths (useInternetIdentity, useActor, main.tsx, ui components).",
+    "All backend logic must remain in the single main actor file (backend/main.mo)."
   ],
   "nonGoals": [
-    "Redesigning the upload form UI.",
-    "Adding new video fields or metadata beyond what already exists.",
-    "Changing authentication or authorization logic."
+    "Changing the upload UI design or adding new upload fields.",
+    "Modifying any feature unrelated to the upload response parsing error."
   ],
   "imageRequirements": {
     "required": [],

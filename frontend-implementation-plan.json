@@ -1,26 +1,27 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Fix uploaded video not appearing on feed",
+  "title": "Fix upload 'expected v3 response body' error",
   "requirements": [
     {
       "id": "REQ-1",
-      "summary": "Invalidate feed query cache after successful video upload so newly uploaded videos appear without manual refresh",
+      "summary": "Fix the upload flow so that the backend upload/storage response is correctly parsed and conforms to the expected v3 response body format, eliminating the 'expected v3 response body' error when a user attempts to upload a video or photo.",
       "acceptanceCriteria": [
-        "After uploading a video and being navigated to the feed, the newly uploaded video is visible in the feed list.",
-        "The feed React Query cache is invalidated on successful createVideo mutation completion.",
-        "No manual page refresh is required for the new video to appear."
+        "Navigating to the Upload page and submitting a video or photo file completes without throwing an 'expected v3 response body' error.",
+        "The backend upload/storage handler returns a response body that satisfies the v3 candid/API contract the frontend actor client expects.",
+        "After a successful upload, the user is redirected to the feed and the newly uploaded content appears.",
+        "Error states (oversized file, unsupported format) still display user-friendly error messages rather than a v3 response body parse error."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/hooks/useQueries.ts",
-          "operation": "modify",
-          "description": "Modify the useCreateVideo mutation hook to invalidate the 'videos' query key upon successful mutation completion using queryClient.invalidateQueries. This ensures the feed refetches the updated video list immediately after a new video is uploaded."
-        },
-        {
           "path": "frontend/src/pages/Upload.tsx",
           "operation": "modify",
-          "description": "Verify that the Upload page navigates to the feed route after successful video creation and that the navigation occurs after the mutation has completed. Ensure the mutation's onSuccess callback is properly awaited or that navigation happens after cache invalidation triggers."
+          "description": "Update the upload flow to correctly handle the backend's UploadResponse type. The backend returns either {__kind__: 'ok', ok: {blob: ExternalBlob}} or {__kind__: 'error', error: string}. Modify the uploadBlob mutation and createVideo mutation to properly parse this response structure. Ensure that the blob from the successful upload response is correctly extracted and passed to createVideo. Add error handling that displays user-friendly messages for parse errors, oversized files, and unsupported formats without exposing raw v3 response body errors to the user."
+        },
+        {
+          "path": "frontend/src/hooks/useQueries.ts",
+          "operation": "modify",
+          "description": "Add or update the useUploadBlob mutation hook to correctly handle the backend UploadResponse type structure. Ensure the mutation properly parses the {__kind__: 'ok', ok: {blob: ExternalBlob}} success response and {__kind__: 'error', error: string} error response. Add proper TypeScript types matching the backend interface definition to prevent runtime parsing errors. Verify that the blob-storage component's ExternalBlob type is correctly integrated with the upload flow."
         }
       ]
     }

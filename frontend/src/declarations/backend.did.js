@@ -26,7 +26,12 @@ export const UserRole = IDL.Variant({
 });
 export const Hashtag = IDL.Text;
 export const ExternalBlob = IDL.Vec(IDL.Nat8);
-export const Result = IDL.Variant({ 'ok' : IDL.Text, 'err' : IDL.Text });
+export const Result = IDL.Variant({
+  'ok' : IDL.Text,
+  'notFound' : IDL.Text,
+  'internalError' : IDL.Text,
+  'unauthorized' : IDL.Text,
+});
 export const UserId = IDL.Principal;
 export const Badge = IDL.Variant({
   'buildMaster' : IDL.Null,
@@ -88,6 +93,10 @@ export const Video = IDL.Record({
   'comments' : IDL.Vec(Comment),
   'reactions' : IDL.Vec(IDL.Tuple(UserId, ReactionType)),
 });
+export const UploadResponse = IDL.Variant({
+  'ok' : IDL.Record({ 'blob' : ExternalBlob }),
+  'error' : IDL.Text,
+});
 
 export const idlService = IDL.Service({
   '_caffeineStorageBlobIsLive' : IDL.Func(
@@ -131,12 +140,14 @@ export const idlService = IDL.Service({
       [Result],
       [],
     ),
+  'deletePost' : IDL.Func([IDL.Text], [Result], []),
   'getCallerUserProfile' : IDL.Func([], [ProfileResult], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
   'getUserProfile' : IDL.Func([IDL.Principal], [ProfileResult], ['query']),
   'getVideos' : IDL.Func([], [IDL.Vec(Video)], ['query']),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+  'uploadBlob' : IDL.Func([ExternalBlob], [UploadResponse], []),
 });
 
 export const idlInitArgs = [];
@@ -160,7 +171,12 @@ export const idlFactory = ({ IDL }) => {
   });
   const Hashtag = IDL.Text;
   const ExternalBlob = IDL.Vec(IDL.Nat8);
-  const Result = IDL.Variant({ 'ok' : IDL.Text, 'err' : IDL.Text });
+  const Result = IDL.Variant({
+    'ok' : IDL.Text,
+    'notFound' : IDL.Text,
+    'internalError' : IDL.Text,
+    'unauthorized' : IDL.Text,
+  });
   const UserId = IDL.Principal;
   const Badge = IDL.Variant({
     'buildMaster' : IDL.Null,
@@ -222,6 +238,10 @@ export const idlFactory = ({ IDL }) => {
     'comments' : IDL.Vec(Comment),
     'reactions' : IDL.Vec(IDL.Tuple(UserId, ReactionType)),
   });
+  const UploadResponse = IDL.Variant({
+    'ok' : IDL.Record({ 'blob' : ExternalBlob }),
+    'error' : IDL.Text,
+  });
   
   return IDL.Service({
     '_caffeineStorageBlobIsLive' : IDL.Func(
@@ -265,12 +285,14 @@ export const idlFactory = ({ IDL }) => {
         [Result],
         [],
       ),
+    'deletePost' : IDL.Func([IDL.Text], [Result], []),
     'getCallerUserProfile' : IDL.Func([], [ProfileResult], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
     'getUserProfile' : IDL.Func([IDL.Principal], [ProfileResult], ['query']),
     'getVideos' : IDL.Func([], [IDL.Vec(Video)], ['query']),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+    'uploadBlob' : IDL.Func([ExternalBlob], [UploadResponse], []),
   });
 };
 

@@ -6,6 +6,7 @@ import {
   UserProfile,
   ProfileResult,
   Result,
+  UploadResponse,
   Comment,
   Variant_video_photo,
   ReactionType,
@@ -209,6 +210,23 @@ export interface CreateVideoParams {
   video: ExternalBlob;
   thumbnail: ExternalBlob;
   mediaType: Variant_video_photo;
+  onMediaProgress?: (pct: number) => void;
+  onThumbnailProgress?: (pct: number) => void;
+}
+
+/**
+ * Upload a single blob via the backend uploadBlob method.
+ * Parses the UploadResponse discriminated union and throws on error.
+ */
+async function uploadBlobViaBackend(
+  actor: { uploadBlob: (blob: ExternalBlob) => Promise<UploadResponse> },
+  blob: ExternalBlob
+): Promise<ExternalBlob> {
+  const response: UploadResponse = await actor.uploadBlob(blob);
+  if (response.__kind__ === "ok") {
+    return response.ok.blob;
+  }
+  throw new Error(response.error || "Upload failed");
 }
 
 export function useCreateVideo() {
@@ -218,15 +236,35 @@ export function useCreateVideo() {
   return useMutation({
     mutationFn: async (params: CreateVideoParams): Promise<Result> => {
       if (!actor) throw new Error("Actor not available");
-      return actor.createVideo(
+
+      // Step 1: Upload media blob via uploadBlob, get back the stored blob reference
+      const mediaWithProgress = params.onMediaProgress
+        ? params.video.withUploadProgress(params.onMediaProgress)
+        : params.video;
+      const uploadedMedia = await uploadBlobViaBackend(actor, mediaWithProgress);
+
+      // Step 2: Upload thumbnail blob via uploadBlob
+      const thumbWithProgress = params.onThumbnailProgress
+        ? params.thumbnail.withUploadProgress(params.onThumbnailProgress)
+        : params.thumbnail;
+      const uploadedThumbnail = await uploadBlobViaBackend(actor, thumbWithProgress);
+
+      // Step 3: Create the video record with the uploaded blob references
+      const result: Result = await actor.createVideo(
         params.title,
         params.description,
         params.category,
         params.hashtags,
-        params.video,
-        params.thumbnail,
+        uploadedMedia,
+        uploadedThumbnail,
         params.mediaType
       );
+
+      if (result.__kind__ === "unauthorized") throw new Error(result.unauthorized);
+      if (result.__kind__ === "internalError") throw new Error(result.internalError);
+      if (result.__kind__ === "notFound") throw new Error("Not found");
+
+      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["allVideos"] });
@@ -241,12 +279,39 @@ export function useCreateVideo() {
 // Alias used by Upload.tsx
 export const useUploadVideo = useCreateVideo;
 
+// ─── Delete Post (videos and photos) ─────────────────────────────────────────
+
+export function useDeletePost() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (postId: string): Promise<void> => {
+      if (!actor) throw new Error("Actor not available");
+      const result: Result = await actor.deletePost(postId);
+      if (result.__kind__ === "ok") return;
+      if (result.__kind__ === "notFound") throw new Error("Post not found");
+      if (result.__kind__ === "unauthorized") throw new Error(result.unauthorized);
+      if (result.__kind__ === "internalError") throw new Error(result.internalError);
+      throw new Error("Unknown error deleting post");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["allVideos"] });
+      queryClient.invalidateQueries({ queryKey: ["trendingVideos"] });
+      queryClient.invalidateQueries({ queryKey: ["videosByUser"] });
+      queryClient.invalidateQueries({ queryKey: ["videosByCategory"] });
+      queryClient.invalidateQueries({ queryKey: ["videosByHashtag"] });
+      queryClient.invalidateQueries({ queryKey: ["savedVideos"] });
+    },
+  });
+}
+
+// Keep legacy stub for any remaining references
 export function useDeleteVideo() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (_params: { videoId: string }) => {
-      // Delete video - client-side only for now
       return;
     },
     onSuccess: () => {
@@ -633,6 +698,19 @@ export function useCreateMechanicsPost() {
   });
 }
 
+export function useDeleteMechanicsPost() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (postId: number) => {
+      localMechanicsPosts = localMechanicsPosts.filter((p) => p.id !== postId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["mechanicsPosts"] });
+    },
+  });
+}
+
 export function useAddMechanicsComment() {
   const queryClient = useQueryClient();
 
@@ -651,22 +729,7 @@ export function useAddMechanicsComment() {
       return comment;
     },
     onSuccess: (_data: MechanicsComment, variables: { postId: number; text: string }) => {
-      queryClient.invalidateQueries({
-        queryKey: ["mechanicsPost", variables.postId],
-      });
-      queryClient.invalidateQueries({ queryKey: ["mechanicsPosts"] });
-    },
-  });
-}
-
-export function useDeleteMechanicsPost() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({ postId }: { postId: number }) => {
-      localMechanicsPosts = localMechanicsPosts.filter((p) => p.id !== postId);
-    },
-    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["mechanicsPost", variables.postId] });
       queryClient.invalidateQueries({ queryKey: ["mechanicsPosts"] });
     },
   });
@@ -699,27 +762,26 @@ export function useGetConversations() {
       const currentUser = "current-user";
       const convMap = new Map<string, DirectMessage[]>();
       localMessages
-        .filter(
-          (m) => m.fromUser === currentUser || m.toUser === currentUser
-        )
+        .filter((m) => m.fromUser === currentUser || m.toUser === currentUser)
         .forEach((m) => {
-          const other =
-            m.fromUser === currentUser ? m.toUser : m.fromUser;
+          const other = m.fromUser === currentUser ? m.toUser : m.fromUser;
           if (!convMap.has(other)) convMap.set(other, []);
           convMap.get(other)!.push(m);
         });
-      return Array.from(convMap.entries()).map(([otherUser, msgs]) => {
+      const summaries: ConversationSummary[] = [];
+      convMap.forEach((msgs, otherUser) => {
         const sorted = [...msgs].sort(
           (a, b) => Number(b.timestamp) - Number(a.timestamp)
         );
-        return {
-          otherUser,
-          lastMessage: sorted[0],
-          unreadCount: msgs.filter(
-            (m) => m.toUser === currentUser && !m.isRead
-          ).length,
-        };
+        const unreadCount = msgs.filter(
+          (m) => m.toUser === currentUser && !m.isRead
+        ).length;
+        summaries.push({ otherUser, lastMessage: sorted[0], unreadCount });
       });
+      return summaries.sort(
+        (a, b) =>
+          Number(b.lastMessage.timestamp) - Number(a.lastMessage.timestamp)
+      );
     },
   });
 }
@@ -758,25 +820,23 @@ export function useSendMessage() {
       return msg;
     },
     onSuccess: (_data: DirectMessage, variables: { toUser: string; text: string }) => {
-      queryClient.invalidateQueries({
-        queryKey: ["messages", variables.toUser],
-      });
+      queryClient.invalidateQueries({ queryKey: ["messages", variables.toUser] });
       queryClient.invalidateQueries({ queryKey: ["conversations"] });
     },
   });
 }
 
-export function useMarkMessagesRead() {
+export function useMarkAsRead() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ otherUserId }: { otherUserId: string }) => {
+    mutationFn: async (otherUserId: string) => {
       const currentUser = "current-user";
-      localMessages.forEach((m) => {
-        if (m.fromUser === otherUserId && m.toUser === currentUser) {
+      localMessages
+        .filter((m) => m.fromUser === otherUserId && m.toUser === currentUser)
+        .forEach((m) => {
           m.isRead = true;
-        }
-      });
+        });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["conversations"] });
@@ -785,23 +845,12 @@ export function useMarkMessagesRead() {
   });
 }
 
-export function useDeleteMessage() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({ messageId }: { messageId: number }) => {
-      localMessages = localMessages.filter((m) => m.id !== messageId);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["messages"] });
-      queryClient.invalidateQueries({ queryKey: ["conversations"] });
-    },
-  });
-}
+// Alias for backward compatibility
+export const useMarkMessagesRead = useMarkAsRead;
 
 // ─── Notifications ────────────────────────────────────────────────────────────
 
-export type NotificationItem = {
+export type Notification = {
   id: number;
   recipientId: string;
   senderId: string;
@@ -812,18 +861,16 @@ export type NotificationItem = {
   createdAt: bigint;
 };
 
-// Alias for backward compatibility
-export type Notification = NotificationItem;
-
-let localNotifications: NotificationItem[] = [];
+let localNotifications: Notification[] = [];
+let nextNotificationId = 1;
 
 export function useGetNotifications() {
-  return useQuery<NotificationItem[]>({
+  return useQuery<Notification[]>({
     queryKey: ["notifications"],
     queryFn: async () => {
-      return [...localNotifications].sort(
-        (a, b) => Number(b.createdAt) - Number(a.createdAt)
-      );
+      return [...localNotifications]
+        .filter((n) => n.recipientId === "current-user")
+        .sort((a, b) => Number(b.createdAt) - Number(a.createdAt));
     },
   });
 }
@@ -832,7 +879,7 @@ export function useMarkNotificationRead() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ notificationId }: { notificationId: number }) => {
+    mutationFn: async (notificationId: number) => {
       const notif = localNotifications.find((n) => n.id === notificationId);
       if (notif) notif.isRead = true;
     },
@@ -847,7 +894,11 @@ export function useMarkAllNotificationsRead() {
 
   return useMutation({
     mutationFn: async () => {
-      localNotifications.forEach((n) => (n.isRead = true));
+      localNotifications
+        .filter((n) => n.recipientId === "current-user")
+        .forEach((n) => {
+          n.isRead = true;
+        });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
@@ -856,6 +907,14 @@ export function useMarkAllNotificationsRead() {
 }
 
 // ─── Build Logs ───────────────────────────────────────────────────────────────
+
+export type BuildStage = {
+  id: number;
+  title: string;
+  description: string;
+  imageUrl: string;
+  createdAt: bigint;
+};
 
 export type BuildLog = {
   id: number;
@@ -868,14 +927,6 @@ export type BuildLog = {
   stages: BuildStage[];
   createdAt: bigint;
   updatedAt: bigint;
-};
-
-export type BuildStage = {
-  id: number;
-  title: string;
-  description: string;
-  imageUrl: string;
-  createdAt: bigint;
 };
 
 let localBuildLogs: BuildLog[] = [];
@@ -914,6 +965,7 @@ export function useCreateBuildLog() {
       carYear: string;
       description: string;
     }) => {
+      const now = BigInt(Date.now()) * BigInt(1_000_000);
       const log: BuildLog = {
         id: nextBuildLogId++,
         title: params.title,
@@ -923,43 +975,13 @@ export function useCreateBuildLog() {
         carYear: params.carYear,
         description: params.description,
         stages: [],
-        createdAt: BigInt(Date.now()) * BigInt(1_000_000),
-        updatedAt: BigInt(Date.now()) * BigInt(1_000_000),
+        createdAt: now,
+        updatedAt: now,
       };
       localBuildLogs.push(log);
       return log;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["buildLogs"] });
-    },
-  });
-}
-
-export function useAddBuildStage() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (params: {
-      logId: number;
-      title: string;
-      description: string;
-      imageUrl: string;
-    }) => {
-      const log = localBuildLogs.find((l) => l.id === params.logId);
-      if (!log) throw new Error("Build log not found");
-      const stage: BuildStage = {
-        id: nextBuildStageId++,
-        title: params.title,
-        description: params.description,
-        imageUrl: params.imageUrl,
-        createdAt: BigInt(Date.now()) * BigInt(1_000_000),
-      };
-      log.stages.push(stage);
-      log.updatedAt = BigInt(Date.now()) * BigInt(1_000_000);
-      return stage;
-    },
-    onSuccess: (_data: BuildStage, variables: { logId: number; title: string; description: string; imageUrl: string }) => {
-      queryClient.invalidateQueries({ queryKey: ["buildLog", variables.logId] });
       queryClient.invalidateQueries({ queryKey: ["buildLogs"] });
     },
   });
@@ -978,7 +1000,39 @@ export function useDeleteBuildLog() {
   });
 }
 
-// ─── Classifieds ──────────────────────────────────────────────────────────────
+export interface AddBuildStageParams {
+  logId: number;
+  title: string;
+  description: string;
+  imageUrl: string;
+}
+
+export function useAddBuildStage() {
+  const queryClient = useQueryClient();
+
+  return useMutation<BuildStage, Error, AddBuildStageParams>({
+    mutationFn: async (params: AddBuildStageParams): Promise<BuildStage> => {
+      const log = localBuildLogs.find((l) => l.id === params.logId);
+      if (!log) throw new Error("Build log not found");
+      const stage: BuildStage = {
+        id: nextBuildStageId++,
+        title: params.title,
+        description: params.description,
+        imageUrl: params.imageUrl,
+        createdAt: BigInt(Date.now()) * BigInt(1_000_000),
+      };
+      log.stages.push(stage);
+      log.updatedAt = BigInt(Date.now()) * BigInt(1_000_000);
+      return stage;
+    },
+    onSuccess: (_data: BuildStage, variables: AddBuildStageParams) => {
+      queryClient.invalidateQueries({ queryKey: ["buildLog", variables.logId] });
+      queryClient.invalidateQueries({ queryKey: ["buildLogs"] });
+    },
+  });
+}
+
+// ─── Classifieds / Listings ───────────────────────────────────────────────────
 
 export type Listing = {
   id: number;
@@ -1126,18 +1180,103 @@ export function usePostChallenge() {
   });
 }
 
+// ─── User Stats ───────────────────────────────────────────────────────────────
+
+export type UserStats = {
+  totalVideos: number;
+  totalViews: number;
+  totalLikes: number;
+  totalComments: number;
+  totalFollowers: number;
+  totalFollowing: number;
+  totalBuildLogs: number;
+  joinedAt: bigint;
+};
+
+export function useGetUserStats(userId: string) {
+  const { actor, isFetching } = useActor();
+
+  return useQuery<UserStats>({
+    queryKey: ["userStats", userId],
+    queryFn: async () => {
+      if (!actor || !userId) {
+        return {
+          totalVideos: 0,
+          totalViews: 0,
+          totalLikes: 0,
+          totalComments: 0,
+          totalFollowers: 0,
+          totalFollowing: 0,
+          totalBuildLogs: 0,
+          joinedAt: BigInt(0),
+        };
+      }
+      const videos = await actor.getVideos();
+      const userVideos = videos.filter((v) => v.uploader.toString() === userId);
+      const totalViews = userVideos.reduce((sum, v) => sum + Number(v.viewCount), 0);
+      const totalLikes = userVideos.reduce((sum, v) => sum + v.likes.length, 0);
+      const totalComments = userVideos.reduce((sum, v) => sum + v.comments.length, 0);
+      const followers = Array.from(followMap.get(userId) ?? []).length;
+      const following = (() => {
+        let count = 0;
+        followMap.forEach((set) => { if (set.has(userId)) count++; });
+        return count;
+      })();
+      const buildLogs = localBuildLogs.filter((l) => l.authorId === userId).length;
+
+      return {
+        totalVideos: userVideos.length,
+        totalViews,
+        totalLikes,
+        totalComments,
+        totalFollowers: followers,
+        totalFollowing: following,
+        totalBuildLogs: buildLogs,
+        joinedAt: BigInt(0),
+      };
+    },
+    enabled: !!actor && !isFetching && !!userId,
+  });
+}
+
 // ─── Admin ────────────────────────────────────────────────────────────────────
+
+export function useGetAllUsersAdmin() {
+  const { actor, isFetching } = useActor();
+
+  return useQuery<UserProfile[]>({
+    queryKey: ["allUsersAdmin"],
+    queryFn: async () => {
+      if (!actor) return [];
+      // No direct getAllUsers backend method; return local cache
+      return [...localUsers];
+    },
+    enabled: !!actor && !isFetching,
+  });
+}
 
 export function useDeleteUser() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (_params: { userId: string }) => {
-      // Admin delete user - client-side only for now
-      return;
+    mutationFn: async (userId: string) => {
+      localUsers = localUsers.filter((u) => u.id.toString() !== userId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["allUsers"] });
+      queryClient.invalidateQueries({ queryKey: ["allUsersAdmin"] });
     },
+  });
+}
+
+export function useIsAdmin() {
+  const { actor, isFetching } = useActor();
+
+  return useQuery<boolean>({
+    queryKey: ["isAdmin"],
+    queryFn: async () => {
+      if (!actor) return false;
+      return actor.isCallerAdmin();
+    },
+    enabled: !!actor && !isFetching,
   });
 }

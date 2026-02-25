@@ -105,7 +105,10 @@ export interface Video {
     comments: Array<Comment>;
     reactions: Array<[UserId, ReactionType]>;
 }
-export type Category = string;
+export interface _CaffeineStorageRefillResult {
+    success?: boolean;
+    topped_up_amount?: bigint;
+}
 export type CommentId = bigint;
 export type Time = bigint;
 export interface Comment {
@@ -116,6 +119,7 @@ export interface Comment {
     timestamp: Time;
     videoId: VideoId;
 }
+export type Category = string;
 export interface _CaffeineStorageRefillInformation {
     proposed_top_up_amount?: bigint;
 }
@@ -138,8 +142,14 @@ export type Result = {
     __kind__: "ok";
     ok: string;
 } | {
-    __kind__: "err";
-    err: string;
+    __kind__: "notFound";
+    notFound: string;
+} | {
+    __kind__: "internalError";
+    internalError: string;
+} | {
+    __kind__: "unauthorized";
+    unauthorized: string;
 };
 export type Hashtag = string;
 export type VideoId = string;
@@ -154,10 +164,15 @@ export interface UserProfile {
     savedVideos: Array<bigint>;
     avatar: ExternalBlob;
 }
-export interface _CaffeineStorageRefillResult {
-    success?: boolean;
-    topped_up_amount?: bigint;
-}
+export type UploadResponse = {
+    __kind__: "ok";
+    ok: {
+        blob: ExternalBlob;
+    };
+} | {
+    __kind__: "error";
+    error: string;
+};
 export enum Badge {
     buildMaster = "buildMaster",
     verified = "verified",
@@ -194,6 +209,10 @@ export interface backendInterface {
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     createVideo(title: string, description: string, category: string, hashtags: Array<Hashtag>, video: ExternalBlob, thumbnail: ExternalBlob, mediaType: Variant_video_photo): Promise<Result>;
     /**
+     * / Delete a post (video or photo). Only the owner of the post or an admin can delete it.
+     */
+    deletePost(postId: string): Promise<Result>;
+    /**
      * / Get the caller's own profile. Returns `#unauthorized` if the caller is not a registered user,
      * / and `#notFound` if the profile does not exist.
      */
@@ -210,8 +229,13 @@ export interface backendInterface {
      * / Save (create or update) the caller's own profile. Only registered users can save profiles.
      */
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
+    /**
+     * / Upload a blob (photo or video) and return its canister path.
+     * / Only registered users are allowed to upload blobs.
+     */
+    uploadBlob(blob: ExternalBlob): Promise<UploadResponse>;
 }
-import type { Badge as _Badge, Category as _Category, Comment as _Comment, ExternalBlob as _ExternalBlob, Hashtag as _Hashtag, ProfileResult as _ProfileResult, ReactionType as _ReactionType, Result as _Result, Time as _Time, UserId as _UserId, UserProfile as _UserProfile, UserRole as _UserRole, Video as _Video, VideoId as _VideoId, _CaffeineStorageRefillInformation as __CaffeineStorageRefillInformation, _CaffeineStorageRefillResult as __CaffeineStorageRefillResult } from "./declarations/backend.did.d.ts";
+import type { Badge as _Badge, Category as _Category, Comment as _Comment, ExternalBlob as _ExternalBlob, Hashtag as _Hashtag, ProfileResult as _ProfileResult, ReactionType as _ReactionType, Result as _Result, Time as _Time, UploadResponse as _UploadResponse, UserId as _UserId, UserProfile as _UserProfile, UserRole as _UserRole, Video as _Video, VideoId as _VideoId, _CaffeineStorageRefillInformation as __CaffeineStorageRefillInformation, _CaffeineStorageRefillResult as __CaffeineStorageRefillResult } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
     constructor(private actor: ActorSubclass<_SERVICE>, private _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, private _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, private processError?: (error: unknown) => never){}
     async _caffeineStorageBlobIsLive(arg0: Uint8Array): Promise<boolean> {
@@ -340,6 +364,20 @@ export class Backend implements backendInterface {
             return from_candid_Result_n12(this._uploadFile, this._downloadFile, result);
         }
     }
+    async deletePost(arg0: string): Promise<Result> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.deletePost(arg0);
+                return from_candid_Result_n12(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.deletePost(arg0);
+            return from_candid_Result_n12(this._uploadFile, this._downloadFile, result);
+        }
+    }
     async getCallerUserProfile(): Promise<ProfileResult> {
         if (this.processError) {
             try {
@@ -424,6 +462,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async uploadBlob(arg0: ExternalBlob): Promise<UploadResponse> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.uploadBlob(await to_candid_ExternalBlob_n10(this._uploadFile, this._downloadFile, arg0));
+                return from_candid_UploadResponse_n37(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.uploadBlob(await to_candid_ExternalBlob_n10(this._uploadFile, this._downloadFile, arg0));
+            return from_candid_UploadResponse_n37(this._uploadFile, this._downloadFile, result);
+        }
+    }
 }
 function from_candid_Badge_n19(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _Badge): Badge {
     return from_candid_variant_n20(_uploadFile, _downloadFile, value);
@@ -439,6 +491,9 @@ function from_candid_ReactionType_n30(_uploadFile: (file: ExternalBlob) => Promi
 }
 function from_candid_Result_n12(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _Result): Result {
     return from_candid_variant_n13(_uploadFile, _downloadFile, value);
+}
+async function from_candid_UploadResponse_n37(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _UploadResponse): Promise<UploadResponse> {
+    return await from_candid_variant_n38(_uploadFile, _downloadFile, value);
 }
 async function from_candid_UserProfile_n16(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _UserProfile): Promise<UserProfile> {
     return await from_candid_record_n17(_uploadFile, _downloadFile, value);
@@ -543,6 +598,15 @@ async function from_candid_record_n26(_uploadFile: (file: ExternalBlob) => Promi
         reactions: from_candid_vec_n28(_uploadFile, _downloadFile, value.reactions)
     };
 }
+async function from_candid_record_n39(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    blob: _ExternalBlob;
+}): Promise<{
+    blob: ExternalBlob;
+}> {
+    return {
+        blob: await from_candid_ExternalBlob_n21(_uploadFile, _downloadFile, value.blob)
+    };
+}
 function from_candid_record_n5(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     success: [] | [boolean];
     topped_up_amount: [] | [bigint];
@@ -564,20 +628,36 @@ function from_candid_tuple_n29(_uploadFile: (file: ExternalBlob) => Promise<Uint
 function from_candid_variant_n13(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     ok: string;
 } | {
-    err: string;
+    notFound: string;
+} | {
+    internalError: string;
+} | {
+    unauthorized: string;
 }): {
     __kind__: "ok";
     ok: string;
 } | {
-    __kind__: "err";
-    err: string;
+    __kind__: "notFound";
+    notFound: string;
+} | {
+    __kind__: "internalError";
+    internalError: string;
+} | {
+    __kind__: "unauthorized";
+    unauthorized: string;
 } {
     return "ok" in value ? {
         __kind__: "ok",
         ok: value.ok
-    } : "err" in value ? {
-        __kind__: "err",
-        err: value.err
+    } : "notFound" in value ? {
+        __kind__: "notFound",
+        notFound: value.notFound
+    } : "internalError" in value ? {
+        __kind__: "internalError",
+        internalError: value.internalError
+    } : "unauthorized" in value ? {
+        __kind__: "unauthorized",
+        unauthorized: value.unauthorized
     } : value;
 }
 async function from_candid_variant_n15(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
@@ -652,6 +732,29 @@ function from_candid_variant_n31(_uploadFile: (file: ExternalBlob) => Promise<Ui
     respect: null;
 }): ReactionType {
     return "fire" in value ? ReactionType.fire : "hype" in value ? ReactionType.hype : "like" in value ? ReactionType.like : "wild" in value ? ReactionType.wild : "respect" in value ? ReactionType.respect : value;
+}
+async function from_candid_variant_n38(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    ok: {
+        blob: _ExternalBlob;
+    };
+} | {
+    error: string;
+}): Promise<{
+    __kind__: "ok";
+    ok: {
+        blob: ExternalBlob;
+    };
+} | {
+    __kind__: "error";
+    error: string;
+}> {
+    return "ok" in value ? {
+        __kind__: "ok",
+        ok: await from_candid_record_n39(_uploadFile, _downloadFile, value.ok)
+    } : "error" in value ? {
+        __kind__: "error",
+        error: value.error
+    } : value;
 }
 function from_candid_vec_n18(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_Badge>): Array<Badge> {
     return value.map((x)=>from_candid_Badge_n19(_uploadFile, _downloadFile, x));

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link } from '@tanstack/react-router';
 import {
   useToggleLike,
@@ -6,7 +6,7 @@ import {
   useSaveVideo,
   useUnsaveVideo,
   useIncrementViewCount,
-  useDeleteVideo,
+  useDeletePost,
   type Video,
   type UserProfile,
 } from '../hooks/useQueries';
@@ -14,6 +14,7 @@ import { Variant_video_photo } from '../backend';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import CommentsPanel from './CommentsPanel';
 import ChallengeModal from './ChallengeModal';
+import { toast } from 'sonner';
 import {
   Heart,
   MessageCircle,
@@ -24,6 +25,9 @@ import {
   Star,
   ThumbsUp,
   Share2,
+  Loader2,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 
 export interface VideoCardProps {
@@ -44,6 +48,8 @@ export default function VideoCard({ video, currentUserProfile }: VideoCardProps)
   const [showComments, setShowComments] = useState(false);
   const [showChallenge, setShowChallenge] = useState(false);
   const [showReactions, setShowReactions] = useState(false);
+  // Start muted (required for autoplay), user can toggle
+  const [isMuted, setIsMuted] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const toggleLike = useToggleLike();
@@ -51,17 +57,40 @@ export default function VideoCard({ video, currentUserProfile }: VideoCardProps)
   const saveVideo = useSaveVideo();
   const unsaveVideo = useUnsaveVideo();
   const incrementView = useIncrementViewCount();
-  const deleteVideo = useDeleteVideo();
+  const deletePost = useDeletePost();
 
   const myPrincipal = identity?.getPrincipal().toString();
   const isLiked = myPrincipal ? video.likes.some((l) => l.toString() === myPrincipal) : false;
   const isSaved = currentUserProfile?.savedVideos?.some((id) => id.toString() === video.id) ?? false;
-  const isOwner = myPrincipal && video.uploader?.toString() === myPrincipal;
+  const isOwner = !!myPrincipal && video.uploader?.toString() === myPrincipal;
 
   const mediaUrl = video.mediaUrl?.getDirectURL?.() ?? '';
   const thumbnailUrl = video.thumbnail?.getDirectURL?.() ?? '';
-  // Variant_video_photo is a string enum: "video" | "photo"
   const isPhoto = video.mediaType === Variant_video_photo.photo;
+
+  // Sync the muted state to the actual video element imperatively.
+  // React's `muted` prop on <video> is not reactive after mount, so we must
+  // set it directly on the DOM node whenever isMuted changes.
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    el.muted = isMuted;
+    // If unmuting, also ensure volume is audible
+    if (!isMuted && el.volume === 0) {
+      el.volume = 1;
+    }
+  }, [isMuted]);
+
+  const handleMuteToggle = () => {
+    const el = videoRef.current;
+    if (!el) return;
+    const next = !isMuted;
+    el.muted = next;
+    if (!next && el.volume === 0) {
+      el.volume = 1;
+    }
+    setIsMuted(next);
+  };
 
   const handleLike = () => {
     if (!identity) return;
@@ -85,9 +114,18 @@ export default function VideoCard({ video, currentUserProfile }: VideoCardProps)
 
   const handleDelete = () => {
     if (!isOwner) return;
-    if (confirm('Delete this video?')) {
-      deleteVideo.mutate({ videoId: video.id });
-    }
+    const label = isPhoto ? 'photo' : 'reel';
+    if (!confirm(`Delete this ${label}? This cannot be undone.`)) return;
+
+    deletePost.mutate(video.id, {
+      onSuccess: () => {
+        toast.success(`${isPhoto ? 'Photo' : 'Reel'} deleted successfully`);
+      },
+      onError: (err: unknown) => {
+        const message = err instanceof Error ? err.message : 'Failed to delete post';
+        toast.error(message);
+      },
+    });
   };
 
   const handleVideoVisible = () => {
@@ -122,6 +160,21 @@ export default function VideoCard({ video, currentUserProfile }: VideoCardProps)
 
       {/* Gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
+
+      {/* Mute/Unmute button — top right, only for videos */}
+      {!isPhoto && (
+        <button
+          onClick={handleMuteToggle}
+          className="absolute top-4 right-4 z-10 bg-black/50 rounded-full p-2 text-white hover:bg-black/70 transition-colors"
+          aria-label={isMuted ? 'Unmute' : 'Mute'}
+        >
+          {isMuted ? (
+            <VolumeX className="w-5 h-5" />
+          ) : (
+            <Volume2 className="w-5 h-5 text-neon-orange" />
+          )}
+        </button>
+      )}
 
       {/* Bottom info */}
       <div className="absolute bottom-0 left-0 right-16 p-4">
@@ -214,9 +267,13 @@ export default function VideoCard({ video, currentUserProfile }: VideoCardProps)
           <button
             onClick={handleDelete}
             className="flex flex-col items-center gap-1"
-            disabled={deleteVideo.isPending}
+            disabled={deletePost.isPending}
           >
-            <Trash2 className="w-6 h-6 text-red-400 drop-shadow" />
+            {deletePost.isPending ? (
+              <Loader2 className="w-6 h-6 text-red-400 drop-shadow animate-spin" />
+            ) : (
+              <Trash2 className="w-6 h-6 text-red-400 drop-shadow" />
+            )}
           </button>
         )}
       </div>

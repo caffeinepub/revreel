@@ -2,10 +2,11 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-after-a-successful-video-upload-via-the-upload-page-the-newly-created-video-must-appear-in-the-main-feed-feed-tsx-without-requiring-a-manual-page-refresh-ensure-the-feed-query-cache-is-invalidated-or-refetched-after-the-createvideo-mutation-completes-successfully",
-      "featureTitle": "After a successful video upload via the Upload page, the newly created video must appear in the main feed (Feed.tsx) without requiring a manual page refresh. Ensure the feed query cache is invalidated or refetched after the createVideo mutation completes successfully.",
+      "featureId": "feature-fix-the-upload-flow-so-that-the-backend-upload-storage-response-is-correctly-parsed-and-conforms-to-the-expected-v3-response-body-format-the-backend-actor-s-blob-storage-or-video-upload-handler-must-return-a-response-shape-that-matches-what-the-frontend-upload-page-expects-eliminating-the-expected-v3-response-body-error-when-a-user-attempts-to-upload-a-video-or-photo",
+      "featureTitle": "Fix the upload flow so that the backend upload/storage response is correctly parsed and conforms to the expected v3 response body format. The backend actor's blob-storage or video upload handler must return a response shape that matches what the frontend Upload page expects, eliminating the 'expected v3 response body' error when a user attempts to upload a video or photo.",
       "files": [
-        "frontend/src/hooks/useQueries.ts"
+        "frontend/src/hooks/useQueries.ts",
+        "frontend/src/pages/Upload.tsx"
       ],
       "components": [
         "authorization@4.0.0",

@@ -82,18 +82,14 @@ export default function Upload() {
 
     try {
       const mediaBytes = new Uint8Array(await mediaFile!.arrayBuffer());
-      const mediaBlob = ExternalBlob.fromBytes(mediaBytes).withUploadProgress((pct) => {
-        setUploadProgress(pct);
-      });
+      const mediaBlob = ExternalBlob.fromBytes(mediaBytes);
 
       let thumbnailBlob: ExternalBlob;
       if (thumbnailFile) {
         const thumbBytes = new Uint8Array(await thumbnailFile.arrayBuffer());
-        thumbnailBlob = ExternalBlob.fromBytes(thumbBytes).withUploadProgress((pct) => {
-          setThumbnailProgress(pct);
-        });
+        thumbnailBlob = ExternalBlob.fromBytes(thumbBytes);
       } else {
-        // Use a placeholder thumbnail
+        // Use a placeholder thumbnail URL
         thumbnailBlob = ExternalBlob.fromURL('/assets/generated/placeholder-thumb.dim_640x360.png');
       }
 
@@ -110,6 +106,8 @@ export default function Upload() {
         video: mediaBlob,
         thumbnail: thumbnailBlob,
         mediaType: mediaType === 'video' ? Variant_video_photo.video : Variant_video_photo.photo,
+        onMediaProgress: (pct) => setUploadProgress(pct),
+        onThumbnailProgress: (pct) => setThumbnailProgress(pct),
       });
 
       setSuccess(true);
@@ -117,8 +115,19 @@ export default function Upload() {
         navigate({ to: '/feed' });
       }, 1500);
     } catch (err: any) {
-      console.error('Upload error:', err);
-      setError(err?.message || 'Upload failed. Please try again.');
+      const msg: string = err?.message ?? '';
+      // Provide user-friendly messages for common errors
+      if (msg.toLowerCase().includes('unauthorized')) {
+        setError('You must be logged in to upload content.');
+      } else if (msg.toLowerCase().includes('too large') || msg.toLowerCase().includes('size')) {
+        setError('File is too large. Please choose a smaller file.');
+      } else if (msg.toLowerCase().includes('format') || msg.toLowerCase().includes('unsupported')) {
+        setError('Unsupported file format. Please use a supported video or image format.');
+      } else if (msg) {
+        setError(msg);
+      } else {
+        setError('Upload failed. Please try again.');
+      }
     }
   };
 
@@ -452,9 +461,7 @@ export default function Upload() {
                       ? `Select a ${mediaType} file to continue`
                       : !title.trim()
                       ? 'Add a title to continue'
-                      : !category
-                      ? 'Select a category to continue'
-                      : ''}
+                      : 'Select a category to continue'}
                   </p>
                 )}
               </div>

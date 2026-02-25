@@ -25,7 +25,7 @@ export default function AdminPanel() {
 
   const handleDelete = (userId: string) => {
     if (confirm('Are you sure you want to delete this user?')) {
-      deleteUser.mutate({ userId });
+      deleteUser.mutate(userId);
     }
   };
 

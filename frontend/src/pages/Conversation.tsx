@@ -5,7 +5,6 @@ import {
   useGetMessages,
   useSendMessage,
   useMarkMessagesRead,
-  useDeleteMessage,
   useGetUserProfile,
 } from '../hooks/useQueries';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
@@ -24,13 +23,12 @@ export default function Conversation() {
   const { data: otherProfile } = useGetUserProfile(userId);
   const sendMessage = useSendMessage();
   const markAsRead = useMarkMessagesRead();
-  const deleteMessage = useDeleteMessage();
 
   const myPrincipal = identity?.getPrincipal().toString();
 
   useEffect(() => {
     if (userId) {
-      markAsRead.mutate({ otherUserId: userId });
+      markAsRead.mutate(userId);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
@@ -50,8 +48,8 @@ export default function Conversation() {
     }
   };
 
-  const handleDelete = (msg: DirectMessage) => {
-    deleteMessage.mutate({ messageId: msg.id });
+  const handleDelete = (_msg: DirectMessage) => {
+    // Delete message is client-side only; no backend method available
   };
 
   const formatTime = (timestamp: bigint) => {

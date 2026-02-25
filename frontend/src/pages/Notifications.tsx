@@ -3,7 +3,7 @@ import {
   useGetNotifications,
   useMarkAllNotificationsRead,
   useMarkNotificationRead,
-  type NotificationItem,
+  type Notification,
 } from '../hooks/useQueries';
 import AuthGuard from '../components/AuthGuard';
 import { Bell, Loader2, CheckCheck } from 'lucide-react';
@@ -28,14 +28,14 @@ export default function Notifications() {
   const markOne = useMarkNotificationRead();
   const navigate = useNavigate();
 
-  const unreadCount = notifications.filter((n: NotificationItem) => !n.isRead).length;
+  const unreadCount = notifications.filter((n: Notification) => !n.isRead).length;
 
   const handleMarkAll = () => {
     markAll.mutate();
   };
 
-  const handleNotifClick = (notif: NotificationItem) => {
-    markOne.mutate({ notificationId: notif.id });
+  const handleNotifClick = (notif: Notification) => {
+    markOne.mutate(notif.id);
     try {
       navigate({
         to: '/profile/$userId',
@@ -89,7 +89,7 @@ export default function Notifications() {
           </div>
         ) : (
           <div className="space-y-2">
-            {notifications.map((notif: NotificationItem) => (
+            {notifications.map((notif: Notification) => (
               <div
                 key={notif.id.toString()}
                 onClick={() => handleNotifClick(notif)}
