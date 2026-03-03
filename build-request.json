@@ -1,36 +1,54 @@
 {
   "kind": "build_request",
-  "title": "Fix upload 'expected v3 response body' error",
-  "projectName": "RevReel",
+  "title": "Fix deployment errors and redeploy",
   "priority": "high",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Fix the upload flow so that the backend upload/storage response is correctly parsed and conforms to the expected v3 response body format. The backend actor's blob-storage or video upload handler must return a response shape that matches what the frontend Upload page expects, eliminating the 'expected v3 response body' error when a user attempts to upload a video or photo.",
-      "target": "both",
+      "text": "Audit and fix all backend Motoko compilation errors in backend/main.mo that are causing deployment failures. Ensure the actor compiles cleanly with no type errors, missing imports, or undefined references.",
+      "target": "backend",
       "source": {
         "messageIds": [
           "msg-1"
         ],
         "quotes": [
-          "When I go to upload it says expected v3 response body"
+          "Fix the deployment and deploy"
         ]
       },
       "acceptanceCriteria": [
-        "Navigating to the Upload page and submitting a video or photo file completes without throwing an 'expected v3 response body' error.",
-        "The backend upload/storage handler returns a response body that satisfies the v3 candid/API contract the frontend actor client expects.",
-        "After a successful upload, the user is redirected to the feed and the newly uploaded content appears.",
-        "Error states (oversized file, unsupported format) still display user-friendly error messages rather than a v3 response body parse error."
+        "backend/main.mo compiles without errors or warnings",
+        "All referenced types and functions are defined or imported correctly",
+        "The single-actor architecture is preserved"
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "text": "Audit and fix all frontend TypeScript compilation errors in the React/TypeScript frontend. Ensure all type imports, component props, and hook return types are correctly aligned between frontend/src/hooks/useQueries.ts and consuming components so the Vite build completes successfully.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-1"
+        ],
+        "quotes": [
+          "Fix the deployment and deploy"
+        ]
+      },
+      "acceptanceCriteria": [
+        "The Vite/TypeScript build completes with zero type errors",
+        "All frontend components import and use backend-derived types correctly",
+        "No missing or mismatched type declarations remain"
       ]
     }
   ],
   "constraints": [
-    "Do not modify files listed under frontend.immutablePaths (useInternetIdentity, useActor, main.tsx, ui components).",
-    "All backend logic must remain in the single main actor file (backend/main.mo)."
+    "Do not alter any files under frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, or frontend/src/components/ui",
+    "Preserve the single-actor Motoko architecture — all logic must remain in backend/main.mo",
+    "Do not change existing data models or remove any existing functionality"
   ],
   "nonGoals": [
-    "Changing the upload UI design or adding new upload fields.",
-    "Modifying any feature unrelated to the upload response parsing error."
+    "Adding new features beyond what is already implemented",
+    "Refactoring code that is not related to the compilation/deployment errors",
+    "Changing the visual design or UI layout"
   ],
   "imageRequirements": {
     "required": [],

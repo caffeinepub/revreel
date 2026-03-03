@@ -1,15 +1,13 @@
-import Map "mo:core/Map";
 import Nat "mo:core/Nat";
 import Int "mo:core/Int";
 import Set "mo:core/Set";
+import Map "mo:core/Map";
 import Array "mo:core/Array";
 import Order "mo:core/Order";
-import Iter "mo:core/Iter";
 import Text "mo:core/Text";
 import Time "mo:core/Time";
 import Principal "mo:core/Principal";
 import Runtime "mo:core/Runtime";
-
 import MixinAuthorization "authorization/MixinAuthorization";
 import MixinStorage "blob-storage/Mixin";
 import Storage "blob-storage/Storage";
@@ -24,13 +22,15 @@ actor {
   type CarMeetId = Text;
   type MeetCategory = Text;
   type Location = Text;
+  type VideoMap = Map.Map<VideoId, Video>;
+  type CommentMap = Map.Map<CommentId, Comment>;
 
   // Mixins
   include MixinStorage();
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
 
-  let hardcodedAdmin = Principal.fromText("2keph-5zs2f-rhhy2-nidwx-pbnpp-yo7mc-yt3ce-qnwjp-23mpl-ikczg-iae");
+  let hardcodedAdmin = Principal.fromText("2keph-5zs2e-fhhy2-nidwx-pbnpp-yo7mc-yt3ce-qnwjp-23mpl-ikczg-iae");
 
   func checkIsAdmin(caller : Principal) : Bool {
     if (caller == hardcodedAdmin) { return true };
@@ -84,9 +84,14 @@ actor {
     timestamp : Time.Time;
     thumbnail : Storage.ExternalBlob;
     mediaUrl : Storage.ExternalBlob;
-    reactions : [(UserId, ReactionType)];
+    reactions : [Reaction];
     viewCount : Nat;
     mediaType : { #video; #photo };
+  };
+
+  public type Reaction = {
+    user : UserId;
+    reactionType : ReactionType;
   };
 
   type InternalUser = {
@@ -270,7 +275,7 @@ actor {
 
   let videos = Map.empty<VideoId, Video>();
   let users = Map.empty<UserId, InternalUser>();
-  let comments = Map.empty<VideoId, Map.Map<CommentId, Comment>>();
+  let comments = Map.empty<VideoId, CommentMap>();
   let carMeets = Map.empty<CarMeetId, CarMeet>();
   let mechanicsPosts = Map.empty<Nat, MechanicsPost>();
   let messages = Map.empty<UserId, Map.Map<UserId, Map.Map<MessageId, DirectMessage>>>();
@@ -337,8 +342,8 @@ actor {
     };
   };
 
-  /// Get the caller's own profile. Returns `#unauthorized` if the caller is not a registered user,
-  /// and `#notFound` if the profile does not exist.
+  /// Get the caller's own profile. Returns \`#unauthorized\` if the caller is not a registered user,
+  /// and \`#notFound\` if the profile does not exist.
   public query ({ caller }) func getCallerUserProfile() : async ProfileResult {
     if (not checkIsUser(caller)) {
       return #unauthorized("Only registered users can get their profile");
@@ -376,12 +381,10 @@ actor {
     };
   };
 
-  /// Get any user's profile by principal. Returns `#unauthorized` if the caller is not the user or an admin,
-  /// and `#notFound` if the profile does not exist.
+  /// Get any user's public profile by principal.
+  /// Any caller (including guests) can view public profiles, which is required for
+  /// social features such as leaderboards, car meets, challenges, and follower lists.
   public query ({ caller }) func getUserProfile(user : Principal) : async ProfileResult {
-    if (caller != user and not checkIsAdmin(caller)) {
-      return #unauthorized("Can only view your own profile");
-    };
     switch (users.get(user)) {
       case (null) { #notFound("Profile not found") };
       case (?u) { #ok(u.profile) };
@@ -397,7 +400,7 @@ actor {
     #ok { blob };
   };
 
-  // Create video with authentication
+  /// Create a video post. Only registered users can upload content.
   public shared ({ caller }) func createVideo(
     title : Text,
     description : Text,
@@ -407,12 +410,10 @@ actor {
     thumbnail : Storage.ExternalBlob,
     mediaType : { #video; #photo }
   ) : async Result {
-    // Check if the caller is authenticated as a user
     if (not checkIsUser(caller)) {
       return #unauthorized("Unauthorized: Only users can upload content");
     };
-
-    // Generate a unique video ID (incremental)
+    // Assign unique video ID (incremental)
     let id = nextVideoId.toText();
     nextVideoId += 1;
 
@@ -437,26 +438,325 @@ actor {
     #ok(id);
   };
 
+  /// Get all videos. Accessible to any caller including guests (public feed).
   public query ({ caller }) func getVideos() : async [Video] {
     videos.values().toArray();
   };
 
-  /// Delete a post (video or photo). Only the owner of the post or an admin can delete it.
-  public shared ({ caller }) func deletePost(postId : Text) : async Result {
-    // Caller must be at least a registered user or admin
+  /// Delete a reel (video or photo) by its owner or an admin.
+  /// Only the owner or an admin can delete a reel.
+  public shared ({ caller }) func deleteReel(reelId : Text) : async Result {
     if (not checkIsUser(caller) and not checkIsAdmin(caller)) {
-      return #unauthorized("Unauthorized: Only registered users can delete posts");
+      return #unauthorized("Unauthorized: Only registered users can delete reels");
     };
-    switch (videos.get(postId)) {
-      case (null) { #notFound("Post not found") };
+    switch (videos.get(reelId)) {
+      case (null) { #notFound("Reel not found") };
       case (?video) {
-        // Only the uploader (owner) or an admin may delete the post
         if (video.uploader != caller and not checkIsAdmin(caller)) {
-          return #unauthorized("Not authorized to delete this post");
+          return #unauthorized("Not authorized to delete this reel");
         };
-        videos.remove(postId);
-        #ok("Post deleted");
+        videos.remove(reelId);
+        #ok("Reel deleted");
       };
     };
   };
+
+  /// Get all reels (videos/photos) for a specific user.
+  /// Accessible to any caller including guests (public profile viewing).
+  public query ({ caller }) func getUserReels(userId : UserId) : async [Video] {
+    videos.values().filter(
+      func(video) { video.uploader == userId }
+    ).toArray();
+  };
+
+  /// Add a comment to a video. Only registered users can comment.
+  public shared ({ caller }) func addComment(videoId : VideoId, text : Text) : async Result {
+    if (not checkIsUser(caller)) {
+      return #unauthorized("Unauthorized: Only registered users can add comments");
+    };
+
+    switch (videos.get(videoId)) {
+      case (null) { #notFound("Video not found") };
+      case (?video) {
+        let commentId = nextCommentId;
+        nextCommentId += 1;
+        let authorName = switch (users.get(caller)) {
+          case (?u) { u.profile.username };
+          case (null) { "Anonymous" };
+        };
+        let newComment : Comment = {
+          id = commentId;
+          videoId;
+          authorId = caller;
+          text;
+          timestamp = Time.now();
+          authorName;
+        };
+
+        let videoComments = switch (comments.get(videoId)) {
+          case (null) {
+            let newComments = Map.empty<CommentId, Comment>();
+            newComments.add(commentId, newComment);
+            newComments;
+          };
+          case (?existingComments) {
+            existingComments.add(commentId, newComment);
+            existingComments;
+          };
+        };
+
+        comments.add(videoId, videoComments);
+
+        let allComments = videoComments.values().toArray();
+        let updatedVideo : Video = { video with comments = allComments };
+        videos.add(videoId, updatedVideo);
+
+        #ok("Comment added");
+      };
+    };
+  };
+
+  /// Get comments for a video. Accessible to any caller including guests.
+  public query ({ caller }) func getComments(videoId : VideoId) : async [Comment] {
+    switch (comments.get(videoId)) {
+      case (null) { [] };
+      case (?videoComments) {
+        videoComments.values().toArray();
+      };
+    };
+  };
+
+  /// Like/unlike video with toggle endpoint. Only registered users can like/unlike.
+  public shared ({ caller }) func toggleLike(videoId : VideoId) : async Result {
+    if (not checkIsUser(caller)) {
+      return #unauthorized("Unauthorized: Only registered users can like/unlike videos");
+    };
+
+    switch (videos.get(videoId)) {
+      case (null) { #notFound("Video not found") };
+      case (?video) {
+        let hasLiked = video.likes.any(func(l) { l == caller });
+        let newLikes = if (hasLiked) {
+          video.likes.filter(func(l) { l != caller });
+        } else {
+          video.likes.concat([caller]);
+        };
+        let updatedVideo : Video = { video with likes = newLikes };
+        videos.add(videoId, updatedVideo);
+        #ok("Like state toggled");
+      };
+    };
+  };
+
+  /// Get the inbox (conversation summaries) for the caller.
+  /// Only registered users can access their inbox.
+  public query ({ caller }) func getInbox() : async [ConversationSummary] {
+    if (not checkIsUser(caller)) {
+      Runtime.trap("Unauthorized: Only registered users can get their inbox");
+    };
+    switch (messages.get(caller)) {
+      case (null) { [] };
+      case (?userMessages) {
+        userMessages.toArray().map(
+          func((otherUser, _conversation)) {
+            getConversationSummaryInternal(caller, otherUser)
+          }
+        );
+      };
+    };
+  };
+
+  /// Get the conversation between the caller and a recipient.
+  /// Only registered users can access their conversations.
+  /// Only the caller's own conversation is accessible (ownership enforced by using caller as key).
+  public query ({ caller }) func getConversation(recipient : Principal) : async [DirectMessage] {
+    if (not checkIsUser(caller)) {
+      Runtime.trap("Unauthorized: Only registered users can get their conversations");
+    };
+
+    switch (messages.get(caller)) {
+      case (null) { [] };
+      case (?userMessages) {
+        switch (userMessages.get(recipient)) {
+          case (null) { [] };
+          case (?conversation) {
+            conversation.values().toArray();
+          };
+        };
+      };
+    };
+  };
+
+  func getConversationSummaryInternal(user : Principal, otherUser : Principal) : ConversationSummary {
+    var lastMessage : DirectMessage = {
+      id = 0;
+      fromUser = user;
+      toUser = otherUser;
+      text = "";
+      timestamp = 0;
+      isRead = true;
+    };
+    var unreadCount : Nat = 0;
+    switch (messages.get(user)) {
+      case (?userMessages) {
+        switch (userMessages.get(otherUser)) {
+          case (?conversation) {
+            conversation.values().forEach(func(message) {
+              if (message.timestamp > lastMessage.timestamp) {
+                lastMessage := message;
+              };
+              if (not message.isRead and message.toUser == user) { unreadCount += 1 };
+            });
+          };
+          case (null) {};
+        };
+      };
+      case (null) {};
+    };
+    {
+      otherUser;
+      lastMessage;
+      unreadCount;
+    };
+  };
+
+  /// Send a direct message to a recipient.
+  /// Only registered users can send messages.
+  public shared ({ caller }) func sendMessage(recipient : Principal, text : Text) : async () {
+    if (not checkIsUser(caller)) {
+      Runtime.trap("Unauthorized: Only registered users can send messages");
+    };
+
+    let messageId = nextMessageId;
+    nextMessageId += 1;
+
+    let message : DirectMessage = {
+      id = messageId;
+      fromUser = caller;
+      toUser = recipient;
+      text;
+      timestamp = Time.now();
+      isRead = false;
+    };
+
+    // Store message in recipient's inbox (keyed by sender = caller)
+    let receiverMessages = switch (messages.get(recipient)) {
+      case (null) {
+        let newUserMessages = Map.empty<UserId, Map.Map<MessageId, DirectMessage>>();
+        newUserMessages;
+      };
+      case (?userMessages) { userMessages };
+    };
+
+    switch (receiverMessages.get(caller)) {
+      case (null) {
+        let newConversation = Map.empty<MessageId, DirectMessage>();
+        newConversation.add(messageId, message);
+        receiverMessages.add(caller, newConversation);
+      };
+      case (?existingConversation) {
+        existingConversation.add(messageId, message);
+      };
+    };
+
+    messages.add(recipient, receiverMessages);
+
+    // Store message in sender's outbox (keyed by recipient)
+    let senderMessages = switch (messages.get(caller)) {
+      case (null) {
+        let newUserMessages = Map.empty<UserId, Map.Map<MessageId, DirectMessage>>();
+        newUserMessages;
+      };
+      case (?userMessages) { userMessages };
+    };
+
+    switch (senderMessages.get(recipient)) {
+      case (null) {
+        let newConversation = Map.empty<MessageId, DirectMessage>();
+        newConversation.add(messageId, message);
+        senderMessages.add(recipient, newConversation);
+      };
+      case (?existingConversation) {
+        existingConversation.add(messageId, message);
+      };
+    };
+    messages.add(caller, senderMessages);
+  };
+
+  /// Mark all messages from a sender as read for the caller.
+  /// Only registered users can mark messages as read.
+  /// Only the caller's own messages can be marked as read (ownership enforced by using caller as key).
+  public shared ({ caller }) func markMessagesRead(sender : Principal) : async () {
+    if (not checkIsUser(caller)) {
+      Runtime.trap("Unauthorized: Only registered users can mark messages as read");
+    };
+
+    switch (messages.get(caller)) {
+      case (null) { () };
+      case (?userMessages) {
+        switch (userMessages.get(sender)) {
+          case (null) { () };
+          case (?conversation) {
+            let unreadMessageIds = conversation.toArray().filter(
+              func((_, m)) { not m.isRead }
+            ).map(
+              func((id, _)) { id }
+            );
+            for (id in unreadMessageIds.values()) {
+              switch (conversation.get(id)) {
+                case (null) {};
+                case (?msg) {
+                  let updatedMessage = { msg with isRead = true };
+                  conversation.add(id, updatedMessage);
+                };
+              };
+            };
+          };
+        };
+      };
+    };
+  };
+
+  /// Get the unread message count for a conversation with another user.
+  /// Only registered users can query their own unread message counts.
+  public query ({ caller }) func getUnreadMessagesCount(otherUser : Principal) : async Nat {
+    if (not checkIsUser(caller)) {
+      Runtime.trap("Unauthorized: Only registered users can get unread message counts");
+    };
+    switch (messages.get(caller)) {
+      case (null) { 0 };
+      case (?userMessages) {
+        switch (userMessages.get(otherUser)) {
+          case (null) { 0 };
+          case (?conversation) {
+            conversation.values().filter(
+              func(m) { not m.isRead and m.toUser == caller }
+            ).size();
+          };
+        };
+      };
+    };
+  };
+
+  /// Delete a conversation with another user.
+  /// Only registered users can delete their own conversations.
+  /// Only the caller's own conversation copy is deleted (ownership enforced by using caller as key).
+  public shared ({ caller }) func deleteConversation(otherUser : Principal) : async () {
+    if (not checkIsUser(caller)) {
+      Runtime.trap("Unauthorized: Only registered users can delete conversations");
+    };
+
+    switch (messages.get(caller)) {
+      case (null) {};
+      case (?userMessages) {
+        switch (userMessages.get(otherUser)) {
+          case (null) {};
+          case (?_) {
+            userMessages.remove(otherUser);
+          };
+        };
+      };
+    };
+  };
+
 };

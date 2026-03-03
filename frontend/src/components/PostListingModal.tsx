@@ -36,6 +36,7 @@ export default function PostListingModal({ open, onClose }: Props) {
     e.preventDefault();
     if (!identity) return;
     try {
+      // sellerId is injected by useCreateListing from the current user's identity
       await createListing.mutateAsync(form);
       setForm({ title: '', description: '', make: '', model: '', year: '', price: '', condition: 'Used', imageUrl: '', category: 'Other' });
       onClose();
@@ -108,17 +109,31 @@ export default function PostListingModal({ open, onClose }: Props) {
           </div>
           <div>
             <Label className="text-muted-foreground text-sm">Image URL (optional)</Label>
-            <Input value={form.imageUrl} onChange={e => setForm(f => ({ ...f, imageUrl: e.target.value }))} placeholder="https://..." className="bg-background border-border mt-1" />
+            <Input
+              value={form.imageUrl}
+              onChange={e => setForm(f => ({ ...f, imageUrl: e.target.value }))}
+              placeholder="https://..."
+              className="bg-background border-border mt-1"
+            />
           </div>
           <div>
             <Label className="text-muted-foreground text-sm">Description</Label>
-            <Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Describe the item..." className="bg-background border-border mt-1 resize-none" rows={3} />
+            <Textarea
+              value={form.description}
+              onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+              placeholder="Describe the part or item..."
+              className="bg-background border-border mt-1 resize-none"
+              rows={3}
+              required
+            />
           </div>
           <div className="flex gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={onClose} className="flex-1 border-border">Cancel</Button>
+            <Button type="button" variant="outline" onClick={onClose} className="flex-1 border-border">
+              Cancel
+            </Button>
             <Button
               type="submit"
-              disabled={!identity || createListing.isPending || !form.title || !form.price}
+              disabled={!identity || createListing.isPending || !form.title || !form.make || !form.model || !form.year || !form.price}
               className="flex-1 bg-neon-orange text-black hover:bg-neon-yellow font-bold"
             >
               {createListing.isPending ? 'Posting...' : 'Post Listing'}

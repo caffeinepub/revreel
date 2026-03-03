@@ -1,27 +1,66 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Fix upload 'expected v3 response body' error",
+  "title": "Fix Frontend TypeScript Compilation Errors for Deployment",
   "requirements": [
     {
-      "id": "REQ-1",
-      "summary": "Fix the upload flow so that the backend upload/storage response is correctly parsed and conforms to the expected v3 response body format, eliminating the 'expected v3 response body' error when a user attempts to upload a video or photo.",
+      "id": "REQ-2",
+      "summary": "Audit and fix all frontend TypeScript compilation errors to ensure the Vite build completes successfully",
       "acceptanceCriteria": [
-        "Navigating to the Upload page and submitting a video or photo file completes without throwing an 'expected v3 response body' error.",
-        "The backend upload/storage handler returns a response body that satisfies the v3 candid/API contract the frontend actor client expects.",
-        "After a successful upload, the user is redirected to the feed and the newly uploaded content appears.",
-        "Error states (oversized file, unsupported format) still display user-friendly error messages rather than a v3 response body parse error."
+        "The Vite/TypeScript build completes with zero type errors",
+        "All frontend components import and use backend-derived types correctly",
+        "No missing or mismatched type declarations remain"
       ],
       "file_operations": [
         {
-          "path": "frontend/src/pages/Upload.tsx",
-          "operation": "modify",
-          "description": "Update the upload flow to correctly handle the backend's UploadResponse type. The backend returns either {__kind__: 'ok', ok: {blob: ExternalBlob}} or {__kind__: 'error', error: string}. Modify the uploadBlob mutation and createVideo mutation to properly parse this response structure. Ensure that the blob from the successful upload response is correctly extracted and passed to createVideo. Add error handling that displays user-friendly messages for parse errors, oversized files, and unsupported formats without exposing raw v3 response body errors to the user."
-        },
-        {
           "path": "frontend/src/hooks/useQueries.ts",
           "operation": "modify",
-          "description": "Add or update the useUploadBlob mutation hook to correctly handle the backend UploadResponse type structure. Ensure the mutation properly parses the {__kind__: 'ok', ok: {blob: ExternalBlob}} success response and {__kind__: 'error', error: string} error response. Add proper TypeScript types matching the backend interface definition to prevent runtime parsing errors. Verify that the blob-storage component's ExternalBlob type is correctly integrated with the upload flow."
+          "description": "Review all type imports from frontend/src/backend.d.ts and ensure they match the backend interface. Verify that all query and mutation hooks return correctly typed data (e.g., Video, UserProfile, Comment, ConversationSummary, DirectMessage, etc.). Fix any mismatched or missing type references, incorrect return types, or undefined properties. Ensure all hook signatures align with component usage patterns observed in frontend/src/pages/*.tsx and frontend/src/components/*.tsx."
+        },
+        {
+          "path": "frontend/src/components/VideoCard.tsx",
+          "operation": "modify",
+          "description": "Verify that all Video type properties (id, title, thumbnail, hashtags, description, mediaUrl, likes, viewCount, timestamp, mediaType, category, uploader, comments, reactions) are correctly imported and used. Fix any type mismatches or missing properties when rendering video metadata, handling likes, or displaying comments. Ensure ExternalBlob usage for thumbnail and mediaUrl follows the backend interface definition."
+        },
+        {
+          "path": "frontend/src/pages/Feed.tsx",
+          "operation": "modify",
+          "description": "Review the Video[] type returned by the useGetVideos query hook. Ensure the feed correctly handles the Video type structure, including all required fields (id, title, thumbnail, hashtags, description, mediaUrl, likes, viewCount, timestamp, mediaType, category, uploader, comments, reactions). Fix any type errors related to video rendering, filtering, or sorting."
+        },
+        {
+          "path": "frontend/src/pages/Profile.tsx",
+          "operation": "modify",
+          "description": "Verify that UserProfile type imports and usage match the backend interface (id, bio, verified, username, badges, joinedAt, avatarUrl, savedVideos, avatar). Fix any type mismatches when displaying user profile data, handling avatar ExternalBlob, or managing badges. Ensure the profile editing flow correctly types the profile update payload."
+        },
+        {
+          "path": "frontend/src/components/CommentsPanel.tsx",
+          "operation": "modify",
+          "description": "Verify that Comment type (id, authorId, text, authorName, timestamp, videoId) is correctly imported and used when rendering comments. Fix any type mismatches in comment display, sorting, or submission. Ensure the addComment mutation correctly types the videoId and text parameters."
+        },
+        {
+          "path": "frontend/src/pages/Inbox.tsx",
+          "operation": "modify",
+          "description": "Verify that ConversationSummary type (lastMessage, otherUser, unreadCount) and DirectMessage type (id, text, isRead, toUser, timestamp, fromUser) are correctly imported and used. Fix any type mismatches when rendering conversations, displaying message previews, or handling unread counts."
+        },
+        {
+          "path": "frontend/src/pages/Conversation.tsx",
+          "operation": "modify",
+          "description": "Verify that DirectMessage type fields (id, text, isRead, toUser, timestamp, fromUser) are correctly typed and used when rendering the conversation view. Fix any type mismatches in message display, sending new messages, or marking messages as read."
+        },
+        {
+          "path": "frontend/src/components/ProfileSetupModal.tsx",
+          "operation": "modify",
+          "description": "Verify that UserProfile type is correctly typed when submitting the profile setup form via useSaveCallerUserProfile. Fix any type mismatches in the profile payload construction, especially for avatar ExternalBlob, username, bio, and other required fields."
+        },
+        {
+          "path": "frontend/src/components/EditProfileModal.tsx",
+          "operation": "modify",
+          "description": "Verify that UserProfile type is correctly typed when submitting profile updates via the updateProfile mutation. Fix any type mismatches in the profile payload, ensuring all required fields (id, bio, verified, username, badges, joinedAt, avatarUrl, savedVideos, avatar) are correctly structured."
+        },
+        {
+          "path": "frontend/src/pages/Upload.tsx",
+          "operation": "modify",
+          "description": "Verify that ExternalBlob type is correctly used for video and thumbnail uploads. Ensure the createVideo mutation payload correctly types title, description, category, hashtags, video (ExternalBlob), thumbnail (ExternalBlob), and mediaType (Variant_video_photo enum). Fix any type mismatches or missing fields."
         }
       ]
     }

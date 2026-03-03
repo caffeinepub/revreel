@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Wrench } from 'lucide-react';
+import { Wrench } from 'lucide-react';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import { useCreateBuildLog } from '../hooks/useQueries';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -28,6 +28,7 @@ export default function StartBuildLogModal({ open, onClose }: Props) {
     e.preventDefault();
     if (!identity) return;
     try {
+      // authorId is injected by useCreateBuildLog from the current user's identity
       await createBuildLog.mutateAsync(form);
       setForm({ title: '', carMake: '', carModel: '', carYear: '', description: '' });
       onClose();

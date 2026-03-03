@@ -1,15 +1,16 @@
-import { useState } from "react";
-import { Link } from "@tanstack/react-router";
-import { useInternetIdentity } from "../hooks/useInternetIdentity";
-import { useGetBuildLogs } from "../hooks/useQueries";
-import type { BuildLog } from "../hooks/useQueries";
-import { Skeleton } from "@/components/ui/skeleton";
-import StartBuildLogModal from "../components/StartBuildLogModal";
-import { BookOpen, Plus, Car, Calendar } from "lucide-react";
+import { useState } from 'react';
+import { Link } from '@tanstack/react-router';
+import { useGetBuildLogs } from '../hooks/useQueries';
+import type { BuildLog } from '../hooks/useQueries';
+import { Skeleton } from '@/components/ui/skeleton';
+import StartBuildLogModal from '../components/StartBuildLogModal';
+import AftermarketAdBanner from '../components/AftermarketAdBanner';
+import { BookOpen, Plus, Car, Calendar } from 'lucide-react';
+import { useInternetIdentity } from '../hooks/useInternetIdentity';
 
 export default function BuildLogs() {
   const { identity } = useInternetIdentity();
-  const { data: buildLogs = [], isLoading } = useGetBuildLogs();
+  const { data: logs = [], isLoading } = useGetBuildLogs();
   const [showModal, setShowModal] = useState(false);
 
   const isAuthenticated = !!identity;
@@ -32,60 +33,45 @@ export default function BuildLogs() {
       {isLoading ? (
         <div className="space-y-3">
           {[...Array(3)].map((_, i) => (
-            <Skeleton key={i} className="h-24 w-full rounded-xl" />
+            <Skeleton key={i} className="h-28 w-full rounded-xl" />
           ))}
         </div>
-      ) : (buildLogs as BuildLog[]).length === 0 ? (
+      ) : (logs as BuildLog[]).length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
           <BookOpen className="h-16 w-16 mx-auto mb-4 opacity-50" />
           <p className="text-lg font-medium mb-2">No build logs yet</p>
-          <p className="text-sm">
-            Share your car build journey with the community!
-          </p>
-          {isAuthenticated && (
-            <button
-              onClick={() => setShowModal(true)}
-              className="mt-4 inline-flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded font-semibold hover:bg-primary/90 transition-colors"
-            >
-              <Plus className="h-4 w-4" />
-              Start a Build Log
-            </button>
-          )}
+          <p className="text-sm">Share your build journey!</p>
         </div>
       ) : (
         <div className="space-y-3">
-          {(buildLogs as BuildLog[]).map((log) => (
-            <Link
-              key={log.id}
-              to="/builds/$buildId"
-              params={{ buildId: String(log.id) }}
-              className="block bg-card border border-border rounded-xl p-4 hover:border-primary/50 transition-colors"
-            >
-              <h3 className="font-display font-bold text-base mb-1">
-                {log.title}
-              </h3>
-              <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <Car className="h-3 w-3" />
-                  {log.carYear} {log.carMake} {log.carModel}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Calendar className="h-3 w-3" />
-                  {new Date(
-                    Number(log.createdAt) / 1_000_000
-                  ).toLocaleDateString()}
-                </span>
-              </div>
-              {log.description && (
-                <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
-                  {log.description}
-                </p>
-              )}
-              <div className="mt-2 text-xs text-primary">
-                {(log.stages ?? []).length} stage
-                {(log.stages ?? []).length !== 1 ? "s" : ""}
-              </div>
-            </Link>
+          {(logs as BuildLog[]).map((log, index) => (
+            <div key={log.id}>
+              <Link
+                to="/builds/$logId"
+                params={{ logId: String(log.id) }}
+                className="block bg-card border border-border rounded-xl p-4 hover:border-primary/50 transition-colors"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center flex-shrink-0">
+                    <Car className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-display font-bold text-base truncate">{log.title}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {log.carYear} {log.carMake} {log.carModel}
+                    </p>
+                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        {new Date(log.createdAt).toLocaleDateString()}
+                      </span>
+                      <span>{log.stages.length} stage{log.stages.length !== 1 ? 's' : ''}</span>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+              {(index + 1) % 4 === 0 && <AftermarketAdBanner className="mt-3" />}
+            </div>
           ))}
         </div>
       )}

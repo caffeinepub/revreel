@@ -4,6 +4,7 @@ import { useGetMechanicsPosts } from "../hooks/useQueries";
 import type { MechanicsPost } from "../hooks/useQueries";
 import { Skeleton } from "@/components/ui/skeleton";
 import PostIssueModal from "../components/PostIssueModal";
+import AftermarketAdBanner from "../components/AftermarketAdBanner";
 import { Wrench, Plus, MessageCircle, Clock } from "lucide-react";
 
 export default function MechanicsHelp() {
@@ -33,47 +34,43 @@ export default function MechanicsHelp() {
         <div className="text-center py-16 text-muted-foreground">
           <Wrench className="h-16 w-16 mx-auto mb-4 opacity-50" />
           <p className="text-lg font-medium mb-2">No issues posted yet</p>
-          <p className="text-sm">
-            Ask the community for help with your car problems!
-          </p>
+          <p className="text-sm">Ask the community for help with your car problems!</p>
         </div>
       ) : (
         <div className="space-y-3">
-          {(posts as MechanicsPost[]).map((post) => (
-            <Link
-              key={post.id}
-              to="/mechanics/$postId"
-              params={{ postId: String(post.id) }}
-              className="block bg-card border border-border rounded-xl p-4 hover:border-primary/50 transition-colors"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-display font-bold text-base truncate">
-                    {post.title}
-                  </h3>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs bg-muted px-2 py-0.5 rounded-full">
-                      {post.category}
-                    </span>
-                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {new Date(
-                        Number(post.createdAt) / 1_000_000
-                      ).toLocaleDateString()}
-                    </span>
+          {(posts as MechanicsPost[]).map((post, index) => (
+            <div key={post.id}>
+              <Link
+                to="/mechanics/$postId"
+                params={{ postId: String(post.id) }}
+                className="block bg-card border border-border rounded-xl p-4 hover:border-primary/50 transition-colors"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-display font-bold text-base truncate">{post.title}</h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs bg-muted px-2 py-0.5 rounded-full">
+                        {post.category}
+                      </span>
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {new Date(post.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                    {post.description && (
+                      <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
+                        {post.description}
+                      </p>
+                    )}
                   </div>
-                  {post.description && (
-                    <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
-                      {post.description}
-                    </p>
-                  )}
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground flex-shrink-0">
+                    <MessageCircle className="h-3.5 w-3.5" />
+                    {(post.comments ?? []).length}
+                  </div>
                 </div>
-                <div className="flex items-center gap-1 text-xs text-muted-foreground flex-shrink-0">
-                  <MessageCircle className="h-3.5 w-3.5" />
-                  {(post.comments ?? []).length}
-                </div>
-              </div>
-            </Link>
+              </Link>
+              {(index + 1) % 4 === 0 && <AftermarketAdBanner className="mt-3" />}
+            </div>
           ))}
         </div>
       )}

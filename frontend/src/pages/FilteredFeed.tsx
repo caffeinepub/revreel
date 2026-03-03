@@ -1,61 +1,81 @@
-import React from 'react';
-import { useParams } from '@tanstack/react-router';
-import { useGetVideosByCategory, useGetVideosByHashtag, useGetCallerUserProfile } from '../hooks/useQueries';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { useSearch, useNavigate } from '@tanstack/react-router';
+import { useGetVideos } from '../hooks/useQueries';
 import VideoCard from '../components/VideoCard';
-import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft } from 'lucide-react';
-import { Link } from '@tanstack/react-router';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 
 export default function FilteredFeed() {
-  // Use strict: false to avoid route path mismatch issues
-  const params = useParams({ strict: false }) as { type?: string; value?: string };
-  const type = params.type ?? '';
-  const value = params.value ?? '';
+  const search = useSearch({ strict: false }) as { category?: string; hashtag?: string };
+  const navigate = useNavigate();
+  const { data: videos = [], isLoading } = useGetVideos();
 
-  const { data: currentUserProfile } = useGetCallerUserProfile();
+  const category = search.category ?? '';
+  const hashtag = search.hashtag ?? '';
 
-  const categoryQuery = useGetVideosByCategory(type === 'category' ? value : '');
-  const hashtagQuery = useGetVideosByHashtag(type === 'hashtag' ? value : '');
+  const filtered = videos.filter((v) => {
+    if (category) return v.category.toLowerCase() === category.toLowerCase();
+    if (hashtag) return v.hashtags.some((h) => h.toLowerCase() === hashtag.toLowerCase());
+    return true;
+  });
 
-  const { data: videos = [], isLoading } = type === 'category' ? categoryQuery : hashtagQuery;
+  const [activeIndex, setActiveIndex] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-  if (isLoading) {
-    return (
-      <div className="p-4 space-y-4">
-        <Skeleton className="h-8 w-48" />
-        {Array.from({ length: 3 }).map((_, i) => (
-          <Skeleton key={i} className="h-64 rounded-xl" />
-        ))}
-      </div>
-    );
-  }
+  const handleObserver = useCallback((entries: IntersectionObserverEntry[]) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        const idx = itemRefs.current.indexOf(entry.target as HTMLDivElement);
+        if (idx !== -1) setActiveIndex(idx);
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(handleObserver, {
+      root: containerRef.current,
+      threshold: 0.6,
+    });
+    itemRefs.current.forEach((el) => {
+      if (el) observer.observe(el);
+    });
+    return () => observer.disconnect();
+  }, [filtered.length, handleObserver]);
+
+  const label = category ? `#${category}` : hashtag ? `#${hashtag}` : 'All';
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Back header */}
-      <div className="sticky top-14 z-10 bg-background/95 backdrop-blur-sm border-b border-border px-4 py-3 flex items-center gap-3">
-        <Link to="/discover" className="text-muted-foreground hover:text-foreground transition-colors">
+    <div className="flex flex-col h-full bg-background">
+      {/* Header */}
+      <div className="shrink-0 flex items-center gap-3 px-4 py-3 bg-surface border-b border-white/10 z-10">
+        <button onClick={() => navigate({ to: '/discover' })} className="text-white/70 hover:text-white">
           <ArrowLeft className="w-5 h-5" />
-        </Link>
-        <div>
-          <h1 className="font-display font-bold text-foreground">
-            {type === 'category' ? value.toUpperCase() : `#${value}`}
-          </h1>
-          <p className="text-xs text-muted-foreground">{videos.length} video{videos.length !== 1 ? 's' : ''}</p>
-        </div>
+        </button>
+        <h1 className="text-white font-bold">{label}</h1>
       </div>
 
-      {videos.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center px-4">
-          <p className="text-muted-foreground text-lg font-display">No videos found</p>
-          <p className="text-muted-foreground text-sm mt-2">
-            {type === 'category' ? `No videos in "${value}" category yet.` : `No videos tagged #${value} yet.`}
-          </p>
+      {isLoading ? (
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="w-8 h-8 text-neon-orange animate-spin" />
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="flex-1 flex flex-col items-center justify-center gap-3">
+          <p className="text-white/50">No videos found for {label}.</p>
         </div>
       ) : (
-        <div className="divide-y divide-border">
-          {videos.map((video) => (
-            <VideoCard key={video.id} video={video} currentUserProfile={currentUserProfile ?? null} />
+        <div
+          ref={containerRef}
+          className="flex-1 overflow-y-scroll snap-y snap-mandatory"
+          style={{ scrollbarWidth: 'none' }}
+        >
+          {filtered.map((video, idx) => (
+            <div
+              key={video.id}
+              ref={(el) => { itemRefs.current[idx] = el; }}
+              className="w-full h-full snap-start snap-always"
+            >
+              <VideoCard video={video} isActive={idx === activeIndex} />
+            </div>
           ))}
         </div>
       )}

@@ -3,6 +3,7 @@ import { useGetListings } from "../hooks/useQueries";
 import type { Listing } from "../hooks/useQueries";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tag, Car, DollarSign } from "lucide-react";
+import AftermarketAdBanner from "../components/AftermarketAdBanner";
 
 export default function Classifieds() {
   const { data: listings = [], isLoading } = useGetListings();
@@ -11,7 +12,7 @@ export default function Classifieds() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-display font-bold">Classifieds</h1>
         <Link
           to="/classifieds/$listingId"
@@ -22,6 +23,9 @@ export default function Classifieds() {
           Post Listing
         </Link>
       </div>
+
+      {/* Aftermarket parts ad banner */}
+      <AftermarketAdBanner className="mb-6" />
 
       {isLoading ? (
         <div className="space-y-3">
@@ -37,49 +41,55 @@ export default function Classifieds() {
         </div>
       ) : (
         <div className="space-y-3">
-          {activeListings.map((listing) => (
-            <Link
-              key={listing.id}
-              to="/classifieds/$listingId"
-              params={{ listingId: String(listing.id) }}
-              className="block bg-card border border-border rounded-xl p-4 hover:border-primary/50 transition-colors"
-            >
-              <div className="flex gap-3">
-                {listing.imageUrl && (
-                  <img
-                    src={listing.imageUrl}
-                    alt={listing.title}
-                    className="h-20 w-20 rounded-lg object-cover flex-shrink-0"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = "none";
-                    }}
-                  />
-                )}
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-display font-bold text-base truncate">
-                    {listing.title}
-                  </h3>
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
-                    <span className="flex items-center gap-1">
-                      <Car className="h-3 w-3" />
-                      {listing.year} {listing.make} {listing.model}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <DollarSign className="h-3 w-3" />
-                      {listing.price}
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                    {listing.description}
-                  </p>
-                  <div className="mt-1">
-                    <span className="text-xs bg-muted px-2 py-0.5 rounded-full">
-                      {listing.condition}
-                    </span>
+          {activeListings.map((listing, index) => (
+            <>
+              <Link
+                key={listing.id}
+                to="/classifieds/$listingId"
+                params={{ listingId: String(listing.id) }}
+                className="block bg-card border border-border rounded-xl p-4 hover:border-primary/50 transition-colors"
+              >
+                <div className="flex gap-3">
+                  {listing.imageUrl && (
+                    <img
+                      src={listing.imageUrl}
+                      alt={listing.title}
+                      className="h-20 w-20 rounded-lg object-cover flex-shrink-0"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-display font-bold text-base truncate">
+                      {listing.title}
+                    </h3>
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                      <span className="flex items-center gap-1">
+                        <Car className="h-3 w-3" />
+                        {listing.year} {listing.make} {listing.model}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <DollarSign className="h-3 w-3" />
+                        {listing.price}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                      {listing.description}
+                    </p>
+                    <div className="mt-1">
+                      <span className="text-xs bg-muted px-2 py-0.5 rounded-full">
+                        {listing.condition}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </Link>
+              </Link>
+              {/* Insert ad after every 4th listing */}
+              {(index + 1) % 4 === 0 && (
+                <AftermarketAdBanner key={`ad-${index}`} />
+              )}
+            </>
           ))}
         </div>
       )}

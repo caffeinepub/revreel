@@ -1,16 +1,12 @@
-import React, { useState } from 'react';
-import { X, Loader2, CalendarPlus } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { useState } from 'react';
+import { Car } from 'lucide-react';
+import { useInternetIdentity } from '../hooks/useInternetIdentity';
+import { useCreateCarMeet } from '../hooks/useQueries';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -18,185 +14,139 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useCreateCarMeet } from '../hooks/useQueries';
-import { toast } from 'sonner';
 
-interface PostMeetModalProps {
+interface Props {
   open: boolean;
   onClose: () => void;
 }
 
-const CATEGORIES = [
-  { value: 'jdm', label: 'JDM' },
-  { value: 'muscle', label: 'Muscle Cars' },
-  { value: 'drift', label: 'Drift' },
-  { value: 'drag', label: 'Drag Racing' },
-  { value: 'supercar', label: 'Supercars' },
-  { value: 'offroad', label: 'Off-Road' },
-  { value: 'all', label: 'All Cars Welcome' },
+const MEET_CATEGORIES = [
+  'Drift',
+  'Drag',
+  'Show & Shine',
+  'Track Day',
+  'Cruise',
+  'JDM',
+  'Euro',
+  'Muscle',
+  'Other',
 ];
 
-export default function PostMeetModal({ open, onClose }: PostMeetModalProps) {
+export default function PostMeetModal({ open, onClose }: Props) {
+  const { identity } = useInternetIdentity();
+  const createMeet = useCreateCarMeet();
   const [title, setTitle] = useState('');
   const [location, setLocation] = useState('');
-  const [dateTime, setDateTime] = useState('');
+  const [dateStr, setDateStr] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('');
+  const [category, setCategory] = useState('Other');
 
-  const createMeet = useCreateCarMeet();
-
-  const isValid = title.trim() !== '' && location.trim() !== '' && dateTime !== '' && category !== '';
+  const isValid =
+    title.trim() !== '' && location.trim() !== '' && dateStr !== '' && category !== '';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isValid) return;
-
-    // Convert local datetime string to nanoseconds timestamp
-    const dateMs = new Date(dateTime).getTime();
-    const dateNs = BigInt(dateMs) * BigInt(1_000_000);
-
+    if (!identity || !isValid) return;
     try {
       await createMeet.mutateAsync({
         title: title.trim(),
         location: location.trim(),
-        date: dateNs,
+        // date is number (milliseconds) in LocalCarMeet
+        date: new Date(dateStr).getTime(),
         description: description.trim(),
         category,
       });
-      toast.success('Meet posted! 🚗💨');
-      // Reset form
       setTitle('');
       setLocation('');
-      setDateTime('');
+      setDateStr('');
       setDescription('');
-      setCategory('');
+      setCategory('Other');
       onClose();
     } catch (err) {
-      toast.error('Failed to post meet. Please try again.');
+      console.error(err);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="bg-card border-border/60 text-foreground max-w-md w-full mx-4">
+      <DialogContent className="bg-card border-border max-w-md">
         <DialogHeader>
-          <DialogTitle className="font-display text-xl tracking-widest neon-text flex items-center gap-2">
-            <CalendarPlus className="w-5 h-5" />
-            POST A MEET
+          <DialogTitle className="font-display text-xl text-foreground flex items-center gap-2">
+            <Car className="w-5 h-5 text-neon-orange" />
+            Post a Car Meet
           </DialogTitle>
-          <DialogDescription className="text-muted-foreground text-sm">
-            Organize a car meetup for the community
-          </DialogDescription>
         </DialogHeader>
-
-        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
-          {/* Title */}
-          <div className="space-y-1.5">
-            <Label htmlFor="meet-title" className="font-display text-xs tracking-wider text-muted-foreground">
-              EVENT TITLE *
-            </Label>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label className="text-muted-foreground text-sm">Title</Label>
             <Input
-              id="meet-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Sunday JDM Cruise Night"
-              className="bg-background/60 border-border/60 focus:border-neon/60 text-foreground placeholder:text-muted-foreground/50"
-              maxLength={80}
+              placeholder="e.g. Sunday Drift Session"
+              className="bg-background border-border mt-1"
+              required
             />
           </div>
-
-          {/* Location */}
-          <div className="space-y-1.5">
-            <Label htmlFor="meet-location" className="font-display text-xs tracking-wider text-muted-foreground">
-              LOCATION *
-            </Label>
+          <div>
+            <Label className="text-muted-foreground text-sm">Location</Label>
             <Input
-              id="meet-location"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
-              placeholder="Downtown Parking Lot, Los Angeles CA"
-              className="bg-background/60 border-border/60 focus:border-neon/60 text-foreground placeholder:text-muted-foreground/50"
-              maxLength={120}
+              placeholder="e.g. Irwindale Speedway, CA"
+              className="bg-background border-border mt-1"
+              required
             />
           </div>
-
-          {/* Date & Time */}
-          <div className="space-y-1.5">
-            <Label htmlFor="meet-datetime" className="font-display text-xs tracking-wider text-muted-foreground">
-              DATE & TIME *
-            </Label>
+          <div>
+            <Label className="text-muted-foreground text-sm">Date & Time</Label>
             <Input
-              id="meet-datetime"
               type="datetime-local"
-              value={dateTime}
-              onChange={(e) => setDateTime(e.target.value)}
-              className="bg-background/60 border-border/60 focus:border-neon/60 text-foreground [color-scheme:dark]"
+              value={dateStr}
+              onChange={(e) => setDateStr(e.target.value)}
+              className="bg-background border-border mt-1"
+              required
             />
           </div>
-
-          {/* Category */}
-          <div className="space-y-1.5">
-            <Label className="font-display text-xs tracking-wider text-muted-foreground">
-              CATEGORY *
-            </Label>
+          <div>
+            <Label className="text-muted-foreground text-sm">Category</Label>
             <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger className="bg-background/60 border-border/60 focus:border-neon/60 text-foreground">
-                <SelectValue placeholder="Select a category" />
+              <SelectTrigger className="bg-background border-border mt-1">
+                <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-card border-border/60">
-                {CATEGORIES.map((cat) => (
-                  <SelectItem
-                    key={cat.value}
-                    value={cat.value}
-                    className="text-foreground focus:bg-neon/10 focus:text-neon"
-                  >
-                    {cat.label}
+              <SelectContent className="bg-card border-border">
+                {MEET_CATEGORIES.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {c}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-
-          {/* Description */}
-          <div className="space-y-1.5">
-            <Label htmlFor="meet-desc" className="font-display text-xs tracking-wider text-muted-foreground">
-              DESCRIPTION
-            </Label>
+          <div>
+            <Label className="text-muted-foreground text-sm">Description (optional)</Label>
             <Textarea
-              id="meet-desc"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Tell the community what to expect..."
-              className="bg-background/60 border-border/60 focus:border-neon/60 text-foreground placeholder:text-muted-foreground/50 resize-none"
+              placeholder="Tell people what to expect..."
+              className="bg-background border-border mt-1 resize-none"
               rows={3}
-              maxLength={400}
             />
           </div>
-
-          {/* Actions */}
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-2 pt-2">
             <Button
               type="button"
               variant="outline"
               onClick={onClose}
-              className="flex-1 font-display tracking-wider border-border/60 text-muted-foreground hover:text-foreground"
-              disabled={createMeet.isPending}
+              className="flex-1 border-border"
             >
-              CANCEL
+              Cancel
             </Button>
             <Button
               type="submit"
-              disabled={!isValid || createMeet.isPending}
-              className="flex-1 font-display tracking-wider bg-neon text-primary-foreground hover:bg-neon/90 neon-glow disabled:opacity-50 disabled:neon-glow-none"
+              disabled={!identity || createMeet.isPending || !isValid}
+              className="flex-1 bg-neon-orange text-black hover:bg-neon-yellow font-bold"
             >
-              {createMeet.isPending ? (
-                <span className="flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  POSTING...
-                </span>
-              ) : (
-                'POST MEET'
-              )}
+              {createMeet.isPending ? 'Posting...' : 'Post Meet'}
             </Button>
           </div>
         </form>

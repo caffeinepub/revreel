@@ -5,6 +5,7 @@ import type { CarMeet } from "../hooks/useQueries";
 import { Skeleton } from "@/components/ui/skeleton";
 import CarMeetCard from "../components/CarMeetCard";
 import PostMeetModal from "../components/PostMeetModal";
+import AftermarketAdBanner from "../components/AftermarketAdBanner";
 import { Car, Plus } from "lucide-react";
 
 export default function CarMeets() {
@@ -43,11 +44,14 @@ export default function CarMeets() {
         </div>
       ) : (
         <div className="space-y-3">
-          {(meets as CarMeet[]).map((meet) => (
-            <CarMeetCard
-              key={meet.id}
-              meet={meet}
-            />
+          {(meets as CarMeet[]).map((meet, index) => (
+            <div key={meet.id}>
+              <CarMeetCard meet={meet} />
+              {/* Inject ad banner after every 4th card */}
+              {(index + 1) % 4 === 0 && (
+                <AftermarketAdBanner className="mt-3" />
+              )}
+            </div>
           ))}
         </div>
       )}

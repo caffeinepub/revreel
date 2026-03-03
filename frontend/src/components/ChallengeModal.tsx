@@ -1,8 +1,15 @@
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { usePostChallenge, useGetVideosByUser, type Video } from '../hooks/useQueries';
 import { Loader2, Zap } from 'lucide-react';
+import { usePostChallenge } from '../hooks/useQueries';
+import { toast } from 'sonner';
 
 interface ChallengeModalProps {
   open: boolean;
@@ -11,98 +18,71 @@ interface ChallengeModalProps {
   originalVideoId: string;
 }
 
-export default function ChallengeModal({ open, onClose, challengedUserId, originalVideoId }: ChallengeModalProps) {
-  const [selectedVideoId, setSelectedVideoId] = useState<string>('');
-  const [error, setError] = useState<string | null>(null);
-
-  const { data: myVideos = [], isLoading: videosLoading } = useGetVideosByUser('');
+export default function ChallengeModal({
+  open,
+  onClose,
+  challengedUserId,
+  originalVideoId,
+}: ChallengeModalProps) {
   const postChallenge = usePostChallenge();
+  const [videoId, setVideoId] = useState('');
 
-  const handleSubmit = async () => {
-    if (!selectedVideoId) {
-      setError('Please select a video to challenge with');
-      return;
-    }
-    setError(null);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!videoId.trim()) return;
     try {
       await postChallenge.mutateAsync({
         challengedId: challengedUserId,
-        videoId: selectedVideoId,
+        videoId: videoId.trim(),
         originalVideoId,
       });
+      toast.success('Challenge sent!');
       onClose();
-    } catch (err: any) {
-      setError(err?.message || 'Failed to send challenge');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to send challenge');
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-md bg-card border-border">
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="bg-surface border-white/10 text-white max-w-sm mx-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl font-display font-bold text-primary neon-text flex items-center gap-2">
-            <Zap className="w-5 h-5" />
-            Send Challenge
+          <DialogTitle className="text-neon-orange font-display text-xl flex items-center gap-2">
+            <Zap className="w-5 h-5" /> Send Challenge
           </DialogTitle>
-          <DialogDescription className="text-muted-foreground">
-            Select one of your videos to challenge this racer.
-          </DialogDescription>
         </DialogHeader>
-
-        <div className="space-y-4 mt-2">
-          {videosLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-6 h-6 animate-spin text-primary" />
-            </div>
-          ) : myVideos.length === 0 ? (
-            <p className="text-muted-foreground text-sm text-center py-4">
-              You need to upload a video first to send a challenge.
-            </p>
-          ) : (
-            <div className="space-y-2 max-h-60 overflow-y-auto">
-              {myVideos.map((video: Video) => (
-                <div
-                  key={video.id}
-                  onClick={() => setSelectedVideoId(video.id)}
-                  className={`p-3 rounded border cursor-pointer transition-colors ${
-                    selectedVideoId === video.id
-                      ? 'border-primary bg-primary/10'
-                      : 'border-border hover:border-primary/50 hover:bg-muted'
-                  }`}
-                >
-                  <p className="font-medium text-sm">{video.title}</p>
-                  <p className="text-xs text-muted-foreground">{video.likes.length} likes</p>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {error && (
-            <div className="p-3 rounded bg-destructive/10 border border-destructive/30 text-destructive text-sm">
-              {error}
-            </div>
-          )}
-
-          <div className="flex gap-2">
-            <Button variant="outline" className="flex-1" onClick={onClose} disabled={postChallenge.isPending}>
+        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+          <div className="space-y-1">
+            <label className="text-white/70 text-sm">Your Video ID</label>
+            <input
+              value={videoId}
+              onChange={(e) => setVideoId(e.target.value)}
+              placeholder="Enter your video ID"
+              className="w-full bg-white/10 border border-white/20 text-white placeholder-white/40 rounded-lg px-4 py-2 text-sm outline-none focus:ring-1 focus:ring-neon-orange"
+            />
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onClose}
+              className="text-white/70 hover:text-white"
+            >
               Cancel
             </Button>
             <Button
-              className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
-              onClick={handleSubmit}
-              disabled={postChallenge.isPending || !selectedVideoId}
+              type="submit"
+              disabled={!videoId.trim() || postChallenge.isPending}
+              className="bg-neon-orange text-black font-bold hover:bg-neon-orange/90"
             >
               {postChallenge.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Sending...
-                </>
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sending…</>
               ) : (
-                'Send Challenge'
+                'Challenge!'
               )}
             </Button>
-          </div>
-        </div>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

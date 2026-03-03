@@ -1,124 +1,112 @@
 import React from 'react';
-import { useGetTrendingVideos, useGetAllVideos, type Video } from '../hooks/useQueries';
-import { Crown, Medal, Award, Loader2, Trophy } from 'lucide-react';
-import { Link } from '@tanstack/react-router';
+import { useGetVideos, useGetUserProfile } from '../hooks/useQueries';
+import { Video } from '../backend';
+import { Trophy, Zap, Loader2 } from 'lucide-react';
+import AftermarketAdBanner from '../components/AftermarketAdBanner';
 
-function RankIcon({ rank }: { rank: number }) {
-  if (rank === 1) return <Crown className="w-5 h-5 text-yellow-400" />;
-  if (rank === 2) return <Medal className="w-5 h-5 text-gray-300" />;
-  if (rank === 3) return <Award className="w-5 h-5 text-amber-600" />;
+function TopRacerItem({ userId, rank }: { userId: string; rank: number }) {
+  const { data: profile } = useGetUserProfile(userId);
+  const avatarUrl = profile?.avatarUrl || profile?.avatar?.getDirectURL() || '';
+
   return (
-    <span className="w-5 h-5 flex items-center justify-center text-sm font-bold text-muted-foreground">
-      #{rank}
-    </span>
+    <div className="flex items-center gap-3 bg-white/5 rounded-xl px-4 py-3">
+      <span className="text-neon-orange font-bold text-lg w-6 text-center">{rank}</span>
+      <div className="w-10 h-10 rounded-full bg-neon-orange/20 overflow-hidden shrink-0">
+        {avatarUrl ? (
+          <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <span className="text-neon-orange font-bold text-sm">
+              {(profile?.username ?? userId).charAt(0).toUpperCase()}
+            </span>
+          </div>
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-white font-semibold truncate">
+          {profile?.username ?? userId.slice(0, 12) + '…'}
+        </p>
+      </div>
+    </div>
   );
 }
 
 export default function Leaderboard() {
-  const { data: trendingVideos = [], isLoading: trendingLoading } = useGetTrendingVideos();
-  const { data: allVideos = [], isLoading: allLoading } = useGetAllVideos();
+  const { data: videos = [], isLoading } = useGetVideos();
 
-  const isLoading = trendingLoading || allLoading;
-
-  // Compute top racers by total likes
-  const racerMap = new Map<string, { userId: string; totalLikes: number; videoCount: number }>();
-  allVideos.forEach((video: Video) => {
-    const uid = video.uploader?.toString() || '';
-    if (!uid) return;
-    const existing = racerMap.get(uid) || { userId: uid, totalLikes: 0, videoCount: 0 };
-    existing.totalLikes += video.likes.length;
-    existing.videoCount += 1;
-    racerMap.set(uid, existing);
-  });
-  const topRacers = Array.from(racerMap.values())
-    .sort((a, b) => b.totalLikes - a.totalLikes)
+  const topVideos = [...videos]
+    .sort((a: Video, b: Video) => Number(b.viewCount) - Number(a.viewCount))
     .slice(0, 10);
 
-  const topVideos = [...trendingVideos].slice(0, 10);
+  const uploaderCounts: Record<string, number> = {};
+  videos.forEach((v: Video) => {
+    const uid = v.uploader.toString();
+    uploaderCounts[uid] = (uploaderCounts[uid] ?? 0) + Number(v.viewCount);
+  });
+  const topRacers = Object.entries(uploaderCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([uid]) => uid);
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 space-y-8">
-      {/* Banner */}
-      <div className="relative rounded-xl overflow-hidden h-40">
-        <img
-          src="/assets/generated/leaderboard-banner.dim_1200x400.png"
-          alt="Leaderboard"
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-transparent flex items-center px-6">
-          <div>
-            <h1 className="font-display text-3xl font-black text-white neon-text flex items-center gap-2">
-              <Trophy className="w-8 h-8 text-primary" />
-              Leaderboard
-            </h1>
-            <p className="text-white/70 text-sm mt-1">Top racers and trending content</p>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-full bg-background text-white pb-24 px-4 pt-6">
+      <h1 className="text-2xl font-display font-bold text-neon-orange mb-6 flex items-center gap-2">
+        <Trophy className="w-6 h-6" /> Leaderboard
+      </h1>
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <div className="flex justify-center py-8">
+          <Loader2 className="w-6 h-6 text-neon-orange animate-spin" />
         </div>
       ) : (
-        <div className="grid md:grid-cols-2 gap-6">
+        <>
           {/* Trending Videos */}
-          <div>
-            <h2 className="font-display text-xl font-bold mb-4 text-primary neon-text">🔥 Trending Videos</h2>
-            <div className="space-y-3">
-              {topVideos.length === 0 ? (
-                <p className="text-muted-foreground text-sm">No videos yet</p>
-              ) : (
-                topVideos.map((video: Video, index) => (
-                  <div
-                    key={video.id}
-                    className="flex items-center gap-3 p-3 rounded-lg bg-card border border-border hover:border-primary/50 transition-colors"
-                  >
-                    <RankIcon rank={index + 1} />
+          <section className="mb-6">
+            <h2 className="text-white/70 text-sm font-semibold mb-3 flex items-center gap-2">
+              <Zap className="w-4 h-4 text-neon-yellow" /> Trending Videos
+            </h2>
+            {topVideos.length === 0 ? (
+              <p className="text-white/40 text-sm text-center py-4">No videos yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {topVideos.map((v: Video, i) => (
+                  <div key={v.id} className="flex items-center gap-3 bg-white/5 rounded-xl px-4 py-3">
+                    <span className="text-neon-orange font-bold text-lg w-6 text-center">{i + 1}</span>
+                    <div className="w-12 h-8 rounded overflow-hidden shrink-0">
+                      <img
+                        src={v.thumbnail.getDirectURL() || '/assets/generated/placeholder-thumb.dim_640x360.png'}
+                        alt={v.title}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm truncate">{video.title}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {video.likes.length} likes · {Number(video.viewCount).toLocaleString()} views
-                      </p>
+                      <p className="text-white text-sm font-semibold truncate">{v.title}</p>
+                      <p className="text-white/40 text-xs">{Number(v.viewCount).toLocaleString()} views</p>
                     </div>
                   </div>
-                ))
-              )}
-            </div>
-          </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <AftermarketAdBanner />
 
           {/* Top Racers */}
-          <div>
-            <h2 className="font-display text-xl font-bold mb-4 text-primary neon-text">🏆 Top Racers</h2>
-            <div className="space-y-3">
-              {topRacers.length === 0 ? (
-                <p className="text-muted-foreground text-sm">No racers yet</p>
-              ) : (
-                topRacers.map((racer, index) => (
-                  <Link
-                    key={racer.userId}
-                    to="/profile/$userId"
-                    params={{ userId: racer.userId }}
-                    className="flex items-center gap-3 p-3 rounded-lg bg-card border border-border hover:border-primary/50 transition-colors"
-                  >
-                    <RankIcon rank={index + 1} />
-                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                      <span className="text-xs font-bold text-primary">
-                        {racer.userId.slice(0, 2).toUpperCase()}
-                      </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm truncate">{racer.userId.slice(0, 12)}...</p>
-                      <p className="text-xs text-muted-foreground">
-                        {racer.totalLikes} total likes · {racer.videoCount} videos
-                      </p>
-                    </div>
-                  </Link>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
+          <section>
+            <h2 className="text-white/70 text-sm font-semibold mb-3 flex items-center gap-2">
+              <Trophy className="w-4 h-4 text-neon-orange" /> Top Racers
+            </h2>
+            {topRacers.length === 0 ? (
+              <p className="text-white/40 text-sm text-center py-4">No racers yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {topRacers.map((uid, i) => (
+                  <TopRacerItem key={uid} userId={uid} rank={i + 1} />
+                ))}
+              </div>
+            )}
+          </section>
+        </>
       )}
     </div>
   );

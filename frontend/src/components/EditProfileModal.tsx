@@ -1,172 +1,148 @@
-import { useState } from "react";
-import { useUpdateProfile } from "../hooks/useQueries";
-import { ExternalBlob } from "../backend";
-import type { UserProfile } from "../backend";
+import React, { useState, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { User, Camera, Loader2 } from "lucide-react";
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Loader2, Camera } from 'lucide-react';
+import { useUpdateProfile } from '../hooks/useQueries';
+import { ExternalBlob, UserProfile } from '../backend';
+import { toast } from 'sonner';
 
 interface EditProfileModalProps {
-  profile: UserProfile;
+  open: boolean;
   onClose: () => void;
+  currentProfile: UserProfile;
 }
 
-export default function EditProfileModal({ profile, onClose }: EditProfileModalProps) {
+export default function EditProfileModal({ open, onClose, currentProfile }: EditProfileModalProps) {
   const updateProfile = useUpdateProfile();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [username, setUsername] = useState(profile.username);
-  const [bio, setBio] = useState(profile.bio);
+  const [username, setUsername] = useState(currentProfile.username);
+  const [bio, setBio] = useState(currentProfile.bio);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [avatarPreview, setAvatarPreview] = useState<string>(
-    profile.avatarUrl || profile.avatar?.getDirectURL?.() || ""
-  );
-  const [error, setError] = useState("");
+  const [avatarPreview, setAvatarPreview] = useState<string>(currentProfile.avatarUrl);
+  const [uploading, setUploading] = useState(false);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setAvatarFile(file);
-    const reader = new FileReader();
-    reader.onload = (ev) => setAvatarPreview(ev.target?.result as string);
-    reader.readAsDataURL(file);
+    const url = URL.createObjectURL(file);
+    setAvatarPreview(url);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username.trim()) {
-      setError("Username is required");
-      return;
-    }
+    if (!username.trim()) return;
 
-    setError("");
-
+    setUploading(true);
     try {
-      let avatarBlob = profile.avatar ?? ExternalBlob.fromURL("");
-      let newAvatarUrl = profile.avatarUrl;
-
+      let avatarBlob: ExternalBlob = currentProfile.avatar;
       if (avatarFile) {
         const bytes = new Uint8Array(await avatarFile.arrayBuffer());
         avatarBlob = ExternalBlob.fromBytes(bytes);
-        newAvatarUrl = avatarPreview;
       }
 
-      const updatedProfile: UserProfile = {
-        ...profile,
+      const updated: UserProfile = {
+        ...currentProfile,
         username: username.trim(),
         bio: bio.trim(),
         avatar: avatarBlob,
-        avatarUrl: newAvatarUrl,
+        avatarUrl: avatarPreview,
       };
 
-      await updateProfile.mutateAsync(updatedProfile);
+      await updateProfile.mutateAsync(updated);
+      toast.success('Profile updated!');
       onClose();
-    } catch (err: any) {
-      setError(err?.message ?? "Failed to update profile");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update profile');
+    } finally {
+      setUploading(false);
     }
   };
 
-  const isLoading = updateProfile.isPending;
-
   return (
-    <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md">
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="bg-surface border-white/10 text-white max-w-sm mx-auto">
         <DialogHeader>
-          <DialogTitle className="font-display text-xl">Edit Profile</DialogTitle>
+          <DialogTitle className="text-neon-orange font-display text-xl">Edit Profile</DialogTitle>
         </DialogHeader>
-
         <form onSubmit={handleSubmit} className="space-y-4 mt-2">
-          {/* Avatar Upload */}
-          <div className="flex flex-col items-center gap-3">
-            <label htmlFor="edit-avatar-upload" className="cursor-pointer group">
-              <div className="h-20 w-20 rounded-full bg-muted border-2 border-dashed border-border group-hover:border-primary transition-colors flex items-center justify-center overflow-hidden">
-                {avatarPreview ? (
-                  <img
-                    src={avatarPreview}
-                    alt="Avatar preview"
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex flex-col items-center gap-1">
-                    <User className="h-8 w-8 text-muted-foreground" />
-                    <Camera className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                )}
+          {/* Avatar */}
+          <div className="flex flex-col items-center gap-2">
+            <div
+              className="relative w-20 h-20 rounded-full overflow-hidden bg-white/10 cursor-pointer"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {avatarPreview ? (
+                <img src={avatarPreview} alt="avatar" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <Camera className="w-8 h-8 text-white/40" />
+                </div>
+              )}
+              <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                <Camera className="w-6 h-6 text-white" />
               </div>
-            </label>
+            </div>
             <input
-              id="edit-avatar-upload"
+              ref={fileInputRef}
               type="file"
               accept="image/*"
               className="hidden"
               onChange={handleAvatarChange}
             />
-            <span className="text-xs text-muted-foreground">
-              Click to change avatar
-            </span>
+            <p className="text-white/50 text-xs">Tap to change avatar</p>
           </div>
 
-          {/* Username */}
-          <div className="space-y-1.5">
-            <Label htmlFor="edit-username">Username *</Label>
+          <div className="space-y-1">
+            <Label className="text-white/70 text-sm">Username</Label>
             <Input
-              id="edit-username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Your username"
-              maxLength={30}
-              disabled={isLoading}
+              className="bg-white/10 border-white/20 text-white placeholder-white/40"
             />
           </div>
 
-          {/* Bio */}
-          <div className="space-y-1.5">
-            <Label htmlFor="edit-bio">Bio</Label>
+          <div className="space-y-1">
+            <Label className="text-white/70 text-sm">Bio</Label>
             <Textarea
-              id="edit-bio"
               value={bio}
               onChange={(e) => setBio(e.target.value)}
-              placeholder="Tell the community about yourself..."
+              className="bg-white/10 border-white/20 text-white placeholder-white/40 resize-none"
               rows={3}
-              maxLength={200}
-              disabled={isLoading}
             />
           </div>
 
-          {error && (
-            <p className="text-sm text-destructive">{error}</p>
-          )}
-
-          <div className="flex gap-2">
-            <button
+          <DialogFooter className="gap-2">
+            <Button
               type="button"
+              variant="ghost"
               onClick={onClose}
-              disabled={isLoading}
-              className="flex-1 py-2.5 rounded border border-border text-sm font-medium hover:bg-muted transition-colors disabled:opacity-50"
+              className="text-white/70 hover:text-white"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
-              disabled={isLoading || !username.trim()}
-              className="flex-1 bg-primary text-primary-foreground py-2.5 rounded font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              disabled={uploading || updateProfile.isPending}
+              className="bg-neon-orange text-black font-bold hover:bg-neon-orange/90"
             >
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Saving...
-                </>
+              {uploading || updateProfile.isPending ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving…</>
               ) : (
-                "Save Changes"
+                'Save Changes'
               )}
-            </button>
-          </div>
+            </Button>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

@@ -1,22 +1,8 @@
 import React from 'react';
-import { useDeleteUser, useGetAllUsers, type UserProfile } from '../hooks/useQueries';
-import { useActor } from '../hooks/useActor';
-import { useQuery } from '@tanstack/react-query';
-import AuthGuard from '../components/AuthGuard';
-import { Loader2, Trash2, ShieldAlert } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-
-function useIsAdmin() {
-  const { actor, isFetching } = useActor();
-  return useQuery({
-    queryKey: ['isCallerAdmin'],
-    queryFn: async () => {
-      if (!actor) return false;
-      return actor.isCallerAdmin();
-    },
-    enabled: !!actor && !isFetching,
-  });
-}
+import { useIsAdmin, useGetAllUsers, useDeleteUser } from '../hooks/useQueries';
+import { UserProfile } from '../backend';
+import { Loader2, ShieldAlert, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function AdminPanel() {
   const { data: isAdmin, isLoading: adminLoading } = useIsAdmin();
@@ -24,77 +10,66 @@ export default function AdminPanel() {
   const deleteUser = useDeleteUser();
 
   const handleDelete = (userId: string) => {
-    if (confirm('Are you sure you want to delete this user?')) {
-      deleteUser.mutate(userId);
-    }
+    deleteUser.mutate(userId, {
+      onSuccess: () => toast.success('User deleted'),
+      onError: (err: unknown) =>
+        toast.error(err instanceof Error ? err.message : 'Failed to delete user'),
+    });
   };
 
-  return (
-    <AuthGuard>
-      <div className="max-w-4xl mx-auto px-4 py-6">
-        <div className="flex items-center gap-3 mb-6">
-          <ShieldAlert className="w-7 h-7 text-primary" />
-          <h1 className="font-display text-2xl font-black text-primary neon-text">Admin Panel</h1>
-        </div>
-
-        {adminLoading ? (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          </div>
-        ) : !isAdmin ? (
-          <div className="text-center py-16">
-            <ShieldAlert className="w-12 h-12 text-destructive mx-auto mb-3" />
-            <p className="text-lg font-semibold text-destructive">Access Denied</p>
-            <p className="text-muted-foreground text-sm mt-1">You don't have admin privileges.</p>
-          </div>
-        ) : (
-          <div>
-            <h2 className="font-display text-lg font-bold mb-4">
-              All Users ({users.length})
-            </h2>
-            {usersLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-6 h-6 animate-spin text-primary" />
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {users.map((user: UserProfile) => (
-                  <div
-                    key={user.id?.toString()}
-                    className="flex items-center gap-3 p-4 rounded-lg bg-card border border-border"
-                  >
-                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-                      {user.avatarUrl ? (
-                        <img src={user.avatarUrl} alt={user.username} className="w-full h-full rounded-full object-cover" />
-                      ) : (
-                        <span className="text-sm font-bold text-primary">
-                          {user.username.slice(0, 1).toUpperCase()}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold truncate">{user.username}</p>
-                      <p className="text-xs text-muted-foreground truncate">{user.id?.toString()}</p>
-                    </div>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDelete(user.id?.toString() || '')}
-                      disabled={deleteUser.isPending}
-                    >
-                      {deleteUser.isPending ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="w-4 h-4" />
-                      )}
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+  if (adminLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="w-8 h-8 text-neon-orange animate-spin" />
       </div>
-    </AuthGuard>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-4 px-6 text-center">
+        <ShieldAlert className="w-12 h-12 text-red-400" />
+        <p className="text-white/60">Access denied. Admins only.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-full bg-background text-white pb-24 px-4 pt-6">
+      <h1 className="text-2xl font-display font-bold text-neon-orange mb-6">Admin Panel</h1>
+
+      {usersLoading ? (
+        <div className="flex justify-center py-8">
+          <Loader2 className="w-6 h-6 text-neon-orange animate-spin" />
+        </div>
+      ) : users.length === 0 ? (
+        <p className="text-white/50 text-center py-8">No users found.</p>
+      ) : (
+        <div className="space-y-2">
+          {users.map((user: UserProfile) => (
+            <div
+              key={user.id.toString()}
+              className="flex items-center gap-3 bg-white/5 rounded-xl px-4 py-3"
+            >
+              <div className="flex-1 min-w-0">
+                <p className="text-white font-semibold truncate">{user.username}</p>
+                <p className="text-white/40 text-xs truncate">{user.id.toString()}</p>
+              </div>
+              <button
+                onClick={() => handleDelete(user.id.toString())}
+                className="text-red-400 hover:text-red-300 transition-colors"
+                disabled={deleteUser.isPending}
+              >
+                {deleteUser.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Trash2 className="w-4 h-4" />
+                )}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

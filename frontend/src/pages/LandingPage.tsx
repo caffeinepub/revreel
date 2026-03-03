@@ -1,18 +1,32 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import { Zap, Users, Trophy, Car, ArrowRight, Loader2 } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function LandingPage() {
-  const { identity, login, loginStatus, isInitializing } = useInternetIdentity();
+  const { identity, login, loginStatus, isInitializing, clear } = useInternetIdentity();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const hasCleared = useRef(false);
+
+  // On every visit to the landing page, clear any persisted session
+  // so the user must log in again.
+  useEffect(() => {
+    if (!hasCleared.current) {
+      hasCleared.current = true;
+      clear();
+      queryClient.clear();
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isAuthenticated = !!identity;
   const isLoggingIn = loginStatus === 'logging-in';
 
-  // Redirect authenticated users to feed, but only after initialization is complete
+  // Only redirect after login (identity becomes set after a fresh login in this session)
+  // We do NOT redirect on isInitializing because we want to force re-login.
   useEffect(() => {
-    if (!isInitializing && isAuthenticated) {
+    if (!isInitializing && isAuthenticated && hasCleared.current) {
       navigate({ to: '/feed' });
     }
   }, [isAuthenticated, isInitializing, navigate]);
@@ -29,7 +43,8 @@ export default function LandingPage() {
     }
   };
 
-  // Show loading spinner while restoring identity from storage
+  // Show loading spinner while the identity system is initializing
+  // (brief moment before clear() takes effect)
   if (isInitializing) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -45,7 +60,7 @@ export default function LandingPage() {
     );
   }
 
-  // If authenticated, show brief redirect state
+  // If authenticated after a fresh login, show redirect state
   if (isAuthenticated) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">

@@ -19,6 +19,13 @@ export const _CaffeineStorageRefillResult = IDL.Record({
   'success' : IDL.Opt(IDL.Bool),
   'topped_up_amount' : IDL.Opt(IDL.Nat),
 });
+export const VideoId = IDL.Text;
+export const Result = IDL.Variant({
+  'ok' : IDL.Text,
+  'notFound' : IDL.Text,
+  'internalError' : IDL.Text,
+  'unauthorized' : IDL.Text,
+});
 export const UserRole = IDL.Variant({
   'admin' : IDL.Null,
   'user' : IDL.Null,
@@ -26,12 +33,6 @@ export const UserRole = IDL.Variant({
 });
 export const Hashtag = IDL.Text;
 export const ExternalBlob = IDL.Vec(IDL.Nat8);
-export const Result = IDL.Variant({
-  'ok' : IDL.Text,
-  'notFound' : IDL.Text,
-  'internalError' : IDL.Text,
-  'unauthorized' : IDL.Text,
-});
 export const UserId = IDL.Principal;
 export const Badge = IDL.Variant({
   'buildMaster' : IDL.Null,
@@ -58,10 +59,8 @@ export const ProfileResult = IDL.Variant({
   'notFound' : IDL.Text,
   'unauthorized' : IDL.Text,
 });
-export const VideoId = IDL.Text;
-export const Time = IDL.Int;
-export const Category = IDL.Text;
 export const CommentId = IDL.Nat;
+export const Time = IDL.Int;
 export const Comment = IDL.Record({
   'id' : CommentId,
   'authorId' : UserId,
@@ -70,12 +69,31 @@ export const Comment = IDL.Record({
   'timestamp' : Time,
   'videoId' : VideoId,
 });
+export const MessageId = IDL.Nat;
+export const DirectMessage = IDL.Record({
+  'id' : MessageId,
+  'text' : IDL.Text,
+  'isRead' : IDL.Bool,
+  'toUser' : UserId,
+  'timestamp' : Time,
+  'fromUser' : UserId,
+});
+export const ConversationSummary = IDL.Record({
+  'lastMessage' : DirectMessage,
+  'otherUser' : UserId,
+  'unreadCount' : IDL.Nat,
+});
+export const Category = IDL.Text;
 export const ReactionType = IDL.Variant({
   'fire' : IDL.Null,
   'hype' : IDL.Null,
   'like' : IDL.Null,
   'wild' : IDL.Null,
   'respect' : IDL.Null,
+});
+export const Reaction = IDL.Record({
+  'user' : UserId,
+  'reactionType' : ReactionType,
 });
 export const Video = IDL.Record({
   'id' : VideoId,
@@ -91,7 +109,7 @@ export const Video = IDL.Record({
   'category' : Category,
   'uploader' : UserId,
   'comments' : IDL.Vec(Comment),
-  'reactions' : IDL.Vec(IDL.Tuple(UserId, ReactionType)),
+  'reactions' : IDL.Vec(Reaction),
 });
 export const UploadResponse = IDL.Variant({
   'ok' : IDL.Record({ 'blob' : ExternalBlob }),
@@ -126,6 +144,7 @@ export const idlService = IDL.Service({
     ),
   '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
   '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
+  'addComment' : IDL.Func([VideoId, IDL.Text], [Result], []),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
   'createVideo' : IDL.Func(
       [
@@ -140,13 +159,26 @@ export const idlService = IDL.Service({
       [Result],
       [],
     ),
-  'deletePost' : IDL.Func([IDL.Text], [Result], []),
+  'deleteConversation' : IDL.Func([IDL.Principal], [], []),
+  'deleteReel' : IDL.Func([IDL.Text], [Result], []),
   'getCallerUserProfile' : IDL.Func([], [ProfileResult], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
+  'getComments' : IDL.Func([VideoId], [IDL.Vec(Comment)], ['query']),
+  'getConversation' : IDL.Func(
+      [IDL.Principal],
+      [IDL.Vec(DirectMessage)],
+      ['query'],
+    ),
+  'getInbox' : IDL.Func([], [IDL.Vec(ConversationSummary)], ['query']),
+  'getUnreadMessagesCount' : IDL.Func([IDL.Principal], [IDL.Nat], ['query']),
   'getUserProfile' : IDL.Func([IDL.Principal], [ProfileResult], ['query']),
+  'getUserReels' : IDL.Func([UserId], [IDL.Vec(Video)], ['query']),
   'getVideos' : IDL.Func([], [IDL.Vec(Video)], ['query']),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+  'markMessagesRead' : IDL.Func([IDL.Principal], [], []),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+  'sendMessage' : IDL.Func([IDL.Principal, IDL.Text], [], []),
+  'toggleLike' : IDL.Func([VideoId], [Result], []),
   'uploadBlob' : IDL.Func([ExternalBlob], [UploadResponse], []),
 });
 
@@ -164,6 +196,13 @@ export const idlFactory = ({ IDL }) => {
     'success' : IDL.Opt(IDL.Bool),
     'topped_up_amount' : IDL.Opt(IDL.Nat),
   });
+  const VideoId = IDL.Text;
+  const Result = IDL.Variant({
+    'ok' : IDL.Text,
+    'notFound' : IDL.Text,
+    'internalError' : IDL.Text,
+    'unauthorized' : IDL.Text,
+  });
   const UserRole = IDL.Variant({
     'admin' : IDL.Null,
     'user' : IDL.Null,
@@ -171,12 +210,6 @@ export const idlFactory = ({ IDL }) => {
   });
   const Hashtag = IDL.Text;
   const ExternalBlob = IDL.Vec(IDL.Nat8);
-  const Result = IDL.Variant({
-    'ok' : IDL.Text,
-    'notFound' : IDL.Text,
-    'internalError' : IDL.Text,
-    'unauthorized' : IDL.Text,
-  });
   const UserId = IDL.Principal;
   const Badge = IDL.Variant({
     'buildMaster' : IDL.Null,
@@ -203,10 +236,8 @@ export const idlFactory = ({ IDL }) => {
     'notFound' : IDL.Text,
     'unauthorized' : IDL.Text,
   });
-  const VideoId = IDL.Text;
-  const Time = IDL.Int;
-  const Category = IDL.Text;
   const CommentId = IDL.Nat;
+  const Time = IDL.Int;
   const Comment = IDL.Record({
     'id' : CommentId,
     'authorId' : UserId,
@@ -215,12 +246,31 @@ export const idlFactory = ({ IDL }) => {
     'timestamp' : Time,
     'videoId' : VideoId,
   });
+  const MessageId = IDL.Nat;
+  const DirectMessage = IDL.Record({
+    'id' : MessageId,
+    'text' : IDL.Text,
+    'isRead' : IDL.Bool,
+    'toUser' : UserId,
+    'timestamp' : Time,
+    'fromUser' : UserId,
+  });
+  const ConversationSummary = IDL.Record({
+    'lastMessage' : DirectMessage,
+    'otherUser' : UserId,
+    'unreadCount' : IDL.Nat,
+  });
+  const Category = IDL.Text;
   const ReactionType = IDL.Variant({
     'fire' : IDL.Null,
     'hype' : IDL.Null,
     'like' : IDL.Null,
     'wild' : IDL.Null,
     'respect' : IDL.Null,
+  });
+  const Reaction = IDL.Record({
+    'user' : UserId,
+    'reactionType' : ReactionType,
   });
   const Video = IDL.Record({
     'id' : VideoId,
@@ -236,7 +286,7 @@ export const idlFactory = ({ IDL }) => {
     'category' : Category,
     'uploader' : UserId,
     'comments' : IDL.Vec(Comment),
-    'reactions' : IDL.Vec(IDL.Tuple(UserId, ReactionType)),
+    'reactions' : IDL.Vec(Reaction),
   });
   const UploadResponse = IDL.Variant({
     'ok' : IDL.Record({ 'blob' : ExternalBlob }),
@@ -271,6 +321,7 @@ export const idlFactory = ({ IDL }) => {
       ),
     '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
     '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
+    'addComment' : IDL.Func([VideoId, IDL.Text], [Result], []),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
     'createVideo' : IDL.Func(
         [
@@ -285,13 +336,26 @@ export const idlFactory = ({ IDL }) => {
         [Result],
         [],
       ),
-    'deletePost' : IDL.Func([IDL.Text], [Result], []),
+    'deleteConversation' : IDL.Func([IDL.Principal], [], []),
+    'deleteReel' : IDL.Func([IDL.Text], [Result], []),
     'getCallerUserProfile' : IDL.Func([], [ProfileResult], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
+    'getComments' : IDL.Func([VideoId], [IDL.Vec(Comment)], ['query']),
+    'getConversation' : IDL.Func(
+        [IDL.Principal],
+        [IDL.Vec(DirectMessage)],
+        ['query'],
+      ),
+    'getInbox' : IDL.Func([], [IDL.Vec(ConversationSummary)], ['query']),
+    'getUnreadMessagesCount' : IDL.Func([IDL.Principal], [IDL.Nat], ['query']),
     'getUserProfile' : IDL.Func([IDL.Principal], [ProfileResult], ['query']),
+    'getUserReels' : IDL.Func([UserId], [IDL.Vec(Video)], ['query']),
     'getVideos' : IDL.Func([], [IDL.Vec(Video)], ['query']),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+    'markMessagesRead' : IDL.Func([IDL.Principal], [], []),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+    'sendMessage' : IDL.Func([IDL.Principal, IDL.Text], [], []),
+    'toggleLike' : IDL.Func([VideoId], [Result], []),
     'uploadBlob' : IDL.Func([ExternalBlob], [UploadResponse], []),
   });
 };

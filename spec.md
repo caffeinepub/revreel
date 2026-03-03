@@ -1,11 +1,10 @@
 # Specification
 
 ## Summary
-**Goal:** Fix the "expected v3 response body" error that occurs when a user attempts to upload a video or photo on the Upload page.
+**Goal:** Fix all backend Motoko and frontend TypeScript compilation errors so the application deploys successfully.
 
 **Planned changes:**
-- Update the backend upload/storage handler in `backend/main.mo` to return a response body that matches the v3 API contract expected by the frontend actor client.
-- Ensure the frontend Upload page correctly parses the updated backend response without throwing a v3 response body parse error.
-- Preserve user-friendly error messages for invalid upload cases (oversized file, unsupported format).
+- Audit and fix all Motoko compilation errors in `backend/main.mo` (type errors, missing imports, undefined references) so the actor compiles cleanly
+- Audit and fix all TypeScript/Vite build errors in the React frontend, ensuring type imports, component props, and hook return types are correctly aligned across `frontend/src/hooks/useQueries.ts` and consuming components
 
-**User-visible outcome:** Users can successfully upload a video or photo without encountering the "expected v3 response body" error, and are redirected to the feed where the newly uploaded content appears.
+**User-visible outcome:** The application deploys without errors and is fully accessible, with all existing features working as before.

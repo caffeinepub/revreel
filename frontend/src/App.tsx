@@ -4,37 +4,39 @@ import {
   createRoute,
   createRootRoute,
   Outlet,
-} from "@tanstack/react-router";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ThemeProvider } from "next-themes";
-import { Toaster } from "@/components/ui/sonner";
-
-import Layout from "./components/Layout";
-import LandingPage from "./pages/LandingPage";
-import Feed from "./pages/Feed";
-import Profile from "./pages/Profile";
-import Upload from "./pages/Upload";
-import Discover from "./pages/Discover";
-import FilteredFeed from "./pages/FilteredFeed";
-import Leaderboard from "./pages/Leaderboard";
-import Inbox from "./pages/Inbox";
-import Conversation from "./pages/Conversation";
-import Notifications from "./pages/Notifications";
-import MechanicsHelp from "./pages/MechanicsHelp";
-import MechanicsPostDetails from "./pages/MechanicsPostDetails";
-import CarMeets from "./pages/CarMeets";
-import CarMeetDetails from "./pages/CarMeetDetails";
-import BuildLogs from "./pages/BuildLogs";
-import BuildLogDetails from "./pages/BuildLogDetails";
-import Classifieds from "./pages/Classifieds";
-import ListingDetails from "./pages/ListingDetails";
-import AdminPanel from "./pages/AdminPanel";
-import About from "./pages/About";
+} from '@tanstack/react-router';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ThemeProvider } from 'next-themes';
+import { Toaster } from '@/components/ui/sonner';
+import Layout from './components/Layout';
+import LandingPage from './pages/LandingPage';
+import Feed from './pages/Feed';
+import Discover from './pages/Discover';
+import FilteredFeed from './pages/FilteredFeed';
+import Upload from './pages/Upload';
+import Inbox from './pages/Inbox';
+import Conversation from './pages/Conversation';
+import Profile from './pages/Profile';
+import Leaderboard from './pages/Leaderboard';
+import Notifications from './pages/Notifications';
+import MechanicsHelp from './pages/MechanicsHelp';
+import MechanicsPostDetails from './pages/MechanicsPostDetails';
+import CarMeets from './pages/CarMeets';
+import CarMeetDetails from './pages/CarMeetDetails';
+import BuildLogs from './pages/BuildLogs';
+import BuildLogDetails from './pages/BuildLogDetails';
+import Classifieds from './pages/Classifieds';
+import ListingDetails from './pages/ListingDetails';
+import AdminPanel from './pages/AdminPanel';
+import About from './pages/About';
+import ProfileSetupModal from './components/ProfileSetupModal';
+import { useInternetIdentity } from './hooks/useInternetIdentity';
+import { useGetCallerUserProfile } from './hooks/useQueries';
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5,
+      staleTime: 1000 * 60 * 2,
       retry: 1,
     },
   },
@@ -42,157 +44,159 @@ const queryClient = new QueryClient({
 
 // Root route
 const rootRoute = createRootRoute({
-  component: () => <Outlet />,
+  component: RootLayout,
 });
+
+function RootLayout() {
+  const { identity } = useInternetIdentity();
+  const { data: userProfile, isLoading: profileLoading, isFetched } = useGetCallerUserProfile();
+  const isAuthenticated = !!identity;
+  const showProfileSetup = isAuthenticated && !profileLoading && isFetched && userProfile === null;
+
+  return (
+    <>
+      <Outlet />
+      {showProfileSetup && (
+        <ProfileSetupModal
+          open={true}
+          onComplete={() => {
+            // Profile setup complete — the query will refetch automatically
+          }}
+        />
+      )}
+    </>
+  );
+}
 
 // Landing page (public)
 const landingRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/",
+  path: '/',
   component: LandingPage,
 });
 
 // App layout route
 const layoutRoute = createRoute({
   getParentRoute: () => rootRoute,
-  id: "app-layout",
+  id: 'layout',
   component: Layout,
 });
 
-// Feed
 const feedRoute = createRoute({
   getParentRoute: () => layoutRoute,
-  path: "/feed",
+  path: '/feed',
   component: Feed,
 });
 
-// Profile - uses $userId param
-const profileRoute = createRoute({
-  getParentRoute: () => layoutRoute,
-  path: "/profile/$userId",
-  component: Profile,
-});
-
-// Upload
-const uploadRoute = createRoute({
-  getParentRoute: () => layoutRoute,
-  path: "/upload",
-  component: Upload,
-});
-
-// Discover
 const discoverRoute = createRoute({
   getParentRoute: () => layoutRoute,
-  path: "/discover",
+  path: '/discover',
   component: Discover,
 });
 
-// Filtered feed
 const filteredFeedRoute = createRoute({
   getParentRoute: () => layoutRoute,
-  path: "/filtered-feed",
+  path: '/filtered-feed',
   component: FilteredFeed,
   validateSearch: (search: Record<string, unknown>) => ({
-    type: (search.type as string) || "",
-    value: (search.value as string) || "",
+    category: (search.category as string) ?? '',
+    hashtag: (search.hashtag as string) ?? '',
   }),
 });
 
-// Leaderboard
-const leaderboardRoute = createRoute({
+const uploadRoute = createRoute({
   getParentRoute: () => layoutRoute,
-  path: "/leaderboard",
-  component: Leaderboard,
+  path: '/upload',
+  component: Upload,
 });
 
-// Inbox
 const inboxRoute = createRoute({
   getParentRoute: () => layoutRoute,
-  path: "/inbox",
+  path: '/inbox',
   component: Inbox,
 });
 
-// Conversation
 const conversationRoute = createRoute({
   getParentRoute: () => layoutRoute,
-  path: "/messages/$userId",
+  path: '/conversation/$userId',
   component: Conversation,
 });
 
-// Notifications
+const profileRoute = createRoute({
+  getParentRoute: () => layoutRoute,
+  path: '/profile/$userId',
+  component: Profile,
+});
+
+const leaderboardRoute = createRoute({
+  getParentRoute: () => layoutRoute,
+  path: '/leaderboard',
+  component: Leaderboard,
+});
+
 const notificationsRoute = createRoute({
   getParentRoute: () => layoutRoute,
-  path: "/notifications",
+  path: '/notifications',
   component: Notifications,
 });
 
-// Mechanics Help
-const mechanicsHelpRoute = createRoute({
+const mechanicsRoute = createRoute({
   getParentRoute: () => layoutRoute,
-  path: "/mechanics",
+  path: '/mechanics',
   component: MechanicsHelp,
 });
 
-// Mechanics Post Details
-const mechanicsPostDetailsRoute = createRoute({
+const mechanicsPostRoute = createRoute({
   getParentRoute: () => layoutRoute,
-  path: "/mechanics/$postId",
+  path: '/mechanics/$postId',
   component: MechanicsPostDetails,
 });
 
-// Car Meets
-const carMeetsRoute = createRoute({
+const meetsRoute = createRoute({
   getParentRoute: () => layoutRoute,
-  path: "/meets",
+  path: '/meets',
   component: CarMeets,
 });
 
-// Car Meet Details
-const carMeetDetailsRoute = createRoute({
+const meetDetailsRoute = createRoute({
   getParentRoute: () => layoutRoute,
-  path: "/meets/$meetId",
+  path: '/meets/$meetId',
   component: CarMeetDetails,
 });
 
-// Build Logs
-const buildLogsRoute = createRoute({
+const buildsRoute = createRoute({
   getParentRoute: () => layoutRoute,
-  path: "/builds",
+  path: '/builds',
   component: BuildLogs,
 });
 
-// Build Log Details
-const buildLogDetailsRoute = createRoute({
+const buildDetailsRoute = createRoute({
   getParentRoute: () => layoutRoute,
-  path: "/builds/$buildId",
+  path: '/builds/$logId',
   component: BuildLogDetails,
 });
 
-// Classifieds
 const classifiedsRoute = createRoute({
   getParentRoute: () => layoutRoute,
-  path: "/classifieds",
+  path: '/classifieds',
   component: Classifieds,
 });
 
-// Listing Details
 const listingDetailsRoute = createRoute({
   getParentRoute: () => layoutRoute,
-  path: "/classifieds/$listingId",
+  path: '/classifieds/$listingId',
   component: ListingDetails,
 });
 
-// Admin Panel
-const adminPanelRoute = createRoute({
+const adminRoute = createRoute({
   getParentRoute: () => layoutRoute,
-  path: "/admin",
+  path: '/admin',
   component: AdminPanel,
 });
 
-// About
 const aboutRoute = createRoute({
   getParentRoute: () => layoutRoute,
-  path: "/about",
+  path: '/about',
   component: About,
 });
 
@@ -200,30 +204,30 @@ const routeTree = rootRoute.addChildren([
   landingRoute,
   layoutRoute.addChildren([
     feedRoute,
-    profileRoute,
-    uploadRoute,
     discoverRoute,
     filteredFeedRoute,
-    leaderboardRoute,
+    uploadRoute,
     inboxRoute,
     conversationRoute,
+    profileRoute,
+    leaderboardRoute,
     notificationsRoute,
-    mechanicsHelpRoute,
-    mechanicsPostDetailsRoute,
-    carMeetsRoute,
-    carMeetDetailsRoute,
-    buildLogsRoute,
-    buildLogDetailsRoute,
+    mechanicsRoute,
+    mechanicsPostRoute,
+    meetsRoute,
+    meetDetailsRoute,
+    buildsRoute,
+    buildDetailsRoute,
     classifiedsRoute,
     listingDetailsRoute,
-    adminPanelRoute,
+    adminRoute,
     aboutRoute,
   ]),
 ]);
 
 const router = createRouter({ routeTree });
 
-declare module "@tanstack/react-router" {
+declare module '@tanstack/react-router' {
   interface Register {
     router: typeof router;
   }

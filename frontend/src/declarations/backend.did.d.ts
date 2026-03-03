@@ -27,11 +27,26 @@ export interface Comment {
   'videoId' : VideoId,
 }
 export type CommentId = bigint;
+export interface ConversationSummary {
+  'lastMessage' : DirectMessage,
+  'otherUser' : UserId,
+  'unreadCount' : bigint,
+}
+export interface DirectMessage {
+  'id' : MessageId,
+  'text' : string,
+  'isRead' : boolean,
+  'toUser' : UserId,
+  'timestamp' : Time,
+  'fromUser' : UserId,
+}
 export type ExternalBlob = Uint8Array;
 export type Hashtag = string;
+export type MessageId = bigint;
 export type ProfileResult = { 'ok' : UserProfile } |
   { 'notFound' : string } |
   { 'unauthorized' : string };
+export interface Reaction { 'user' : UserId, 'reactionType' : ReactionType }
 export type ReactionType = { 'fire' : null } |
   { 'hype' : null } |
   { 'like' : null } |
@@ -74,7 +89,7 @@ export interface Video {
   'category' : Category,
   'uploader' : UserId,
   'comments' : Array<Comment>,
-  'reactions' : Array<[UserId, ReactionType]>,
+  'reactions' : Array<Reaction>,
 }
 export type VideoId = string;
 export interface _CaffeineStorageCreateCertificateResult {
@@ -105,7 +120,14 @@ export interface _SERVICE {
   >,
   '_caffeineStorageUpdateGatewayPrincipals' : ActorMethod<[], undefined>,
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
+  /**
+   * / Add a comment to a video. Only registered users can comment.
+   */
+  'addComment' : ActorMethod<[VideoId, string], Result>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
+  /**
+   * / Create a video post. Only registered users can upload content.
+   */
   'createVideo' : ActorMethod<
     [
       string,
@@ -120,26 +142,77 @@ export interface _SERVICE {
     Result
   >,
   /**
-   * / Delete a post (video or photo). Only the owner of the post or an admin can delete it.
+   * / Delete a conversation with another user.
+   * / Only registered users can delete their own conversations.
+   * / Only the caller's own conversation copy is deleted (ownership enforced by using caller as key).
    */
-  'deletePost' : ActorMethod<[string], Result>,
+  'deleteConversation' : ActorMethod<[Principal], undefined>,
   /**
-   * / Get the caller's own profile. Returns `#unauthorized` if the caller is not a registered user,
-   * / and `#notFound` if the profile does not exist.
+   * / Delete a reel (video or photo) by its owner or an admin.
+   * / Only the owner or an admin can delete a reel.
+   */
+  'deleteReel' : ActorMethod<[string], Result>,
+  /**
+   * / Get the caller's own profile. Returns \`#unauthorized\` if the caller is not a registered user,
+   * / and \`#notFound\` if the profile does not exist.
    */
   'getCallerUserProfile' : ActorMethod<[], ProfileResult>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
   /**
-   * / Get any user's profile by principal. Returns `#unauthorized` if the caller is not the user or an admin,
-   * / and `#notFound` if the profile does not exist.
+   * / Get comments for a video. Accessible to any caller including guests.
+   */
+  'getComments' : ActorMethod<[VideoId], Array<Comment>>,
+  /**
+   * / Get the conversation between the caller and a recipient.
+   * / Only registered users can access their conversations.
+   * / Only the caller's own conversation is accessible (ownership enforced by using caller as key).
+   */
+  'getConversation' : ActorMethod<[Principal], Array<DirectMessage>>,
+  /**
+   * / Get the inbox (conversation summaries) for the caller.
+   * / Only registered users can access their inbox.
+   */
+  'getInbox' : ActorMethod<[], Array<ConversationSummary>>,
+  /**
+   * / Get the unread message count for a conversation with another user.
+   * / Only registered users can query their own unread message counts.
+   */
+  'getUnreadMessagesCount' : ActorMethod<[Principal], bigint>,
+  /**
+   * / Get any user's public profile by principal.
+   * / Any caller (including guests) can view public profiles, which is required for
+   * / social features such as leaderboards, car meets, challenges, and follower lists.
    */
   'getUserProfile' : ActorMethod<[Principal], ProfileResult>,
+  /**
+   * / Get all reels (videos/photos) for a specific user.
+   * / Accessible to any caller including guests (public profile viewing).
+   */
+  'getUserReels' : ActorMethod<[UserId], Array<Video>>,
+  /**
+   * / Get all videos. Accessible to any caller including guests (public feed).
+   */
   'getVideos' : ActorMethod<[], Array<Video>>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
+  /**
+   * / Mark all messages from a sender as read for the caller.
+   * / Only registered users can mark messages as read.
+   * / Only the caller's own messages can be marked as read (ownership enforced by using caller as key).
+   */
+  'markMessagesRead' : ActorMethod<[Principal], undefined>,
   /**
    * / Save (create or update) the caller's own profile. Only registered users can save profiles.
    */
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
+  /**
+   * / Send a direct message to a recipient.
+   * / Only registered users can send messages.
+   */
+  'sendMessage' : ActorMethod<[Principal, string], undefined>,
+  /**
+   * / Like/unlike video with toggle endpoint. Only registered users can like/unlike.
+   */
+  'toggleLike' : ActorMethod<[VideoId], Result>,
   /**
    * / Upload a blob (photo or video) and return its canister path.
    * / Only registered users are allowed to upload blobs.

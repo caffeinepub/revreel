@@ -28,10 +28,22 @@ export interface Video {
     category: Category;
     uploader: UserId;
     comments: Array<Comment>;
-    reactions: Array<[UserId, ReactionType]>;
+    reactions: Array<Reaction>;
+}
+export interface Reaction {
+    user: UserId;
+    reactionType: ReactionType;
+}
+export type Time = bigint;
+export interface DirectMessage {
+    id: MessageId;
+    text: string;
+    isRead: boolean;
+    toUser: UserId;
+    timestamp: Time;
+    fromUser: UserId;
 }
 export type CommentId = bigint;
-export type Time = bigint;
 export interface Comment {
     id: CommentId;
     authorId: UserId;
@@ -65,8 +77,14 @@ export type Result = {
     __kind__: "unauthorized";
     unauthorized: string;
 };
+export type MessageId = bigint;
 export type Hashtag = string;
 export type VideoId = string;
+export interface ConversationSummary {
+    lastMessage: DirectMessage;
+    otherUser: UserId;
+    unreadCount: bigint;
+}
 export interface UserProfile {
     id: UserId;
     bio: string;
@@ -113,29 +131,87 @@ export enum Variant_video_photo {
     photo = "photo"
 }
 export interface backendInterface {
+    /**
+     * / Add a comment to a video. Only registered users can comment.
+     */
+    addComment(videoId: VideoId, text: string): Promise<Result>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    /**
+     * / Create a video post. Only registered users can upload content.
+     */
     createVideo(title: string, description: string, category: string, hashtags: Array<Hashtag>, video: ExternalBlob, thumbnail: ExternalBlob, mediaType: Variant_video_photo): Promise<Result>;
     /**
-     * / Delete a post (video or photo). Only the owner of the post or an admin can delete it.
+     * / Delete a conversation with another user.
+     * / Only registered users can delete their own conversations.
+     * / Only the caller's own conversation copy is deleted (ownership enforced by using caller as key).
      */
-    deletePost(postId: string): Promise<Result>;
+    deleteConversation(otherUser: Principal): Promise<void>;
     /**
-     * / Get the caller's own profile. Returns `#unauthorized` if the caller is not a registered user,
-     * / and `#notFound` if the profile does not exist.
+     * / Delete a reel (video or photo) by its owner or an admin.
+     * / Only the owner or an admin can delete a reel.
+     */
+    deleteReel(reelId: string): Promise<Result>;
+    /**
+     * / Get the caller's own profile. Returns \`#unauthorized\` if the caller is not a registered user,
+     * / and \`#notFound\` if the profile does not exist.
      */
     getCallerUserProfile(): Promise<ProfileResult>;
     getCallerUserRole(): Promise<UserRole>;
     /**
-     * / Get any user's profile by principal. Returns `#unauthorized` if the caller is not the user or an admin,
-     * / and `#notFound` if the profile does not exist.
+     * / Get comments for a video. Accessible to any caller including guests.
+     */
+    getComments(videoId: VideoId): Promise<Array<Comment>>;
+    /**
+     * / Get the conversation between the caller and a recipient.
+     * / Only registered users can access their conversations.
+     * / Only the caller's own conversation is accessible (ownership enforced by using caller as key).
+     */
+    getConversation(recipient: Principal): Promise<Array<DirectMessage>>;
+    /**
+     * / Get the inbox (conversation summaries) for the caller.
+     * / Only registered users can access their inbox.
+     */
+    getInbox(): Promise<Array<ConversationSummary>>;
+    /**
+     * / Get the unread message count for a conversation with another user.
+     * / Only registered users can query their own unread message counts.
+     */
+    getUnreadMessagesCount(otherUser: Principal): Promise<bigint>;
+    /**
+     * / Get any user's public profile by principal.
+     * / Any caller (including guests) can view public profiles, which is required for
+     * / social features such as leaderboards, car meets, challenges, and follower lists.
      */
     getUserProfile(user: Principal): Promise<ProfileResult>;
+    /**
+     * / Get all reels (videos/photos) for a specific user.
+     * / Accessible to any caller including guests (public profile viewing).
+     */
+    getUserReels(userId: UserId): Promise<Array<Video>>;
+    /**
+     * / Get all videos. Accessible to any caller including guests (public feed).
+     */
     getVideos(): Promise<Array<Video>>;
     isCallerAdmin(): Promise<boolean>;
+    /**
+     * / Mark all messages from a sender as read for the caller.
+     * / Only registered users can mark messages as read.
+     * / Only the caller's own messages can be marked as read (ownership enforced by using caller as key).
+     */
+    markMessagesRead(sender: Principal): Promise<void>;
     /**
      * / Save (create or update) the caller's own profile. Only registered users can save profiles.
      */
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
+    /**
+     * / Send a direct message to a recipient.
+     * / Only registered users can send messages.
+     */
+    sendMessage(recipient: Principal, text: string): Promise<void>;
+    /**
+     * / Like/unlike video with toggle endpoint. Only registered users can like/unlike.
+     */
+    toggleLike(videoId: VideoId): Promise<Result>;
     /**
      * / Upload a blob (photo or video) and return its canister path.
      * / Only registered users are allowed to upload blobs.

@@ -1,27 +1,24 @@
 import { useParams, Link } from "@tanstack/react-router";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
-import { useGetCarMeetDetails, useJoinCarMeet, useLeaveCarMeet } from "../hooks/useQueries";
-import type { UserProfile } from "../hooks/useQueries";
+import { useGetCarMeetDetails, useJoinMeet, useLeaveMeet } from "../hooks/useQueries";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Car, MapPin, Calendar, Users, ChevronLeft, Loader2 } from "lucide-react";
 
 export default function CarMeetDetails() {
-  const { meetId } = useParams({ from: "/app-layout/meets/$meetId" });
+  const { meetId } = useParams({ strict: false }) as { meetId: string };
   const { identity } = useInternetIdentity();
   const { data: meet, isLoading } = useGetCarMeetDetails(meetId);
-  const joinMeet = useJoinCarMeet();
-  const leaveMeet = useLeaveCarMeet();
+  const joinMeet = useJoinMeet();
+  const leaveMeet = useLeaveMeet();
 
   const currentUserId = identity?.getPrincipal().toString() ?? "";
-  const isAttending = (meet as any)?.attendees?.some(
-    (a: UserProfile) => a.id?.toString() === currentUserId
-  );
+  const isAttending = meet?.attendees?.some((a) => a === currentUserId) ?? false;
 
   const handleToggleAttend = () => {
     if (isAttending) {
-      leaveMeet.mutate({ meetId });
+      leaveMeet.mutate(meetId);
     } else {
-      joinMeet.mutate({ meetId });
+      joinMeet.mutate(meetId);
     }
   };
 
@@ -47,8 +44,6 @@ export default function CarMeetDetails() {
     );
   }
 
-  const m = meet as any;
-
   return (
     <div className="max-w-2xl mx-auto px-4 py-6">
       {/* Header */}
@@ -57,7 +52,7 @@ export default function CarMeetDetails() {
           <ChevronLeft className="h-5 w-5" />
         </Link>
         <h1 className="flex-1 text-xl font-display font-bold truncate">
-          {m.title}
+          {meet.title}
         </h1>
       </div>
 
@@ -65,29 +60,27 @@ export default function CarMeetDetails() {
       <div className="bg-card border border-border rounded-xl p-4 mb-4 space-y-3">
         <div className="flex items-center gap-2 text-sm">
           <MapPin className="h-4 w-4 text-primary" />
-          <span>{m.location}</span>
+          <span>{meet.location}</span>
         </div>
         <div className="flex items-center gap-2 text-sm">
           <Calendar className="h-4 w-4 text-primary" />
-          <span>
-            {new Date(Number(m.date) / 1_000_000).toLocaleString()}
-          </span>
+          <span>{new Date(meet.date).toLocaleString()}</span>
         </div>
         <div className="flex items-center gap-2 text-sm">
           <Car className="h-4 w-4 text-primary" />
-          <span>{m.category}</span>
+          <span>{meet.category}</span>
         </div>
         <div className="flex items-center gap-2 text-sm">
           <Users className="h-4 w-4 text-primary" />
-          <span>{(m.attendees ?? []).length} attending</span>
+          <span>{meet.attendees.length} attending</span>
         </div>
       </div>
 
       {/* Description */}
-      {m.description && (
+      {meet.description && (
         <div className="mb-4">
           <h2 className="font-display font-semibold mb-2">About</h2>
-          <p className="text-sm text-muted-foreground">{m.description}</p>
+          <p className="text-sm text-muted-foreground">{meet.description}</p>
         </div>
       )}
 
@@ -113,33 +106,25 @@ export default function CarMeetDetails() {
       )}
 
       {/* Attendees */}
-      {(m.attendees ?? []).length > 0 && (
+      {meet.attendees.length > 0 && (
         <div className="mt-6">
           <h2 className="font-display font-semibold mb-3">
-            Attendees ({(m.attendees ?? []).length})
+            Attendees ({meet.attendees.length})
           </h2>
           <div className="space-y-2">
-            {(m.attendees as UserProfile[]).map((attendee, idx) => (
+            {meet.attendees.map((attendeeId, idx) => (
               <Link
-                key={attendee.id?.toString() ?? idx}
+                key={attendeeId ?? idx}
                 to="/profile/$userId"
-                params={{ userId: attendee.id?.toString() ?? "" }}
+                params={{ userId: attendeeId ?? "" }}
                 className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors"
               >
-                <div className="h-8 w-8 rounded-full bg-muted overflow-hidden flex-shrink-0">
-                  {attendee.avatarUrl ? (
-                    <img
-                      src={attendee.avatarUrl}
-                      alt={attendee.username}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="h-full w-full flex items-center justify-center text-xs font-bold text-muted-foreground">
-                      {attendee.username?.[0]?.toUpperCase() ?? "?"}
-                    </div>
-                  )}
+                <div className="h-8 w-8 rounded-full bg-muted overflow-hidden flex-shrink-0 flex items-center justify-center">
+                  <span className="text-xs font-bold text-muted-foreground">
+                    {attendeeId.slice(0, 2).toUpperCase()}
+                  </span>
                 </div>
-                <span className="text-sm font-medium">{attendee.username}</span>
+                <span className="text-sm font-medium">{attendeeId.slice(0, 12)}...</span>
               </Link>
             ))}
           </div>

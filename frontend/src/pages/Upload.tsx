@@ -1,474 +1,283 @@
-import { useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { Upload as UploadIcon, X, Film, Image, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
-import AuthGuard from '../components/AuthGuard';
-import { useUploadVideo } from '../hooks/useQueries';
+import { useInternetIdentity } from '../hooks/useInternetIdentity';
+import { useCreateVideo } from '../hooks/useQueries';
 import { ExternalBlob, Variant_video_photo } from '../backend';
+import { Loader2, Upload as UploadIcon, Image, Film, X } from 'lucide-react';
+import { toast } from 'sonner';
 import { Progress } from '@/components/ui/progress';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 
 const CATEGORIES = [
-  'Drift',
-  'Drag Racing',
-  'Track Day',
-  'Car Meet',
-  'Build Reveal',
-  'Street',
-  'Off-Road',
-  'Burnout',
-  'Stance',
-  'JDM',
-  'Muscle',
-  'Euro',
-  'Other',
+  'Drift', 'Drag', 'Track', 'Show', 'Build', 'Street', 'Off-Road', 'Other',
 ];
 
-type MediaType = 'video' | 'photo';
-
 export default function Upload() {
+  const { identity } = useInternetIdentity();
+  const createVideo = useCreateVideo();
   const navigate = useNavigate();
-  const uploadVideo = useUploadVideo();
 
-  const [mediaType, setMediaType] = useState<MediaType>('video');
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [mediaPreview, setMediaPreview] = useState<string>('');
+  const [thumbPreview, setThumbPreview] = useState<string>('');
+  const [mediaType, setMediaType] = useState<Variant_video_photo>(Variant_video_photo.video);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('');
+  const [category, setCategory] = useState(CATEGORIES[0]);
   const [hashtags, setHashtags] = useState('');
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [thumbnailProgress, setThumbnailProgress] = useState(0);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const [mediaProgress, setMediaProgress] = useState(0);
+  const [thumbProgress, setThumbProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
 
   const mediaInputRef = useRef<HTMLInputElement>(null);
-  const thumbnailInputRef = useRef<HTMLInputElement>(null);
+  const thumbInputRef = useRef<HTMLInputElement>(null);
 
-  const mediaPreviewUrl = mediaFile ? URL.createObjectURL(mediaFile) : null;
-  const thumbnailPreviewUrl = thumbnailFile ? URL.createObjectURL(thumbnailFile) : null;
-
-  const isFormValid = !!mediaFile && title.trim().length > 0 && category.length > 0;
-  const isUploading = uploadVideo.isPending;
-
-  const handleMediaSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMediaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setMediaFile(file);
-    setError(null);
-    // Auto-detect media type
-    if (file.type.startsWith('video/')) {
-      setMediaType('video');
-    } else if (file.type.startsWith('image/')) {
-      setMediaType('photo');
-    }
+    setMediaPreview(URL.createObjectURL(file));
+    const isVid = file.type.startsWith('video/');
+    setMediaType(isVid ? Variant_video_photo.video : Variant_video_photo.photo);
   };
 
-  const handleThumbnailSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleThumbChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setThumbnailFile(file);
+    setThumbPreview(URL.createObjectURL(file));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isFormValid || isUploading) return;
+    if (!identity) {
+      toast.error('Please log in to upload');
+      return;
+    }
+    if (!mediaFile) {
+      toast.error('Please select a media file');
+      return;
+    }
+    if (!title.trim()) {
+      toast.error('Please enter a title');
+      return;
+    }
 
-    setError(null);
-    setUploadProgress(0);
-    setThumbnailProgress(0);
+    setIsUploading(true);
+    setMediaProgress(0);
+    setThumbProgress(0);
 
     try {
-      const mediaBytes = new Uint8Array(await mediaFile!.arrayBuffer());
-      const mediaBlob = ExternalBlob.fromBytes(mediaBytes);
+      const mediaBytes = new Uint8Array(await mediaFile.arrayBuffer());
+      const videoBlob = ExternalBlob.fromBytes(mediaBytes);
 
-      let thumbnailBlob: ExternalBlob;
+      let thumbBlob: ExternalBlob;
       if (thumbnailFile) {
         const thumbBytes = new Uint8Array(await thumbnailFile.arrayBuffer());
-        thumbnailBlob = ExternalBlob.fromBytes(thumbBytes);
+        thumbBlob = ExternalBlob.fromBytes(thumbBytes);
       } else {
-        // Use a placeholder thumbnail URL
-        thumbnailBlob = ExternalBlob.fromURL('/assets/generated/placeholder-thumb.dim_640x360.png');
+        thumbBlob = ExternalBlob.fromURL('/assets/generated/placeholder-thumb.dim_640x360.png');
       }
 
-      const hashtagList = hashtags
+      const tags = hashtags
         .split(/[\s,#]+/)
-        .map((h) => h.trim().toLowerCase())
-        .filter((h) => h.length > 0);
+        .map((t) => t.trim())
+        .filter(Boolean);
 
-      await uploadVideo.mutateAsync({
+      await createVideo.mutateAsync({
         title: title.trim(),
         description: description.trim(),
         category,
-        hashtags: hashtagList,
-        video: mediaBlob,
-        thumbnail: thumbnailBlob,
-        mediaType: mediaType === 'video' ? Variant_video_photo.video : Variant_video_photo.photo,
-        onMediaProgress: (pct) => setUploadProgress(pct),
-        onThumbnailProgress: (pct) => setThumbnailProgress(pct),
+        hashtags: tags,
+        video: videoBlob,
+        thumbnail: thumbBlob,
+        mediaType,
+        onMediaProgress: setMediaProgress,
+        onThumbnailProgress: setThumbProgress,
       });
 
-      setSuccess(true);
-      setTimeout(() => {
-        navigate({ to: '/feed' });
-      }, 1500);
-    } catch (err: any) {
-      const msg: string = err?.message ?? '';
-      // Provide user-friendly messages for common errors
-      if (msg.toLowerCase().includes('unauthorized')) {
-        setError('You must be logged in to upload content.');
-      } else if (msg.toLowerCase().includes('too large') || msg.toLowerCase().includes('size')) {
-        setError('File is too large. Please choose a smaller file.');
-      } else if (msg.toLowerCase().includes('format') || msg.toLowerCase().includes('unsupported')) {
-        setError('Unsupported file format. Please use a supported video or image format.');
-      } else if (msg) {
-        setError(msg);
+      toast.success('Reel uploaded successfully!');
+      navigate({ to: '/feed' });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Upload failed';
+      if (msg.includes('Unauthorized') || msg.includes('unauthorized')) {
+        toast.error('You must be logged in to upload');
+      } else if (msg.includes('size') || msg.includes('large')) {
+        toast.error('File is too large. Please try a smaller file.');
+      } else if (msg.includes('format') || msg.includes('type')) {
+        toast.error('Unsupported file format.');
       } else {
-        setError('Upload failed. Please try again.');
+        toast.error(msg);
       }
+    } finally {
+      setIsUploading(false);
     }
   };
 
-  const handleClearMedia = () => {
-    setMediaFile(null);
-    setUploadProgress(0);
-    if (mediaInputRef.current) mediaInputRef.current.value = '';
-  };
+  if (!identity) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-4 px-6 text-center">
+        <UploadIcon className="w-12 h-12 text-neon-orange/50" />
+        <p className="text-white/60">Please log in to upload reels.</p>
+      </div>
+    );
+  }
 
   return (
-    <AuthGuard>
-      <div className="min-h-screen bg-background">
-        <div className="max-w-lg mx-auto px-4 py-6">
-          {/* Page Title */}
-          <div className="mb-6">
-            <h1 className="font-display text-3xl font-bold text-foreground tracking-wider uppercase">
-              Upload
-            </h1>
-            <p className="text-muted-foreground text-sm mt-1">
-              Share your reel or photo with the RevReel community
-            </p>
-          </div>
+    <div className="min-h-full bg-background text-white pb-24 px-4 pt-6">
+      <h1 className="text-2xl font-display font-bold text-neon-orange mb-6">Upload Reel</h1>
 
-          {/* Success State */}
-          {success && (
-            <div className="flex flex-col items-center justify-center py-16 gap-4">
-              <CheckCircle className="h-16 w-16 text-green-500" />
-              <p className="font-display text-xl font-bold text-foreground">Upload Successful!</p>
-              <p className="text-muted-foreground text-sm">Redirecting to feed…</p>
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {/* Media picker */}
+        <div
+          className="border-2 border-dashed border-white/20 rounded-xl p-6 flex flex-col items-center gap-3 cursor-pointer hover:border-neon-orange/50 transition-colors"
+          onClick={() => mediaInputRef.current?.click()}
+        >
+          {mediaPreview ? (
+            <div className="relative w-full max-h-48 overflow-hidden rounded-lg">
+              {mediaType === Variant_video_photo.video ? (
+                <video src={mediaPreview} className="w-full max-h-48 object-contain" muted />
+              ) : (
+                <img src={mediaPreview} alt="preview" className="w-full max-h-48 object-contain" />
+              )}
+              <button
+                type="button"
+                className="absolute top-2 right-2 bg-black/60 rounded-full p-1"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMediaFile(null);
+                  setMediaPreview('');
+                }}
+              >
+                <X className="w-4 h-4 text-white" />
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="flex gap-3">
+                <Film className="w-8 h-8 text-neon-orange/60" />
+                <Image className="w-8 h-8 text-neon-orange/60" />
+              </div>
+              <p className="text-white/60 text-sm">Tap to select video or photo</p>
+            </>
+          )}
+          <input
+            ref={mediaInputRef}
+            type="file"
+            accept="video/*,image/*"
+            className="hidden"
+            onChange={handleMediaChange}
+          />
+        </div>
+
+        {/* Thumbnail picker */}
+        <div
+          className="border border-white/10 rounded-xl p-4 flex items-center gap-3 cursor-pointer hover:border-neon-orange/30 transition-colors"
+          onClick={() => thumbInputRef.current?.click()}
+        >
+          {thumbPreview ? (
+            <img src={thumbPreview} alt="thumb" className="w-16 h-10 object-cover rounded" />
+          ) : (
+            <div className="w-16 h-10 bg-white/10 rounded flex items-center justify-center">
+              <Image className="w-5 h-5 text-white/40" />
             </div>
           )}
-
-          {!success && (
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Media Type Toggle */}
-              <div className="flex gap-2 p-1 bg-muted rounded-xl">
-                <button
-                  type="button"
-                  onClick={() => setMediaType('video')}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all ${
-                    mediaType === 'video'
-                      ? 'bg-primary text-primary-foreground shadow'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  <Film className="h-4 w-4" />
-                  Reel / Video
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMediaType('photo')}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all ${
-                    mediaType === 'photo'
-                      ? 'bg-primary text-primary-foreground shadow'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  <Image className="h-4 w-4" />
-                  Photo
-                </button>
-              </div>
-
-              {/* Media File Picker */}
-              <div>
-                <Label className="text-sm font-semibold text-foreground mb-2 block">
-                  {mediaType === 'video' ? 'Video File *' : 'Photo File *'}
-                </Label>
-
-                {/* Hidden file input */}
-                <input
-                  ref={mediaInputRef}
-                  type="file"
-                  accept={mediaType === 'video' ? 'video/*' : 'image/*'}
-                  onChange={handleMediaSelect}
-                  className="hidden"
-                  id="media-file-input"
-                />
-
-                {!mediaFile ? (
-                  <div className="space-y-3">
-                    {/* Click area */}
-                    <div
-                      onClick={() => mediaInputRef.current?.click()}
-                      className="border-2 border-dashed border-border hover:border-primary/60 rounded-xl p-8 flex flex-col items-center gap-3 cursor-pointer transition-colors bg-muted/30 hover:bg-muted/50"
-                    >
-                      <UploadIcon className="h-10 w-10 text-muted-foreground" />
-                      <div className="text-center">
-                        <p className="text-sm font-medium text-foreground">
-                          Click to select {mediaType === 'video' ? 'a video' : 'a photo'}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {mediaType === 'video'
-                            ? 'MP4, MOV, WebM, AVI supported'
-                            : 'JPG, PNG, WebP, GIF supported'}
-                        </p>
-                      </div>
-                    </div>
-                    {/* Explicit button as fallback */}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => mediaInputRef.current?.click()}
-                    >
-                      <UploadIcon className="h-4 w-4 mr-2" />
-                      Choose {mediaType === 'video' ? 'Video' : 'Photo'} File
-                    </Button>
-                    {/* Also expose the label for native file picker */}
-                    <label
-                      htmlFor="media-file-input"
-                      className="block text-center text-xs text-muted-foreground cursor-pointer hover:text-primary transition-colors"
-                    >
-                      or tap here to browse files
-                    </label>
-                  </div>
-                ) : (
-                  <div className="relative rounded-xl overflow-hidden bg-muted border border-border">
-                    {mediaType === 'video' && mediaPreviewUrl ? (
-                      <video
-                        src={mediaPreviewUrl}
-                        className="w-full max-h-48 object-cover"
-                        controls
-                        muted
-                      />
-                    ) : mediaPreviewUrl ? (
-                      <img
-                        src={mediaPreviewUrl}
-                        alt="Preview"
-                        className="w-full max-h-48 object-cover"
-                      />
-                    ) : null}
-                    <div className="p-3 flex items-center justify-between">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">{mediaFile.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {(mediaFile.size / (1024 * 1024)).toFixed(1)} MB
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handleClearMedia}
-                        className="ml-2 p-1.5 rounded-full bg-destructive/20 text-destructive hover:bg-destructive/30 transition-colors flex-shrink-0"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Title */}
-              <div>
-                <Label htmlFor="title" className="text-sm font-semibold text-foreground mb-2 block">
-                  Title *
-                </Label>
-                <Input
-                  id="title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Give your post a title…"
-                  maxLength={100}
-                  className="bg-muted/50 border-border"
-                />
-              </div>
-
-              {/* Description */}
-              <div>
-                <Label htmlFor="description" className="text-sm font-semibold text-foreground mb-2 block">
-                  Description
-                </Label>
-                <Textarea
-                  id="description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Tell the community about this post…"
-                  rows={3}
-                  maxLength={500}
-                  className="bg-muted/50 border-border resize-none"
-                />
-              </div>
-
-              {/* Category */}
-              <div>
-                <Label className="text-sm font-semibold text-foreground mb-2 block">
-                  Category *
-                </Label>
-                <div className="flex flex-wrap gap-2">
-                  {CATEGORIES.map((cat) => (
-                    <button
-                      key={cat}
-                      type="button"
-                      onClick={() => setCategory(cat)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all border ${
-                        category === cat
-                          ? 'bg-primary text-primary-foreground border-primary'
-                          : 'bg-muted/50 text-muted-foreground border-border hover:border-primary/50 hover:text-foreground'
-                      }`}
-                    >
-                      {cat}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Hashtags */}
-              <div>
-                <Label htmlFor="hashtags" className="text-sm font-semibold text-foreground mb-2 block">
-                  Hashtags
-                </Label>
-                <Input
-                  id="hashtags"
-                  value={hashtags}
-                  onChange={(e) => setHashtags(e.target.value)}
-                  placeholder="#drift #jdm #turbo"
-                  className="bg-muted/50 border-border"
-                />
-                <p className="text-xs text-muted-foreground mt-1">Separate with spaces or commas</p>
-              </div>
-
-              {/* Thumbnail (optional) */}
-              <div>
-                <Label className="text-sm font-semibold text-foreground mb-2 block">
-                  Thumbnail <span className="text-muted-foreground font-normal">(optional)</span>
-                </Label>
-                <input
-                  ref={thumbnailInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleThumbnailSelect}
-                  className="hidden"
-                  id="thumbnail-file-input"
-                />
-                {!thumbnailFile ? (
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => thumbnailInputRef.current?.click()}
-                    >
-                      <Image className="h-4 w-4 mr-2" />
-                      Choose Thumbnail
-                    </Button>
-                    <label
-                      htmlFor="thumbnail-file-input"
-                      className="flex items-center justify-center px-4 py-2 rounded-md border border-border text-sm text-muted-foreground cursor-pointer hover:bg-muted transition-colors"
-                    >
-                      Browse
-                    </label>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-xl border border-border">
-                    {thumbnailPreviewUrl && (
-                      <img
-                        src={thumbnailPreviewUrl}
-                        alt="Thumbnail"
-                        className="h-12 w-20 object-cover rounded-lg"
-                      />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{thumbnailFile.name}</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setThumbnailFile(null);
-                        if (thumbnailInputRef.current) thumbnailInputRef.current.value = '';
-                      }}
-                      className="p-1.5 rounded-full bg-destructive/20 text-destructive hover:bg-destructive/30 transition-colors"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Upload Progress */}
-              {isUploading && (
-                <div className="space-y-3 p-4 bg-muted/50 rounded-xl border border-border">
-                  <div>
-                    <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                      <span>Uploading media…</span>
-                      <span>{uploadProgress}%</span>
-                    </div>
-                    <Progress value={uploadProgress} className="h-2" />
-                  </div>
-                  {thumbnailFile && (
-                    <div>
-                      <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                        <span>Uploading thumbnail…</span>
-                        <span>{thumbnailProgress}%</span>
-                      </div>
-                      <Progress value={thumbnailProgress} className="h-2" />
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Error */}
-              {error && (
-                <div className="flex items-start gap-2 p-3 bg-destructive/10 border border-destructive/30 rounded-xl text-destructive text-sm">
-                  <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                  <span>{error}</span>
-                </div>
-              )}
-
-              {/* Submit Button */}
-              <div className="pt-2 pb-6">
-                <Button
-                  type="submit"
-                  disabled={!isFormValid || isUploading}
-                  className="w-full h-12 text-base font-bold font-display tracking-wider uppercase bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
-                  size="lg"
-                >
-                  {isUploading ? (
-                    <>
-                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                      Uploading…
-                    </>
-                  ) : (
-                    <>
-                      <UploadIcon className="h-5 w-5 mr-2" />
-                      {mediaType === 'video' ? 'Post Reel' : 'Post Photo'}
-                    </>
-                  )}
-                </Button>
-
-                {!isFormValid && !isUploading && (
-                  <p className="text-center text-xs text-muted-foreground mt-2">
-                    {!mediaFile
-                      ? `Select a ${mediaType} file to continue`
-                      : !title.trim()
-                      ? 'Add a title to continue'
-                      : 'Select a category to continue'}
-                  </p>
-                )}
-              </div>
-            </form>
-          )}
+          <p className="text-white/60 text-sm">
+            {thumbnailFile ? thumbnailFile.name : 'Select thumbnail (optional)'}
+          </p>
+          <input
+            ref={thumbInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleThumbChange}
+          />
         </div>
-      </div>
-    </AuthGuard>
+
+        {/* Title */}
+        <div className="space-y-1">
+          <label className="text-white/70 text-sm">Title *</label>
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Give your reel a title…"
+            className="w-full bg-white/10 border border-white/20 text-white placeholder-white/40 rounded-lg px-4 py-2 text-sm outline-none focus:ring-1 focus:ring-neon-orange"
+          />
+        </div>
+
+        {/* Description */}
+        <div className="space-y-1">
+          <label className="text-white/70 text-sm">Description</label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Describe your reel…"
+            rows={3}
+            className="w-full bg-white/10 border border-white/20 text-white placeholder-white/40 rounded-lg px-4 py-2 text-sm outline-none focus:ring-1 focus:ring-neon-orange resize-none"
+          />
+        </div>
+
+        {/* Category */}
+        <div className="space-y-1">
+          <label className="text-white/70 text-sm">Category</label>
+          <div className="flex flex-wrap gap-2">
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setCategory(cat)}
+                className={`px-3 py-1 rounded-full text-sm border transition-colors ${
+                  category === cat
+                    ? 'bg-neon-orange text-black border-neon-orange'
+                    : 'border-white/20 text-white/70 hover:border-neon-orange/50'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Hashtags */}
+        <div className="space-y-1">
+          <label className="text-white/70 text-sm">Hashtags</label>
+          <input
+            value={hashtags}
+            onChange={(e) => setHashtags(e.target.value)}
+            placeholder="drift, turbo, jdm (comma or space separated)"
+            className="w-full bg-white/10 border border-white/20 text-white placeholder-white/40 rounded-lg px-4 py-2 text-sm outline-none focus:ring-1 focus:ring-neon-orange"
+          />
+        </div>
+
+        {/* Progress bars */}
+        {isUploading && (
+          <div className="space-y-2">
+            <div>
+              <p className="text-white/60 text-xs mb-1">Media upload: {mediaProgress}%</p>
+              <Progress value={mediaProgress} className="h-1.5" />
+            </div>
+            {thumbnailFile && (
+              <div>
+                <p className="text-white/60 text-xs mb-1">Thumbnail: {thumbProgress}%</p>
+                <Progress value={thumbProgress} className="h-1.5" />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Submit */}
+        <button
+          type="submit"
+          disabled={isUploading || !mediaFile || !title.trim()}
+          className="w-full bg-neon-orange text-black font-bold py-3 rounded-xl disabled:opacity-50 flex items-center justify-center gap-2"
+        >
+          {isUploading ? (
+            <><Loader2 className="w-5 h-5 animate-spin" /> Uploading…</>
+          ) : (
+            <><UploadIcon className="w-5 h-5" /> Post Reel</>
+          )}
+        </button>
+      </form>
+    </div>
   );
 }
